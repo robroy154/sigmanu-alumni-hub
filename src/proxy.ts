@@ -3,24 +3,31 @@ import { createServerClient } from "@supabase/ssr";
 
 // Route access matrix — ARCHITECTURE.md Section 4:
 //
-// Unauthenticated → / (public event landing) only
-// pending         → / and /register only
-// member          → / + /directory + /family-tree + /profile
+// Unauthenticated → / and auth routes only
+// pending         → / + /register (Phase 5) + /pending-approval + auth routes
+// member          → above + /directory + /family-tree + /profile
 // admin           → everything above + /admin
 
-const PUBLIC_ROUTES = ["/"];
-const AUTH_ROUTES = ["/login", "/signup", "/pending-approval"];
+const PUBLIC_ROUTES = ["/", "/auth/callback"];
+const AUTH_ROUTES = [
+  "/login",
+  "/signup",
+  "/pending-approval",
+  "/complete-profile",
+];
+const PENDING_ALLOWED = ["/register"];
+const ADMIN_ROUTES = ["/admin"];
 
-// Member status enforcement is a Phase 3 stub.
-// In Phase 3: fetch the member row from Supabase, read status,
-// and redirect pending users to /pending-approval or /register,
-// and unauthenticated users away from member/admin routes.
+function matchesRoute(pathname: string, routes: string[]): boolean {
+  return routes.some(
+    (route) => pathname === route || pathname.startsWith(route + "/")
+  );
+}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // Supabase SSR requires creating a client in proxy to keep
-  // the session cookie refreshed on every request.
+  // Supabase SSR: create client here to keep the session cookie refreshed.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -42,36 +49,69 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: Do not run any logic between createServerClient and
-  // getUser(). A stale session causes auth/session_not_found errors.
+  // IMPORTANT: Do not run any logic between createServerClient and getUser().
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
 
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isPublicRoute = matchesRoute(pathname, PUBLIC_ROUTES);
+  const isAuthRoute = matchesRoute(pathname, AUTH_ROUTES);
 
-  // Unauthenticated users — redirect to /login except for public and auth pages
-  if (!user && !isPublicRoute && !isAuthRoute) {
+  // ── Unauthenticated ────────────────────────────────────────────────────────
+  if (user === null) {
+    if (isPublicRoute || isAuthRoute) {
+      return supabaseResponse;
+    }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Authenticated users hitting auth pages — send them home
-  if (user && isAuthRoute) {
+  // ── Authenticated: fetch member status (lightweight single-column query) ───
+  const { data: member } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  const status = member?.status as string | undefined;
+
+  // Authenticated users on auth pages → redirect away from login/signup
+  if (isAuthRoute && pathname !== "/pending-approval" && pathname !== "/complete-profile") {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // Phase 3: Add member status checks here.
-  // Query: const { data: member } = await supabase.from("members").select("status").eq("id", user.id).single();
-  // Then enforce: pending → /pending-approval, admin routes → require status === "admin"
+  // ── Pending ────────────────────────────────────────────────────────────────
+  if (status === "pending") {
+    const pendingOk =
+      isPublicRoute ||
+      isAuthRoute ||
+      matchesRoute(pathname, PENDING_ALLOWED);
 
-  return supabaseResponse;
+    if (!pendingOk) {
+      return NextResponse.redirect(new URL("/pending-approval", request.url));
+    }
+    return supabaseResponse;
+  }
+
+  // ── Member ─────────────────────────────────────────────────────────────────
+  if (status === "member") {
+    if (matchesRoute(pathname, ADMIN_ROUTES)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return supabaseResponse;
+  }
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+  // Admin has full access — including all member routes and admin routes.
+  if (status === "admin") {
+    return supabaseResponse;
+  }
+
+  // Unknown status: fail safe — redirect to home
+  return NextResponse.redirect(new URL("/", request.url));
 }
 
 export const config = {

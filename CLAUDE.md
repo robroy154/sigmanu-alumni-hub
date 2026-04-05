@@ -80,9 +80,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 1 — Project scaffolding complete
-Last completed: Next.js 16 (App Router) initialized, TypeScript strict mode, Tailwind v4 with sn-navy/sn-gold tokens, shadcn/ui v4 (base-nova), route groups (public/auth/member/admin), placeholder pages, middleware.ts stub, lib/supabase client stubs, lib/utils/pledge-classes.ts (600-class generator), full data model types, .env.example, GitHub push, Vercel deployment
-Next task: Phase 2 — Supabase setup (schema migration, RLS policies, typed client generation, storage bucket)
+Phase: 2 — Supabase setup complete
+Last completed: Schema migration (5 tables + indexes + triggers + RLS policies), auth trigger (handle_new_user), storage bucket (profile-photos, private), service-role admin client, typed Supabase clients (Database generic), real types generated via `npm run db:types`
+Next task: Phase 3 — Auth (signup, login, Google/Facebook/Apple OAuth, pending status enforcement, signout, auth callback, complete-profile for OAuth users)
 
 ---
 
