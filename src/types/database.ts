@@ -1,69 +1,41 @@
-// Canonical TypeScript types mirroring the Supabase schema.
-// Manually maintained in Phase 1.
-// Phase 2: replace with auto-generated types via `supabase gen types typescript`.
+// Canonical application-level types for the Sigma Nu Alumni Hub.
+//
+// The raw generated types live in src/types/supabase.ts (gitignored).
+// Regenerate with: npm run db:types
+//
+// Do NOT import from supabase.ts directly in app code — always import from
+// @/types or @/types/database.
 
-export type MemberStatus = "pending" | "member" | "admin";
+import type { Database } from "./supabase";
+
+// Row types — what you get back from a SELECT with no joins.
+export type MemberRow            = Database["public"]["Tables"]["members"]["Row"];
+export type BadgeRow             = Database["public"]["Tables"]["badges"]["Row"];
+export type EventRow             = Database["public"]["Tables"]["events"]["Row"];
+export type RegistrationRow      = Database["public"]["Tables"]["registrations"]["Row"];
+export type RegistrationGuestRow = Database["public"]["Tables"]["registration_guests"]["Row"];
+
+// Insert types — what you pass to an INSERT. Columns with defaults are optional.
+export type MemberInsert            = Database["public"]["Tables"]["members"]["Insert"];
+export type BadgeInsert             = Database["public"]["Tables"]["badges"]["Insert"];
+export type EventInsert             = Database["public"]["Tables"]["events"]["Insert"];
+export type RegistrationInsert      = Database["public"]["Tables"]["registrations"]["Insert"];
+export type RegistrationGuestInsert = Database["public"]["Tables"]["registration_guests"]["Insert"];
+
+// Update types — all columns optional, for PATCH-style updates.
+export type MemberUpdate            = Database["public"]["Tables"]["members"]["Update"];
+export type BadgeUpdate             = Database["public"]["Tables"]["badges"]["Update"];
+export type EventUpdate             = Database["public"]["Tables"]["events"]["Update"];
+export type RegistrationUpdate      = Database["public"]["Tables"]["registrations"]["Update"];
+export type RegistrationGuestUpdate = Database["public"]["Tables"]["registration_guests"]["Update"];
+
+// Enum unions — maintained manually because Postgres check constraints do not
+// produce Supabase pg_enum types (which would appear in Database["public"]["Enums"]).
+export type MemberStatus  = "pending" | "member" | "admin";
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
-export type TShirtSize = "S" | "M" | "L" | "XL" | "XXL";
+export type TShirtSize    = "S" | "M" | "L" | "XL" | "XXL";
 
-export interface Member {
-  id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  nickname: string | null;
-  pledge_class: string | null;
-  pin_number: string | null;
-  phone: string | null;
-  city: string | null;
-  state: string | null;
-  home_address: string | null;
-  linkedin_url: string | null;
-  profile_photo_url: string | null;
-  big_id: string | null;
-  status: MemberStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Badge {
-  id: string;
-  member_id: string;
-  badge_type: string;
-  assigned_by: string;
-  assigned_at: string;
-}
-
-export interface Event {
-  id: string;
-  title: string;
-  description: string | null;
-  event_date: string;
-  location: string | null;
-  ticket_price: number;
-  registration_open: boolean;
-  capacity: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Registration {
-  id: string;
-  event_id: string;
-  member_id: string | null;
-  registrant_name: string;
-  email: string;
-  phone: string | null;
-  dietary_restrictions: string | null;
-  tshirt_size: TShirtSize | null;
-  guest_count: number;
-  payment_status: PaymentStatus;
-  stripe_payment_id: string | null;
-  submitted_at: string;
-}
-
-export interface RegistrationGuest {
-  id: string;
-  registration_id: string;
-  guest_name: string;
-}
+// Composite types for common join shapes — extend as query patterns emerge.
+export type MemberWithBadges         = MemberRow & { badges: BadgeRow[] };
+export type RegistrationWithGuests   = RegistrationRow & { registration_guests: RegistrationGuestRow[] };
+export type EventWithRegistrationCount = EventRow & { registration_count: number };

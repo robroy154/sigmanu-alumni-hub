@@ -38,6 +38,13 @@ logs/*.log
 # vercel
 .vercel
 
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# Auto-generated Supabase types — regenerate with: npm run db:types
+src/types/supabase.ts
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
