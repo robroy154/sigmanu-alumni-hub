@@ -28,7 +28,7 @@ export function SignupForm() {
     setServerError(null);
     const supabase = createClient();
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
@@ -46,6 +46,21 @@ export function SignupForm() {
           : error.message
       );
       return;
+    }
+
+    // The handle_new_user trigger only copies first_name and last_name.
+    // Write pledge_class and phone directly now that we have a session.
+    if (signUpData.user !== null) {
+      const update: { pledge_class?: string; phone?: string } = {};
+      if (data.pledge_class !== undefined && data.pledge_class !== "") {
+        update.pledge_class = data.pledge_class;
+      }
+      if (data.phone !== undefined && data.phone !== "") {
+        update.phone = data.phone;
+      }
+      if (Object.keys(update).length > 0) {
+        await supabase.from("members").update(update).eq("id", signUpData.user.id);
+      }
     }
 
     router.push("/pending-approval");
@@ -109,25 +124,42 @@ export function SignupForm() {
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="pledge_class" className="text-white/80 text-sm">
-          Pledge class{" "}
-          <span className="text-white/40 font-normal">(optional)</span>
-        </Label>
-        <select
-          id="pledge_class"
-          className="h-8 w-full rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-sm text-white focus:outline-none focus:border-sn-gold"
-          {...register("pledge_class")}
-        >
-          <option value="" className="bg-sn-navy">
-            Select your pledge class
-          </option>
-          {PLEDGE_CLASSES.map((pc) => (
-            <option key={pc} value={pc} className="bg-sn-navy">
-              {pc}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="pledge_class" className="text-white/80 text-sm">
+            Pledge class{" "}
+            <span className="text-white/40 font-normal">(optional)</span>
+          </Label>
+          <select
+            id="pledge_class"
+            className="h-8 w-full rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-sm text-white focus:outline-none focus:border-sn-gold"
+            {...register("pledge_class")}
+          >
+            <option value="" className="bg-sn-navy">
+              Select class
             </option>
-          ))}
-        </select>
+            {PLEDGE_CLASSES.map((pc) => (
+              <option key={pc} value={pc} className="bg-sn-navy">
+                {pc}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="phone" className="text-white/80 text-sm">
+            Phone{" "}
+            <span className="text-white/40 font-normal">(optional)</span>
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            autoComplete="tel"
+            placeholder="(555) 000-0000"
+            className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+            {...register("phone")}
+          />
+        </div>
       </div>
 
       <div className="space-y-1.5">
