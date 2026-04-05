@@ -38,6 +38,7 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 - `registrations.payment_status` enum: `unpaid` | `paid` | `refunded`
 - `registration_guests` is a separate table — not a comma-separated text field on registrations
 - `badges` table is admin-assigned only — members cannot assign their own badges
+- `members.pin_number` is unique (DB constraint), set once by the member, editable by admins only afterward. Visible to all authenticated users.
 - See `docs/ARCHITECTURE.md` Section 3 for full column definitions and query patterns
 
 ---
@@ -80,9 +81,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 2 — Supabase setup complete
-Last completed: Schema migration (5 tables + indexes + triggers + RLS policies), auth trigger (handle_new_user), storage bucket (profile-photos, private), service-role admin client, typed Supabase clients (Database generic), real types generated via `npm run db:types`
-Next task: Phase 3 — Auth (signup, login, Google/Facebook/Apple OAuth, pending status enforcement, signout, auth callback, complete-profile for OAuth users)
+Phase: 4 — Member profiles complete
+Last completed: Profile view (`/profile`), profile edit (`/profile/edit`) with photo upload to Supabase Storage, one-time pin number setter (admin-client backed, DB unique constraint), view-other-member page (`/profile/[id]`), member layout with sign-out + admin link. DB migration 20260405000001 applied (UNIQUE on pin_number, SELECT re-granted to authenticated). OAuth providers (Google/Facebook/Apple) deferred to end of project.
+Next task: Phase 5 — Event registration (public event landing, registration form for pending+member users, Stripe payment, confirmation page)
 
 ---
 

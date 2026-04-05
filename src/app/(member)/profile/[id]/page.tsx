@@ -1,29 +1,50 @@
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "My Profile" };
+interface Props {
+  params: Promise<{ id: string }>;
+}
 
-export default async function ProfilePage() {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
   const supabase = await createClient();
+  const { data } = await supabase
+    .from("members")
+    .select("first_name, last_name")
+    .eq("id", id)
+    .single();
+
+  if (data === null) return { title: "Member Not Found" };
+  return { title: `${data.first_name} ${data.last_name}` };
+}
+
+export default async function MemberProfilePage({ params }: Props) {
+  const { id } = await params;
+  const supabase = await createClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (user === null) redirect("/login");
 
+  // Redirect to own profile rather than viewing as a stranger.
+  if (id === user.id) redirect("/profile");
+
   const { data: member } = await supabase
     .from("members")
     .select(
       "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status"
     )
-    .eq("id", user.id)
+    .eq("id", id)
+    .in("status", ["member", "admin"])
     .single();
 
-  if (member === null) redirect("/login");
+  if (member === null) notFound();
 
-  // Resolve signed URL for photo if one is stored.
+  // Resolve signed photo URL.
   let photoUrl: string | null = null;
   if (member.profile_photo_url !== null && member.profile_photo_url !== "") {
     const { data: signed } = await supabase.storage
@@ -35,7 +56,7 @@ export default async function ProfilePage() {
   const { data: badges } = await supabase
     .from("badges")
     .select("id, badge_type")
-    .eq("member_id", user.id);
+    .eq("member_id", id);
 
   const fullName = [member.first_name, member.last_name].join(" ");
   const location =
@@ -45,6 +66,13 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <Link
+        href="/directory"
+        className="inline-block text-white/50 hover:text-white text-sm transition-colors"
+      >
+        ← Back to directory
+      </Link>
+
       {/* Header card */}
       <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 flex items-start gap-6">
         {/* Avatar */}
@@ -63,32 +91,22 @@ export default async function ProfilePage() {
 
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-white text-xl font-semibold leading-tight">
-                {fullName}
-                {member.nickname !== null && member.nickname !== "" && (
-                  <span className="text-sn-gold text-base font-normal ml-2">
-                    &ldquo;{member.nickname}&rdquo;
-                  </span>
-                )}
-              </h1>
-              {member.pledge_class !== null && (
-                <p className="text-white/60 text-sm mt-0.5">
-                  {member.pledge_class} Class
-                </p>
-              )}
-              {location !== null && (
-                <p className="text-white/50 text-sm">{location}</p>
-              )}
-            </div>
-            <Link
-              href="/profile/edit"
-              className="shrink-0 inline-flex h-8 items-center justify-center rounded-lg border border-sn-gold/40 px-3 text-sm text-sn-gold hover:bg-sn-gold/10 transition-colors"
-            >
-              Edit profile
-            </Link>
-          </div>
+          <h1 className="text-white text-xl font-semibold leading-tight">
+            {fullName}
+            {member.nickname !== null && member.nickname !== "" && (
+              <span className="text-sn-gold text-base font-normal ml-2">
+                &ldquo;{member.nickname}&rdquo;
+              </span>
+            )}
+          </h1>
+          {member.pledge_class !== null && (
+            <p className="text-white/60 text-sm mt-0.5">
+              {member.pledge_class} Class
+            </p>
+          )}
+          {location !== null && (
+            <p className="text-white/50 text-sm">{location}</p>
+          )}
 
           {/* Badges */}
           {badges !== null && badges.length > 0 && (
@@ -113,7 +131,6 @@ export default async function ProfilePage() {
         </h2>
 
         <dl className="space-y-3">
-          <Row label="Email" value={user.email ?? null} />
           <Row label="Phone" value={member.phone} />
           <Row label="Pin number" value={member.pin_number} />
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
