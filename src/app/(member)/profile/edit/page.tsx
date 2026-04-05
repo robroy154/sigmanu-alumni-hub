@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { SetPinForm } from "@/components/profile/SetPinForm";
+import { BigBrotherSelector } from "@/components/profile/BigBrotherSelector";
 import type { ProfileUpdateInput } from "@/lib/profile/schemas";
 
 export const metadata: Metadata = { title: "Edit Profile" };
@@ -17,13 +18,22 @@ export default async function ProfileEditPage() {
 
   if (user === null) redirect("/login");
 
-  const { data: member } = await supabase
-    .from("members")
-    .select(
-      "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url"
-    )
-    .eq("id", user.id)
-    .single();
+  const [{ data: member }, { data: allMembers }] = await Promise.all([
+    supabase
+      .from("members")
+      .select(
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, big_id"
+      )
+      .eq("id", user.id)
+      .single(),
+    // All approved members except self — for the Big Brother selector.
+    supabase
+      .from("members")
+      .select("id, first_name, last_name, pledge_class")
+      .in("status", ["member", "admin"])
+      .neq("id", user.id)
+      .order("last_name"),
+  ]);
 
   if (member === null) redirect("/login");
 
@@ -34,6 +44,15 @@ export default async function ProfileEditPage() {
       .from("profile-photos")
       .createSignedUrl(member.profile_photo_url, 3600);
     photoUrl = signed?.signedUrl ?? null;
+  }
+
+  // Resolve current Big's name for display in the selector.
+  let currentBigName: string | null = null;
+  if (member.big_id !== null) {
+    const bigMember = (allMembers ?? []).find((m) => m.id === member.big_id);
+    if (bigMember !== undefined) {
+      currentBigName = `${bigMember.first_name} ${bigMember.last_name}`;
+    }
   }
 
   const defaultValues: ProfileUpdateInput = {
@@ -77,6 +96,23 @@ export default async function ProfileEditPage() {
           <SetPinForm />
         </div>
       )}
+
+      {/* Big Brother */}
+      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-3">
+        <div className="space-y-0.5">
+          <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+            Big Brother
+          </p>
+          <p className="text-white/40 text-xs">
+            Select the member who is your Big. Your Littles are set automatically when they choose you.
+          </p>
+        </div>
+        <BigBrotherSelector
+          currentBigId={member.big_id}
+          currentBigName={currentBigName}
+          allMembers={allMembers ?? []}
+        />
+      </div>
 
       {/* Profile fields */}
       <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">

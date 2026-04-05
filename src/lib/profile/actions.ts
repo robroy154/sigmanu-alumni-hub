@@ -91,6 +91,54 @@ export async function setPinNumber(
   return { success: true };
 }
 
+// ── Update big brother ────────────────────────────────────────────────────────
+// Members can freely change their own big_id (no lock, just confirmation in UI).
+// Passing null clears the relationship.
+export async function updateBigBrother(
+  bigId: string | null
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user === null) {
+    return { error: "Not authenticated." };
+  }
+
+  // Prevent self-reference.
+  if (bigId === user.id) {
+    return { error: "You cannot set yourself as your own Big." };
+  }
+
+  // Prevent simple circular reference: check that the chosen big doesn't
+  // already have the current user as their big.
+  if (bigId !== null) {
+    const { data: proposed } = await supabase
+      .from("members")
+      .select("big_id")
+      .eq("id", bigId)
+      .single();
+
+    if (proposed?.big_id === user.id) {
+      return { error: "That member already has you as their Big — circular lineage not allowed." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("members")
+    .update({ big_id: bigId })
+    .eq("id", user.id);
+
+  if (error !== null) {
+    return { error: "Failed to update Big Brother. Please try again." };
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/profile/edit");
+  return { success: true };
+}
+
 // ── Update profile photo path ──────────────────────────────────────────────────
 // Called after client-side upload to Supabase Storage succeeds.
 // Receives the storage object path (not a full URL).
