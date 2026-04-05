@@ -9,6 +9,7 @@ export interface DirectoryMember {
   last_name:        string;
   nickname:         string | null;
   pledge_class:     string | null;
+  pin_number:       string | null;
   city:             string | null;
   state:            string | null;
   photo_url:        string | null; // pre-resolved signed URL or null
@@ -36,7 +37,8 @@ export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps
       return (
         m.first_name.toLowerCase().includes(q) ||
         m.last_name.toLowerCase().includes(q) ||
-        (m.nickname ?? "").toLowerCase().includes(q)
+        (m.nickname ?? "").toLowerCase().includes(q) ||
+        (m.pin_number ?? "").toLowerCase().includes(q)
       );
     });
   }, [members, query, classFilter]);

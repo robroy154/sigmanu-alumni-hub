@@ -20,7 +20,7 @@ export default async function DirectoryPage() {
   const { data: rows } = await supabase
     .from("members")
     .select(
-      "id, first_name, last_name, nickname, pledge_class, city, state, profile_photo_url"
+      "id, first_name, last_name, nickname, pledge_class, pin_number, city, state, profile_photo_url"
     )
     .in("status", ["member", "admin"])
     .order("last_name");
@@ -53,6 +53,7 @@ export default async function DirectoryPage() {
     last_name:    m.last_name,
     nickname:     m.nickname,
     pledge_class: m.pledge_class,
+    pin_number:   m.pin_number,
     city:         m.city,
     state:        m.state,
     photo_url:    m.profile_photo_url !== null
