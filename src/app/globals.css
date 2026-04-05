@@ -5,6 +5,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Sigma Nu brand color tokens — use these throughout the app */
+  --color-sn-navy: #1b2a47;
+  --color-sn-navy-dark: #111c30;
+  --color-sn-gold: #c9a84c;
+  --color-sn-gold-light: #f0d080;
+
+  /* shadcn semantic tokens mapped to CSS variables */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -49,72 +56,98 @@
 }
 
 :root {
+  /* Sigma Nu Navy (#1B2A47) as primary — shadcn components inherit the branding */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.27 0.065 255);        /* sn-navy-ish */
+
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.27 0.065 255);
+
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.27 0.065 255);
+
+  /* Primary = Sigma Nu Navy */
+  --primary: oklch(0.27 0.065 255);           /* #1B2A47 */
+  --primary-foreground: oklch(0.72 0.11 85);  /* #C9A84C gold */
+
+  /* Secondary = Sigma Nu Gold */
+  --secondary: oklch(0.72 0.11 85);           /* #C9A84C */
+  --secondary-foreground: oklch(0.27 0.065 255);
+
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+
+  /* Accent = Gold light */
+  --accent: oklch(0.86 0.10 85);              /* #F0D080 */
+  --accent-foreground: oklch(0.27 0.065 255);
+
   --destructive: oklch(0.577 0.245 27.325);
+
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
+  --ring: oklch(0.27 0.065 255);              /* navy ring */
+
+  --radius: 0.5rem;
+
+  --chart-1: oklch(0.72 0.11 85);
+  --chart-2: oklch(0.27 0.065 255);
+  --chart-3: oklch(0.86 0.10 85);
+  --chart-4: oklch(0.439 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.27 0.065 255);
+  --sidebar-primary: oklch(0.27 0.065 255);
+  --sidebar-primary-foreground: oklch(0.72 0.11 85);
+  --sidebar-accent: oklch(0.72 0.11 85);
+  --sidebar-accent-foreground: oklch(0.27 0.065 255);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.27 0.065 255);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Dark mode: navy-dark background, gold becomes primary */
+  --background: oklch(0.18 0.055 255);        /* sn-navy-dark */
+  --foreground: oklch(0.86 0.10 85);          /* gold-light for text */
+
+  --card: oklch(0.27 0.065 255);              /* sn-navy */
+  --card-foreground: oklch(0.86 0.10 85);
+
+  --popover: oklch(0.27 0.065 255);
+  --popover-foreground: oklch(0.86 0.10 85);
+
+  --primary: oklch(0.72 0.11 85);             /* gold as primary in dark */
+  --primary-foreground: oklch(0.18 0.055 255);
+
+  --secondary: oklch(0.27 0.065 255);
+  --secondary-foreground: oklch(0.86 0.10 85);
+
+  --muted: oklch(0.27 0.065 255);
+  --muted-foreground: oklch(0.72 0.11 85);
+
+  --accent: oklch(0.86 0.10 85);
+  --accent-foreground: oklch(0.18 0.055 255);
+
   --destructive: oklch(0.704 0.191 22.216);
+
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
+  --ring: oklch(0.72 0.11 85);
+
+  --chart-1: oklch(0.72 0.11 85);
+  --chart-2: oklch(0.86 0.10 85);
+  --chart-3: oklch(0.27 0.065 255);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+
+  --sidebar: oklch(0.27 0.065 255);
+  --sidebar-foreground: oklch(0.86 0.10 85);
+  --sidebar-primary: oklch(0.72 0.11 85);
+  --sidebar-primary-foreground: oklch(0.18 0.055 255);
+  --sidebar-accent: oklch(0.86 0.10 85);
+  --sidebar-accent-foreground: oklch(0.18 0.055 255);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.72 0.11 85);
 }
 
 @layer base {
