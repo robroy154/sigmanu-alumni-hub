@@ -16,7 +16,7 @@ const AUTH_ROUTES = [
   "/complete-profile",
 ];
 const PENDING_ALLOWED = ["/register"];
-const ADMIN_ROUTES = ["/admin"];
+const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
   return routes.some(

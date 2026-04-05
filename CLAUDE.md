@@ -81,9 +81,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 5 — Event registration complete
-Last completed: Stripe integration (checkout session, webhook at `/api/stripe/webhook`), `/register` page (pre-filled, dynamic guest fields, order summary), `/register/confirmation` page, home page pulls active event from DB, seed migration for 30th Anniversary Reunion (June 27 2026, Columbus Trade Center, $100/person). DB migration 20260405000002 applied (event seed). `/api/stripe` added to PUBLIC_ROUTES in proxy.ts. OAuth providers (Google/Facebook/Apple) deferred to end of project.
-Next task: Phase 6 — Admin panel (registration management, member approval, badge assignment, CSV export)
+Phase: 6 — Admin panel complete
+Last completed: Admin layout (auth-guarded, nav), dashboard with live counts + revenue, member management table (search, status filter, inline approve), member detail/edit page (all fields including pin_number + home_address, status, big_id, badge assign/remove), registrations table (filter by payment status, revenue summary), CSV export at `/api/admin/registrations/export`. `/api/admin` added to ADMIN_ROUTES in proxy.ts. Also fixed signup: pledge_class + phone now saved via post-signup UPDATE (trigger only copies name fields).
+Next task: Phase 7 — Directory (member directory page, search + filter by name/pledge class)
 
 ---
 

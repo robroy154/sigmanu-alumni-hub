@@ -1,42 +1,79 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/lib/auth/actions";
 
-// Admin layout — visually distinct from member layout (darker header).
-// Phase 6: enforce status === "admin" before rendering.
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user === null) redirect("/login");
+
+  const { data: member } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  if (member?.status !== "admin") redirect("/");
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-sn-navy-dark border-b border-sn-gold/30 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-sn-gold flex items-center justify-center text-sn-navy font-bold text-xs select-none">
+    <div className="min-h-screen bg-sn-navy-dark flex flex-col">
+      <header className="bg-black/40 border-b border-sn-gold/30 px-6 py-3">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-7 h-7 rounded-full bg-sn-gold flex items-center justify-center text-sn-navy font-bold text-xs select-none">
               ΣΝ
             </div>
-            <div>
-              <p className="text-sn-gold font-semibold text-sm leading-none">
-                Admin Panel
-              </p>
-              <p className="text-white/50 text-xs leading-none mt-0.5">
-                Sigma Nu · Mu Xi Alumni Hub
-              </p>
-            </div>
+            <span className="text-sn-gold font-semibold text-sm">
+              Admin Panel
+            </span>
           </div>
-          <nav className="flex items-center gap-6">
-            <Link
-              href="/admin"
-              className="text-white/80 hover:text-white text-sm transition-colors"
-            >
-              Dashboard
-            </Link>
+
+          <nav className="flex items-center gap-1">
+            <AdminNavLink href="/admin">Dashboard</AdminNavLink>
+            <AdminNavLink href="/admin/members">Members</AdminNavLink>
+            <AdminNavLink href="/admin/registrations">Registrations</AdminNavLink>
+            <AdminNavLink href="/directory">← Site</AdminNavLink>
           </nav>
+
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="text-white/50 hover:text-white text-sm transition-colors"
+            >
+              Sign out
+            </button>
+          </form>
         </div>
       </header>
-      <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         {children}
       </main>
     </div>
+  );
+}
+
+function AdminNavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="text-white/70 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors"
+    >
+      {children}
+    </Link>
   );
 }

@@ -1,0 +1,175 @@
+import Link from "next/link";
+import type { Metadata } from "next";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export const metadata: Metadata = { title: "Registrations — Admin" };
+
+interface Props {
+  searchParams: Promise<{ status?: string }>;
+}
+
+export default async function AdminRegistrationsPage({ searchParams }: Props) {
+  const { status: filterStatus } = await searchParams;
+  const admin = createAdminClient();
+
+  let dbQuery = admin
+    .from("registrations")
+    .select(
+      "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, events(title, ticket_price), registration_guests(guest_name)"
+    )
+    .order("submitted_at", { ascending: false });
+
+  if (filterStatus === "paid" || filterStatus === "unpaid" || filterStatus === "refunded") {
+    dbQuery = dbQuery.eq("payment_status", filterStatus);
+  }
+
+  const { data: registrations } = await dbQuery;
+
+  const rows = registrations ?? [];
+
+  // Totals
+  const paidRows = rows.filter((r) => r.payment_status === "paid");
+  const totalRevenue = paidRows.reduce((sum, r) => {
+    const price = Array.isArray(r.events)
+      ? (r.events[0]?.ticket_price ?? 0)
+      : ((r.events as { ticket_price: number } | null)?.ticket_price ?? 0);
+    return sum + (1 + (r.guest_count ?? 0)) * price;
+  }, 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-white text-2xl font-bold">Registrations</h1>
+        <a
+          href="/api/admin/registrations/export"
+          className="inline-flex h-8 items-center rounded-lg border border-sn-gold/40 px-3 text-sm text-sn-gold hover:bg-sn-gold/10 transition-colors"
+        >
+          Export CSV
+        </a>
+      </div>
+
+      {/* Summary strip */}
+      <div className="flex flex-wrap gap-4 text-sm">
+        <span className="text-white/60">
+          <span className="text-white font-medium">{rows.length}</span> total
+        </span>
+        <span className="text-white/60">
+          <span className="text-green-400 font-medium">{paidRows.length}</span> paid
+        </span>
+        <span className="text-white/60">
+          Revenue:{" "}
+          <span className="text-sn-gold font-medium">
+            ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+          </span>
+        </span>
+      </div>
+
+      {/* Filter */}
+      <div className="flex gap-1">
+        {[
+          { label: "All", value: "" },
+          { label: "Paid", value: "paid" },
+          { label: "Unpaid", value: "unpaid" },
+          { label: "Refunded", value: "refunded" },
+        ].map(({ label, value }) => (
+          <Link
+            key={value}
+            href={value === "" ? "/admin/registrations" : `/admin/registrations?status=${value}`}
+            className={`h-8 px-3 rounded-lg text-sm transition-colors flex items-center ${
+              (filterStatus ?? "") === value
+                ? "bg-sn-gold text-sn-navy font-semibold"
+                : "border border-white/20 text-white/70 hover:bg-white/10"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border border-sn-gold/20 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-sn-navy border-b border-sn-gold/20">
+              <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Email</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium hidden lg:table-cell">Event</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium">Guests</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium">Amount</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium">Status</th>
+              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-8 text-center text-white/40">
+                  No registrations found.
+                </td>
+              </tr>
+            )}
+            {rows.map((r, i) => {
+              const price = Array.isArray(r.events)
+                ? (r.events[0]?.ticket_price ?? 0)
+                : ((r.events as { ticket_price: number } | null)?.ticket_price ?? 0);
+              const eventTitle = Array.isArray(r.events)
+                ? (r.events[0]?.title ?? "—")
+                : ((r.events as { title: string } | null)?.title ?? "—");
+              const amount = (1 + (r.guest_count ?? 0)) * price;
+              const guests = Array.isArray(r.registration_guests) ? r.registration_guests : [];
+
+              return (
+                <tr
+                  key={r.id}
+                  className={`border-b border-white/5 ${i % 2 === 0 ? "bg-sn-navy/60" : "bg-sn-navy/30"}`}
+                >
+                  <td className="px-4 py-3">
+                    <div className="text-white font-medium">{r.registrant_name}</div>
+                    {guests.length > 0 && (
+                      <div className="text-white/40 text-xs mt-0.5">
+                        + {guests.map((g: { guest_name: string }) => g.guest_name).join(", ")}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-white/60 hidden md:table-cell">{r.email}</td>
+                  <td className="px-4 py-3 text-white/60 hidden lg:table-cell">{eventTitle}</td>
+                  <td className="px-4 py-3 text-white/60">{r.guest_count ?? 0}</td>
+                  <td className="px-4 py-3 text-white">
+                    {price > 0 ? `$${amount.toFixed(2)}` : "Free"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <PaymentBadge status={r.payment_status} />
+                  </td>
+                  <td className="px-4 py-3 text-white/40 hidden md:table-cell">
+                    {new Date(r.submitted_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day:   "numeric",
+                      year:  "numeric",
+                    })}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PaymentBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    paid:     "bg-green-500/20 text-green-400 border-green-500/30",
+    unpaid:   "bg-amber-500/20 text-amber-400 border-amber-500/30",
+    refunded: "bg-white/10 text-white/50 border-white/20",
+  };
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize ${
+        styles[status] ?? "bg-white/10 text-white/50 border-white/20"
+      }`}
+    >
+      {status}
+    </span>
+  );
+}
