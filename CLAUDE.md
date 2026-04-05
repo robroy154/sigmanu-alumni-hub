@@ -81,9 +81,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 4 — Member profiles complete
-Last completed: Profile view (`/profile`), profile edit (`/profile/edit`) with photo upload to Supabase Storage, one-time pin number setter (admin-client backed, DB unique constraint), view-other-member page (`/profile/[id]`), member layout with sign-out + admin link. DB migration 20260405000001 applied (UNIQUE on pin_number, SELECT re-granted to authenticated). OAuth providers (Google/Facebook/Apple) deferred to end of project.
-Next task: Phase 5 — Event registration (public event landing, registration form for pending+member users, Stripe payment, confirmation page)
+Phase: 5 — Event registration complete
+Last completed: Stripe integration (checkout session, webhook at `/api/stripe/webhook`), `/register` page (pre-filled, dynamic guest fields, order summary), `/register/confirmation` page, home page pulls active event from DB, seed migration for 30th Anniversary Reunion (June 27 2026, Columbus Trade Center, $100/person). DB migration 20260405000002 applied (event seed). `/api/stripe` added to PUBLIC_ROUTES in proxy.ts. OAuth providers (Google/Facebook/Apple) deferred to end of project.
+Next task: Phase 6 — Admin panel (registration management, member approval, badge assignment, CSV export)
 
 ---
 
