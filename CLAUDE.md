@@ -81,9 +81,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 6 — Admin panel complete
-Last completed: Admin layout (auth-guarded, nav), dashboard with live counts + revenue, member management table (search, status filter, inline approve), member detail/edit page (all fields including pin_number + home_address, status, big_id, badge assign/remove), registrations table (filter by payment status, revenue summary), CSV export at `/api/admin/registrations/export`. `/api/admin` added to ADMIN_ROUTES in proxy.ts. Also fixed signup: pledge_class + phone now saved via post-signup UPDATE (trigger only copies name fields).
-Next task: Phase 7 — Directory (member directory page, search + filter by name/pledge class)
+Phase: 7 — Directory (starting)
+Last completed: Phase 6 admin panel + Big Brother selector added to /profile/edit (members set own big_id, inline confirmation dialog, circular reference guard). Members can freely change their Big at any time. Build clean at 19 routes.
+Next task: Phase 7 — Directory (/directory page: member cards/table, search by name, filter by pledge class)
 
 ---
 
