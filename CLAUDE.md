@@ -81,9 +81,34 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase: 7 — Directory (starting)
-Last completed: Phase 6 admin panel + Big Brother selector added to /profile/edit (members set own big_id, inline confirmation dialog, circular reference guard). Members can freely change their Big at any time. Build clean at 19 routes.
-Next task: Phase 7 — Directory (/directory page: member cards/table, search by name, filter by pledge class)
+All 10 phases complete. Build clean at 20 routes.
+
+Last completed: Phase 10 — Polish + OAuth. See memory file for full phase history.
+
+Completed phases summary:
+- Phase 1–2: Scaffold, Supabase schema/RLS/storage
+- Phase 3: Auth (email/password, OAuth callback, pending enforcement)
+- Phase 4: Member profiles (view/edit, photo upload, one-time pin)
+- Phase 5: Event registration + Stripe checkout/webhook
+- Phase 6: Admin panel (members, registrations, badges, CSV export)
+- Big Brother selector added: members set own big_id freely (circular ref guard)
+- Phase 7: Brother directory (search name/nickname/pin, pledge class filter)
+- Phase 8: Family tree (React Flow + dagre, node selection/lineage highlight, search-to-fly)
+- Demo seed: 50 members via `npm run seed:demo`
+- Phase 9: Email notifications via Resend (welcome, registration confirm, admin alert)
+- Phase 10: Google OAuth button, custom 404, profile completeness nudge, Big/Littles on profiles
+
+Key runtime decisions:
+- Next.js 16.2.2 (not 14) — uses proxy.ts not middleware.ts, export named `proxy`
+- Tailwind v4 CSS-based config — @theme inline {} in globals.css
+- shadcn base-nova uses @base-ui/react — no Radix asChild, no form.tsx wrapper
+- exactOptionalPropertyTypes: true — optional props need explicit `| undefined`
+- Stripe API version: "2026-03-25.dahlia" (stripe npm v22)
+- pin_number: set once by member (admin client action), unique DB constraint
+- Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side
+- proxy.ts PUBLIC_ROUTES: ["/", "/auth/callback", "/api/stripe"]
+- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to onboarding@resend.dev)
+- Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true
 
 ---
 
