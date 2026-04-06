@@ -8,14 +8,14 @@ import { createServerClient } from "@supabase/ssr";
 // member          → above + /directory + /family-tree + /profile
 // admin           → everything above + /admin
 
-const PUBLIC_ROUTES = ["/", "/auth/callback", "/api/stripe"];
+const PUBLIC_ROUTES = ["/", "/auth/callback", "/api/stripe", "/events"];
 const AUTH_ROUTES = [
   "/login",
   "/signup",
   "/pending-approval",
   "/complete-profile",
 ];
-const PENDING_ALLOWED = ["/register"];
+const PENDING_ALLOWED = ["/register", "/events"];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
 function matchesRoute(pathname: string, routes: string[]): boolean {

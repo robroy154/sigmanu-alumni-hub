@@ -15,8 +15,8 @@ export default async function HomePage() {
   const isLoggedIn = user !== null;
   const { data: event } = await admin
     .from("events")
-    .select("title, event_date, location, ticket_price, registration_open")
-    .eq("registration_open", true)
+    .select("id, title, event_date, location, ticket_price")
+    .eq("status", "published")
     .order("event_date", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -117,7 +117,7 @@ export default async function HomePage() {
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register">
+              <Link href={`/events/${event.id}/register`}>
                 <Button
                   size="lg"
                   className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8"

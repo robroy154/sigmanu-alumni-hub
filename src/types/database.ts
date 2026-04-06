@@ -34,6 +34,7 @@ export type RegistrationGuestUpdate = Database["public"]["Tables"]["registration
 export type MemberStatus  = "pending" | "member" | "admin";
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
 export type TShirtSize    = "S" | "M" | "L" | "XL" | "XXL";
+export type EventStatus   = "draft" | "published" | "archived";
 
 // Composite types for common join shapes — extend as query patterns emerge.
 export type MemberWithBadges         = MemberRow & { badges: BadgeRow[] };

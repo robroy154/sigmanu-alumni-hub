@@ -20,14 +20,14 @@ export async function createRegistration(
     return { error: "You must be signed in to register." };
   }
 
-  // Verify the event exists and registration is open.
+  // Verify the event exists and is published.
   const { data: event } = await supabase
     .from("events")
-    .select("id, title, ticket_price, registration_open, capacity")
+    .select("id, title, ticket_price, status, capacity")
     .eq("id", eventId)
     .single();
 
-  if (event === null || !event.registration_open) {
+  if (event === null || event.status !== "published") {
     return { error: "This event is not currently open for registration." };
   }
 
@@ -111,7 +111,7 @@ export async function createRegistration(
     ],
     metadata: { registration_id: registration.id },
     success_url: `${APP_URL}/register/confirmation?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url:  `${APP_URL}/register?cancelled=1`,
+    cancel_url:  `${APP_URL}/events/${eventId}/register?cancelled=1`,
   });
 
   if (session.url === null) {

@@ -46,18 +46,17 @@ export default async function PendingApprovalPage() {
           </p>
           <p className="text-white/50 text-sm">
             In the meantime, you can still{" "}
-            <span className="text-sn-gold">register for the reunion</span>{" "}
+            <span className="text-sn-gold">register for an event</span>{" "}
             using the button below.
           </p>
         </div>
 
         <div className="space-y-2">
-          {/* /register is built in Phase 5 */}
           <a
             href="/register"
             className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-sn-gold px-4 text-sm font-semibold text-sn-black hover:bg-sn-gold-light transition-colors"
           >
-            Register for Reunion
+            Register for an Event
           </a>
 
           <form action={signOut}>
