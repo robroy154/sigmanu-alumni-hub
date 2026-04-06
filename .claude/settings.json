@@ -10,7 +10,8 @@
       "Bash(node -e \"const l = require\\('/Users/robertroy/Projects/sigmanu-alumni-hub/node_modules/lucide-react'\\); console.log\\('ChevronDownIcon:', !!l.ChevronDownIcon, 'CheckIcon:', !!l.CheckIcon, 'ChevronUpIcon:', !!l.ChevronUpIcon\\)\")",
       "Bash(kill 58304)",
       "Bash(pkill -f \"next dev\")",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)"
     ],
     "additionalDirectories": [
       "/Users/robertroy/Projects/sigmanu-alumni-hub/src/app/(admin)/admin/members",
