@@ -22,10 +22,10 @@ export default async function MyEventsPage() {
 
   const rows = (registrations ?? []) as RegistrationRow[];
 
-  // Dates for calendar highlights
-  const eventDates = rows
+  // ISO strings for calendar highlights — Date objects lose type through RSC serialisation
+  const eventDateStrings = rows
     .filter((r) => r.events !== null)
-    .map((r) => new Date(r.events!.event_date));
+    .map((r) => r.events!.event_date);
 
   return (
     <div className="space-y-8">
@@ -38,7 +38,7 @@ export default async function MyEventsPage() {
         {/* Calendar sidebar */}
         <div className="lg:sticky lg:top-6">
           <h2 className="text-sn-off-white font-semibold mb-3">Calendar</h2>
-          <EventsCalendar eventDates={eventDates} />
+          <EventsCalendar eventDateStrings={eventDateStrings} />
           <p className="text-sn-gray-medium text-xs mt-2 text-center">
             Highlighted days are your registered events.
           </p>
