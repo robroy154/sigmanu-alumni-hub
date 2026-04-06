@@ -389,7 +389,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         panOnDrag={true}
         zoomOnPinch={true}
         preventScrolling={true}
-        panOnScroll={false}
+        panOnScroll={true}
         colorMode="dark"
         style={{ background: "#111827" }}
       >
