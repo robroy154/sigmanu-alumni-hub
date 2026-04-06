@@ -28,7 +28,7 @@ export default async function MemberLayout({
       <header className="bg-sn-black border-b border-sn-gold/20 px-6 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           {/* Brand */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href="/home" className="flex items-center gap-2.5 shrink-0">
             <div className="w-7 h-7 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
               ΣΝ
             </div>

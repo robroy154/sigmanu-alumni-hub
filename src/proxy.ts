@@ -83,6 +83,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/home", request.url));
   }
 
+  // Authenticated users on the public landing page → redirect to /home
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/home", request.url));
+  }
+
   // ── Pending ────────────────────────────────────────────────────────────────
   if (status === "pending") {
     const pendingOk =
