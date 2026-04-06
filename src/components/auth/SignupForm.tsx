@@ -13,9 +13,18 @@ import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { notifyAdminsNewMember } from "@/lib/email";
 
+type DuplicateState =
+  | { type: "none" }
+  | { type: "prompt"; email: string }
+  | { type: "reset_sent"; email: string };
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export function SignupForm() {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError]     = useState<string | null>(null);
+  const [duplicate, setDuplicate]         = useState<DuplicateState>({ type: "none" });
+  const [resetLoading, setResetLoading]   = useState(false);
 
   const {
     register,
@@ -41,11 +50,17 @@ export function SignupForm() {
     });
 
     if (error !== null) {
-      setServerError(
-        error.message.includes("already registered")
-          ? "An account with this email already exists. Try signing in."
-          : error.message
-      );
+      const isDuplicate =
+        error.message.toLowerCase().includes("already registered") ||
+        error.message.toLowerCase().includes("already exists") ||
+        ("code" in error && (error as { code?: string }).code === "user_already_exists");
+
+      if (isDuplicate) {
+        setDuplicate({ type: "prompt", email: data.email });
+        return;
+      }
+
+      setServerError(error.message);
       return;
     }
 
@@ -69,6 +84,68 @@ export function SignupForm() {
 
     router.push("/pending-approval");
   }
+
+  async function sendResetLink(email: string) {
+    setResetLoading(true);
+    const supabase = createClient();
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${APP_URL}/auth/reset-password`,
+    });
+    setResetLoading(false);
+    setDuplicate({ type: "reset_sent", email });
+  }
+
+  // ── Duplicate email states ──────────────────────────────────────────────────
+  if (duplicate.type === "prompt") {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-amber-400/10 border border-amber-400/20 px-4 py-3 space-y-1">
+          <p className="text-amber-300 text-sm font-medium">Email already in use</p>
+          <p className="text-white/60 text-sm">
+            An account with{" "}
+            <span className="text-white">{duplicate.email}</span> already
+            exists. Want us to send you a password reset link?
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            onClick={() => void sendResetLink(duplicate.email)}
+            disabled={resetLoading}
+            className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
+          >
+            {resetLoading ? "Sending…" : "Send reset link"}
+          </Button>
+          <Link
+            href="/login"
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-white/20 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            Back to login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (duplicate.type === "reset_sent") {
+    return (
+      <div className="space-y-4 text-center py-2">
+        <div className="text-green-400 text-3xl">✓</div>
+        <p className="text-white text-sm leading-relaxed">
+          A reset link has been sent to{" "}
+          <span className="text-sn-gold">{duplicate.email}</span>. Check your
+          inbox (and spam folder).
+        </p>
+        <Link
+          href="/login"
+          className="inline-block text-sn-gold hover:text-sn-gold-light text-sm underline"
+        >
+          Back to sign in
+        </Link>
+      </div>
+    );
+  }
+  // ───────────────────────────────────────────────────────────────────────────
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

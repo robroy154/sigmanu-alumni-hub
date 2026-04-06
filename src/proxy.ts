@@ -8,7 +8,7 @@ import { createServerClient } from "@supabase/ssr";
 // member          → above + /directory + /family-tree + /profile
 // admin           → everything above + /admin
 
-const PUBLIC_ROUTES = ["/", "/auth/callback", "/api/stripe", "/events"];
+const PUBLIC_ROUTES = ["/", "/auth/callback", "/auth/forgot-password", "/auth/reset-password", "/api/stripe", "/events"];
 const AUTH_ROUTES = [
   "/login",
   "/signup",

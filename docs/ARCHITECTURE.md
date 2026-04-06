@@ -129,7 +129,7 @@ Admin-assigned recognition only. Members cannot assign their own badges.
 
 ### 3.3 `events`
 
-One record per event. Admin creates and manages. Reusable for future events — no code changes required to spin up a new event.
+One record per event. Admin creates and manages. Reusable for future events — no code changes required to spin up a new event. Multiple events can be published simultaneously; the homepage hero shows the next upcoming published event by date.
 
 | Column | Type | Nullable | Notes |
 |---|---|---|---|
@@ -139,10 +139,23 @@ One record per event. Admin creates and manages. Reusable for future events — 
 | `event_date` | `timestamptz` | NO | |
 | `location` | `text` | YES | Venue name and address |
 | `ticket_price` | `numeric(10,2)` | NO | `0.00` for free events |
-| `registration_open` | `boolean` | NO | Admin toggles. Default: `false`. |
 | `capacity` | `integer` | YES | Null = unlimited |
+| `status` | `event_status` | NO | Enum: `draft` \| `published` \| `archived`. Default: `draft`. |
+| `registration_open` | `boolean` | NO | Legacy column — superseded by `status`. Do not use in new queries. |
 | `created_at` | `timestamptz` | NO | Auto-set |
 | `updated_at` | `timestamptz` | NO | Auto-updated via trigger |
+
+**Status semantics:**
+
+- `draft` — not visible to the public; work in progress
+- `published` — visible at `/events/[id]`, open for registration
+- `archived` — hidden from all public routes; registration history preserved, record never deleted
+
+**Canonical routes:**
+
+- `/events/[id]` — public event detail page (unauthenticated accessible)
+- `/events/[id]/register` — registration form (auth required: pending, member, admin)
+- `/admin/events` — admin list, create, edit, archive
 
 ### 3.4 `registrations`
 
@@ -440,6 +453,15 @@ A chronological record of every locked decision.
 | 13 | 2–3 admin users | Supabase dashboard + app admin panel covers this comfortably |
 | 14 | Profile fields mostly optional | Members control what they share; only name/email/pledge class required |
 | 15 | Registration is final once submitted (no self-cancel) | Admin handles cancellations. Per Rob's answer on Q11. |
+| 16 | Events managed dynamically — no hardcoded IDs or slugs anywhere in code | Any new event is a DB row; the 30th Anniversary Reunion is an ordinary record |
+| 17 | `status` enum (`draft`/`published`/`archived`) replaces `registration_open` boolean | Enum supports three states cleanly; boolean only covered open/closed with no archived state |
+| 18 | Canonical event routes: `/events/[id]` and `/events/[id]/register` | Per-event URLs enable multiple simultaneous events; `/register` is a legacy redirect |
+| 19 | Admin event management at `/admin/events` | List, create, edit, and archive from one page; no hard deletes to preserve registration history |
+| 20 | Homepage hero pulls next published event dynamically by `event_date ASC` | Multiple events can be published simultaneously; hero always shows the soonest upcoming one |
+| 21 | Events can be archived but never deleted | Preserves all registration history and financial records tied to the event |
+| 22 | Forgot password uses `supabase.auth.resetPasswordForEmail()` at `/auth/forgot-password` | No custom token handling — Supabase manages link generation and expiry |
+| 23 | Reset password page reads recovery token from URL hash client-side via `onAuthStateChange` | Hash fragments are never sent to the server; must be handled in a client component |
+| 24 | Duplicate email on signup intercepted and routed to password reset prompt | Avoids raw Supabase error strings leaking to users; guides them to the right action |
 
 ---
 

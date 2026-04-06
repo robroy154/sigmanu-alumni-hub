@@ -95,6 +95,12 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
           <Label htmlFor="password" className="text-white/80 text-sm">
             Password
           </Label>
+          <Link
+            href="/auth/forgot-password"
+            className="text-xs text-white/40 hover:text-sn-gold transition-colors"
+          >
+            Forgot password?
+          </Link>
         </div>
         <Input
           id="password"

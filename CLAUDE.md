@@ -87,11 +87,12 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 10 phases complete. Build clean at 20 routes.
+All 12 phases complete. Build clean at 26 routes.
 
-Last completed: Phase 10 — Polish + OAuth. See memory file for full phase history.
+Last completed: Phase 12 — Auth Hardening. See memory file for full phase history.
 
 Completed phases summary:
+
 - Phase 1–2: Scaffold, Supabase schema/RLS/storage
 - Phase 3: Auth (email/password, OAuth callback, pending enforcement)
 - Phase 4: Member profiles (view/edit, photo upload, one-time pin)
@@ -103,8 +104,11 @@ Completed phases summary:
 - Demo seed: 50 members via `npm run seed:demo`
 - Phase 9: Email notifications via Resend (welcome, registration confirm, admin alert)
 - Phase 10: Google OAuth button, custom 404, profile completeness nudge, Big/Littles on profiles
+- Phase 11: Event manager refactor — multi-event system, /events/[id] routes, admin event CRUD, status enum (draft/published/archived)
+- Phase 12: Auth hardening — forgot password flow, reset password page, duplicate email interception on signup
 
 Key runtime decisions:
+
 - Next.js 16.2.2 (not 14) — uses proxy.ts not middleware.ts, export named `proxy`
 - Tailwind v4 CSS-based config — @theme inline {} in globals.css
 - shadcn base-nova uses @base-ui/react — no Radix asChild, no form.tsx wrapper
@@ -112,9 +116,13 @@ Key runtime decisions:
 - Stripe API version: "2026-03-25.dahlia" (stripe npm v22)
 - pin_number: set once by member (admin client action), unique DB constraint
 - Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side
-- proxy.ts PUBLIC_ROUTES: ["/", "/auth/callback", "/api/stripe"]
-- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to onboarding@resend.dev)
+- proxy.ts PUBLIC_ROUTES: `["/", "/auth/callback", "/auth/forgot-password", "/auth/reset-password", "/api/stripe", "/events"]`
+- proxy.ts PENDING_ALLOWED: `["/register", "/events"]`
+- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
 - Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true
+- Events use status enum (draft/published/archived), not registration_open boolean, for visibility control
+- Canonical event routes: /events/[id] (public detail) and /events/[id]/register (auth required)
+- /register redirects to the next published event (legacy compat for pending-approval flow)
 
 ---
 
