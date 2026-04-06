@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,14 +34,17 @@ interface Member {
 interface AdminMemberEditFormProps {
   member: Member;
   badges: Badge[];
-  // id → name map for big_id selector
   allMembers: { id: string; first_name: string; last_name: string }[];
+  referrerName?: string | null;
+  referrerId?:   string | null;
 }
 
 export function AdminMemberEditForm({
   member,
   badges,
   allMembers,
+  referrerName,
+  referrerId,
 }: AdminMemberEditFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -209,6 +213,20 @@ export function AdminMemberEditForm({
             </select>
           </Field>
         </div>
+
+        {/* Referred by — read-only, admin-only field */}
+        <Field label="Referred by" labelClass={labelClass}>
+          {referrerName !== null && referrerName !== undefined && referrerId !== null && referrerId !== undefined ? (
+            <Link
+              href={`/admin/members/${referrerId}`}
+              className="text-sn-gold text-sm hover:text-sn-gold-light underline"
+            >
+              {referrerName}
+            </Link>
+          ) : (
+            <span className="text-white/40 text-sm">—</span>
+          )}
+        </Field>
       </section>
 
       {/* Save */}

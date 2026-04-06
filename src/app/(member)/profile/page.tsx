@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { ReferralForm } from "@/components/profile/ReferralForm";
 
 export const metadata: Metadata = { title: "My Profile" };
 
@@ -13,7 +14,7 @@ export default async function ProfilePage() {
 
   if (user === null) redirect("/login");
 
-  const [{ data: member }, { data: littles }] = await Promise.all([
+  const [{ data: member }, { data: littles }, { data: referrals }] = await Promise.all([
     supabase
       .from("members")
       .select(
@@ -27,6 +28,12 @@ export default async function ProfilePage() {
       .eq("big_id", user.id)
       .in("status", ["member", "admin"])
       .order("last_name"),
+    supabase
+      .from("referrals")
+      .select("id, first_name, last_name, email, status, created_at")
+      .eq("referred_by", user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   if (member === null) redirect("/login");
@@ -236,6 +243,19 @@ export default async function ProfilePage() {
           )}
         </div>
       )}
+
+      {/* Invite a Brother */}
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
+        <div className="space-y-0.5">
+          <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+            Invite a Brother
+          </h2>
+          <p className="text-white/40 text-xs">
+            Send a personalized invite link to a brother not yet on the hub. Links expire after 7 days.
+          </p>
+        </div>
+        <ReferralForm initialReferrals={referrals ?? []} />
+      </div>
     </div>
   );
 }

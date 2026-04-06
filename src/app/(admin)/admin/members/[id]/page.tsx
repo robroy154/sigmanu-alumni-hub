@@ -29,7 +29,7 @@ export default async function AdminMemberDetailPage({ params }: Props) {
       admin
         .from("members")
         .select(
-          "id, first_name, last_name, email, nickname, pledge_class, pin_number, phone, city, state, home_address, linkedin_url, status, big_id, created_at"
+          "id, first_name, last_name, email, nickname, pledge_class, pin_number, phone, city, state, home_address, linkedin_url, status, big_id, created_at, referred_by"
         )
         .eq("id", id)
         .single(),
@@ -45,6 +45,25 @@ export default async function AdminMemberDetailPage({ params }: Props) {
     ]);
 
   if (member === null) notFound();
+
+  // Resolve referrer name for display (admin-only field).
+  let referrerName: string | null = null;
+  let referrerId:   string | null = null;
+  if (member.referred_by !== null && member.referred_by !== undefined) {
+    referrerId = member.referred_by;
+    const referrerMember = (allMembers ?? []).find((m) => m.id === member.referred_by);
+    if (referrerMember !== undefined) {
+      referrerName = `${referrerMember.first_name} ${referrerMember.last_name}`;
+    } else {
+      // May be a pending/deleted member not in allMembers — fetch directly.
+      const { data: ref } = await admin
+        .from("members")
+        .select("first_name, last_name")
+        .eq("id", member.referred_by)
+        .single();
+      if (ref !== null) referrerName = `${ref.first_name} ${ref.last_name}`;
+    }
+  }
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -65,6 +84,8 @@ export default async function AdminMemberDetailPage({ params }: Props) {
         member={member}
         badges={badges ?? []}
         allMembers={allMembers ?? []}
+        referrerName={referrerName}
+        referrerId={referrerId}
       />
     </div>
   );

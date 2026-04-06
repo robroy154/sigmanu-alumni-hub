@@ -317,3 +317,148 @@ export async function notifyAdminsNewMember(): Promise<void> {
     console.error("[email] notifyAdminsNewMember threw:", err);
   }
 }
+
+// ---------------------------------------------------------------------------
+// 4. Referral invite — sent to the person being invited
+// ---------------------------------------------------------------------------
+
+export async function sendReferralInvite({
+  to,
+  referrerFullName,
+  inviteeFirstName,
+  token,
+}: {
+  to:               string;
+  referrerFullName: string;
+  inviteeFirstName: string;
+  token:            string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const inviteUrl = `${appUrl}/join?token=${token}`;
+
+  const body = `
+    <h1 style="${h1}">You've been invited, ${inviteeFirstName}!</h1>
+    <p style="${p}">
+      <strong style="color:#ffffff;">${referrerFullName}</strong> has invited you to join
+      the <strong style="color:#C6A75E;">Sigma Nu Mu Xi Chapter Alumni Hub</strong> —
+      the private platform for Mu Xi Chapter brothers.
+    </p>
+    <p style="${p}">
+      Use the link below to create your account. This invitation expires in
+      <strong style="color:#ffffff;">7 days</strong>.
+    </p>
+    <p style="text-align:center;margin:32px 0;">
+      <a href="${inviteUrl}" style="${btn}">Create My Account →</a>
+    </p>
+    <hr style="${divider}">
+    <p style="color:rgba(255,255,255,0.4);font-size:12px;font-family:Arial,sans-serif;text-align:center;margin:0;">
+      If you weren&rsquo;t expecting this invite, you can safely ignore this email.
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: "You're invited to join the Sigma Nu Mu Xi Alumni Hub",
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendReferralInvite failed:", error);
+  } catch (err) {
+    console.error("[email] sendReferralInvite threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. Referral sent confirmation — sent to the referring member
+// ---------------------------------------------------------------------------
+
+export async function sendReferralSentConfirmation({
+  to,
+  referrerFirstName,
+  inviteeFirstName,
+  inviteeLastName,
+}: {
+  to:                string;
+  referrerFirstName: string;
+  inviteeFirstName:  string;
+  inviteeLastName:   string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const body = `
+    <h1 style="${h1}">Your invite has been sent!</h1>
+    <p style="${p}">
+      Hi ${referrerFirstName}, your invitation to
+      <strong style="color:#ffffff;">${inviteeFirstName} ${inviteeLastName}</strong>
+      has been sent. You&rsquo;ll receive a notification here as soon as they create
+      their account.
+    </p>
+    <hr style="${divider}">
+    <p style="${p}">
+      Invite links are valid for 7 days. If ${inviteeFirstName} doesn&rsquo;t sign up
+      in time, you can send a new invite from your profile page.
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: `Your invite to ${inviteeFirstName} has been sent`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendReferralSentConfirmation failed:", error);
+  } catch (err) {
+    console.error("[email] sendReferralSentConfirmation threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Referral completed — sent to the referring member when invitee joins
+// ---------------------------------------------------------------------------
+
+export async function sendReferralCompleted({
+  to,
+  referrerFirstName,
+  inviteeFirstName,
+  inviteeLastName,
+}: {
+  to:                string;
+  referrerFirstName: string;
+  inviteeFirstName:  string;
+  inviteeLastName:   string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">${inviteeFirstName} ${inviteeLastName} just joined!</h1>
+    <p style="${p}">
+      Hi ${referrerFirstName},
+      <strong style="color:#ffffff;">${inviteeFirstName} ${inviteeLastName}</strong>
+      just created their account using your invite link. Welcome them to the hub!
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/directory" style="${btn}">View the Directory →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: `${inviteeFirstName} ${inviteeLastName} just joined!`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendReferralCompleted failed:", error);
+  } catch (err) {
+    console.error("[email] sendReferralCompleted threw:", err);
+  }
+}
