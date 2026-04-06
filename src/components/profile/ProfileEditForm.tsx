@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -11,6 +10,7 @@ import { updateProfile } from "@/lib/profile/actions";
 import { ProfileUpdateSchema, type ProfileUpdateInput } from "@/lib/profile/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface ProfileEditFormProps {
   defaultValues: ProfileUpdateInput;
@@ -18,8 +18,6 @@ interface ProfileEditFormProps {
 
 export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [saved, setSaved]             = useState(false);
 
   const {
     register,
@@ -34,14 +32,12 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
   });
 
   async function onSubmit(data: ProfileUpdateInput) {
-    setServerError(null);
-    setSaved(false);
     const result = await updateProfile(data);
     if ("error" in result) {
-      setServerError(result.error);
+      toastError(result.error);
       return;
     }
-    setSaved(true);
+    toastSuccess("Profile saved.");
     router.refresh();
   }
 
@@ -214,17 +210,6 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
           onChange={(v) => setValue("show_birthday", v, { shouldDirty: true })}
         />
       </div>
-
-      {serverError !== null && (
-        <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
-          {serverError}
-        </p>
-      )}
-      {saved && (
-        <p className="text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
-          Profile saved.
-        </p>
-      )}
 
       <Button
         type="submit"

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 
 export interface DirectoryMember {
   id:               string;
@@ -71,7 +72,10 @@ export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps
 
       {/* Cards */}
       {filtered.length === 0 ? (
-        <p className="text-center text-white/40 py-16">No brothers match your search.</p>
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
+          <Users className="size-8 text-sn-gray-medium" />
+          <p className="text-sn-gray-text text-sm">No brothers match your search.</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((m) => (

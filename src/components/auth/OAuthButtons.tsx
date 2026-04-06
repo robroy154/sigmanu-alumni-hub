@@ -103,7 +103,7 @@ export function OAuthButtons() {
           type="button"
           onClick={() => handleOAuth(provider)}
           disabled={loading !== null}
-          className="w-full flex items-center justify-center gap-2.5 h-10 rounded-lg border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2.5 h-10 rounded-sm border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading === provider.id ? (
             <span className="text-white/60">Redirecting…</span>

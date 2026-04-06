@@ -36,24 +36,24 @@ export default async function AdminReferralsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-white text-2xl font-bold">Referrals</h1>
+      <h1 className="text-sn-off-white text-2xl font-bold">Referrals</h1>
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Pending"   value={counts.pending}   color="text-sn-gold" />
         <StatCard label="Joined"    value={counts.completed} color="text-green-400" />
-        <StatCard label="Expired"   value={counts.expired}   color="text-white/40" />
+        <StatCard label="Expired"   value={counts.expired}   color="text-sn-gray-medium" />
       </div>
 
       {/* Table */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 overflow-hidden">
+      <div className="bg-sn-surface rounded-xl overflow-hidden">
         {rows.length === 0 ? (
-          <p className="text-white/40 text-sm text-center py-12">No referrals yet.</p>
+          <p className="text-sn-gray-medium text-sm text-center py-12">No referrals yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/10 text-white/50 text-xs uppercase tracking-wider">
+                <tr className="border-b border-white/10 text-sn-gray-text text-xs uppercase tracking-wider">
                   <th className="px-4 py-3 text-left font-medium">Invitee</th>
                   <th className="px-4 py-3 text-left font-medium">Email</th>
                   <th className="px-4 py-3 text-left font-medium">Referred by</th>
@@ -69,22 +69,22 @@ export default async function AdminReferralsPage() {
                   const effectiveStatus = isExpiredByDate ? "expired" : r.status;
                   return (
                     <tr key={r.id} className="hover:bg-white/3 transition-colors">
-                      <td className="px-4 py-3 text-white font-medium">
+                      <td className="px-4 py-3 text-sn-off-white font-medium">
                         {r.first_name} {r.last_name}
                       </td>
-                      <td className="px-4 py-3 text-white/60">{r.email}</td>
-                      <td className="px-4 py-3 text-white/70">
+                      <td className="px-4 py-3 text-sn-gray-text">{r.email}</td>
+                      <td className="px-4 py-3 text-sn-gray-text">
                         {referrerMap.get(r.referred_by) ?? "—"}
                       </td>
                       <td className="px-4 py-3">
                         <StatusBadge status={effectiveStatus} />
                       </td>
-                      <td className="px-4 py-3 text-white/50 text-xs">
+                      <td className="px-4 py-3 text-sn-gray-text text-xs">
                         {new Date(r.created_at).toLocaleDateString("en-US", {
                           month: "short", day: "numeric", year: "numeric",
                         })}
                       </td>
-                      <td className="px-4 py-3 text-white/50 text-xs">
+                      <td className="px-4 py-3 text-sn-gray-text text-xs">
                         {effectiveStatus === "completed"
                           ? r.completed_at !== null && r.completed_at !== undefined
                             ? `Joined ${new Date(r.completed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
@@ -112,8 +112,8 @@ export default async function AdminReferralsPage() {
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="bg-sn-black rounded-xl border border-sn-gold/20 px-5 py-4">
-      <p className="text-white/50 text-xs uppercase tracking-wider">{label}</p>
+    <div className="bg-sn-surface rounded-xl border border-sn-gold/20 px-5 py-4">
+      <p className="text-sn-gray-text text-xs uppercase tracking-wider">{label}</p>
       <p className={`${color} text-3xl font-bold mt-1`}>{value}</p>
     </div>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth/actions";
+import { House, Users, GitFork, Calendar, User, ShieldCheck } from "lucide-react";
 
 export default async function MemberLayout({
   children,
@@ -39,12 +40,12 @@ export default async function MemberLayout({
 
           {/* Nav */}
           <nav className="flex items-center gap-1">
-            <NavLink href="/home">Home</NavLink>
-            <NavLink href="/directory">Directory</NavLink>
-            <NavLink href="/family-tree">Family Tree</NavLink>
-            <NavLink href="/my-events">My Events</NavLink>
-            <NavLink href="/profile">My Profile</NavLink>
-            {isAdmin && <NavLink href="/admin">Admin</NavLink>}
+            <NavLink href="/home"><House className="w-3.5 h-3.5" />Home</NavLink>
+            <NavLink href="/directory"><Users className="w-3.5 h-3.5" />Directory</NavLink>
+            <NavLink href="/family-tree"><GitFork className="w-3.5 h-3.5" />Family Tree</NavLink>
+            <NavLink href="/my-events"><Calendar className="w-3.5 h-3.5" />My Events</NavLink>
+            <NavLink href="/profile"><User className="w-3.5 h-3.5" />My Profile</NavLink>
+            {isAdmin && <NavLink href="/admin"><ShieldCheck className="w-3.5 h-3.5" />Admin</NavLink>}
           </nav>
 
           {/* Sign out */}
@@ -76,7 +77,7 @@ function NavLink({
   return (
     <Link
       href={href}
-      className="text-white/70 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors"
+      className="flex flex-row items-center gap-1.5 text-white/70 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors"
     >
       {children}
     </Link>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApproveButton } from "@/components/admin/ApproveButton";
+import { Users, Pencil } from "lucide-react";
 
 export const metadata: Metadata = { title: "Members — Admin" };
 
@@ -46,7 +47,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-white text-2xl font-bold">Members</h1>
+        <h1 className="text-sn-off-white text-2xl font-bold">Members</h1>
         {pendingCount > 0 && (
           <span className="text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-3 py-1">
             {pendingCount} pending approval
@@ -87,23 +88,26 @@ export default async function AdminMembersPage({ searchParams }: Props) {
       </form>
 
       {/* Table */}
-      <div className="rounded-xl border border-sn-gold/20 overflow-hidden">
+      <div className="rounded-sm border border-sn-gold/20 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-sn-black border-b border-sn-gold/20">
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Email</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden lg:table-cell">Pledge Class</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Status</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Joined</th>
+            <tr className="bg-sn-surface border-b border-sn-gold/20">
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Name</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Email</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden lg:table-cell">Pledge Class</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Joined</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-white/40">
-                  No members found.
+                <td colSpan={6}>
+                  <div className="flex flex-col items-center gap-3 py-12 text-center">
+                    <Users className="size-8 text-sn-gray-medium" />
+                    <p className="text-sn-gray-text text-sm">No members found.</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -117,21 +121,21 @@ export default async function AdminMembersPage({ searchParams }: Props) {
                 <td className="px-4 py-3">
                   <Link
                     href={`/admin/members/${m.id}`}
-                    className="text-white hover:text-sn-gold transition-colors font-medium"
+                    className="text-sn-off-white hover:text-sn-gold transition-colors font-medium"
                   >
                     {m.first_name} {m.last_name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-white/60 hidden md:table-cell">
+                <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">
                   {m.email}
                 </td>
-                <td className="px-4 py-3 text-white/60 hidden lg:table-cell">
-                  {m.pledge_class ?? <span className="text-white/30">—</span>}
+                <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">
+                  {m.pledge_class ?? <span className="text-sn-gray-medium">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={m.status} />
                 </td>
-                <td className="px-4 py-3 text-white/40 hidden md:table-cell">
+                <td className="px-4 py-3 text-sn-gray-medium hidden md:table-cell">
                   {new Date(m.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day:   "numeric",
@@ -144,9 +148,9 @@ export default async function AdminMembersPage({ searchParams }: Props) {
                   ) : (
                     <Link
                       href={`/admin/members/${m.id}`}
-                      className="text-white/40 hover:text-white text-xs transition-colors"
+                      className="flex items-center gap-1 text-sn-gray-medium hover:text-sn-off-white text-xs transition-colors"
                     >
-                      Edit →
+                      <Pencil className="w-3.5 h-3.5" />Edit
                     </Link>
                   )}
                 </td>

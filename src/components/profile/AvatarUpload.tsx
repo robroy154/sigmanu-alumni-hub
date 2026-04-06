@@ -6,6 +6,7 @@ import "react-image-crop/dist/ReactCrop.css";
 import { createClient } from "@/lib/supabase/client";
 import { updateProfilePhoto } from "@/lib/profile/actions";
 import { Button } from "@/components/ui/button";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface AvatarUploadProps {
   userId: string;
@@ -26,7 +27,6 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
 
   const [previewUrl, setPreviewUrl]   = useState<string | null>(currentPhotoUrl);
   const [uploading, setUploading]     = useState(false);
-  const [error, setError]             = useState<string | null>(null);
 
   // Crop modal state
   const [rawSrc, setRawSrc]           = useState<string | null>(null);
@@ -42,17 +42,15 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
 
     const MAX_MB = 10;
     if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`Photo must be under ${MAX_MB} MB.`);
+      toastError(`Photo must be under ${MAX_MB} MB.`);
       return;
     }
 
     const allowed = ["image/jpeg", "image/png", "image/webp"];
     if (!allowed.includes(file.type)) {
-      setError("Only JPEG, PNG, or WebP photos are accepted.");
+      toastError("Only JPEG, PNG, or WebP photos are accepted.");
       return;
     }
-
-    setError(null);
     setRawFile(file);
     setRawSrc(URL.createObjectURL(file));
   }
@@ -96,7 +94,7 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, "image/jpeg", 0.92),
     );
-    if (blob === null) { setError("Failed to process image."); return; }
+    if (blob === null) { toastError("Failed to process image."); return; }
 
     setUploading(true);
     setRawSrc(null);
@@ -109,14 +107,18 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
       .upload(storagePath, blob, { upsert: true, contentType: "image/jpeg" });
 
     if (uploadError !== null) {
-      setError("Upload failed. Please try again.");
+      toastError("Upload failed. Please try again.");
       setPreviewUrl(currentPhotoUrl);
       setUploading(false);
       return;
     }
 
     const result = await updateProfilePhoto(storagePath);
-    if ("error" in result) setError(result.error);
+    if ("error" in result) {
+      toastError(result.error);
+    } else {
+      toastSuccess("Photo updated.");
+    }
 
     setUploading(false);
   }
@@ -210,9 +212,6 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
         {uploading ? "Uploading…" : previewUrl !== null ? "Change photo" : "Upload photo"}
       </Button>
 
-      {error !== null && (
-        <p className="text-red-400 text-xs text-center">{error}</p>
-      )}
     </div>
   );
 }

@@ -70,14 +70,14 @@ export default async function AdminMemberDetailPage({ params }: Props) {
       <div className="flex items-center gap-4">
         <Link
           href="/admin/members"
-          className="text-white/50 hover:text-white text-sm transition-colors"
+          className="text-sn-gray-text hover:text-sn-off-white text-sm transition-colors"
         >
           ← Members
         </Link>
-        <h1 className="text-white text-xl font-bold">
+        <h1 className="text-sn-off-white text-xl font-bold">
           {member.first_name} {member.last_name}
         </h1>
-        <span className="text-white/40 text-sm">{member.email}</span>
+        <span className="text-sn-gray-medium text-sm">{member.email}</span>
       </div>
 
       <AdminMemberEditForm

@@ -11,6 +11,9 @@
       "Bash(mv /Users/robertroy/Projects/sigmanu-alumni-hub/docs /tmp/sn-docs-backup)",
       "Bash(mv /Users/robertroy/Projects/sigmanu-alumni-hub/logs /tmp/sn-logs-backup)",
       "Bash(mv /Users/robertroy/Projects/sigmanu-alumni-hub/CLAUDE.md /tmp/sn-claude-backup)"
+    ],
+    "additionalDirectories": [
+      "/Users/robertroy/Projects/sigmanu-alumni-hub/src/app/events/[id]"
     ]
   }
 }

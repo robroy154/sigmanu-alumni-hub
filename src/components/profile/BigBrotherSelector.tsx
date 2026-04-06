@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { updateBigBrother } from "@/lib/profile/actions";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface Member {
   id: string;
@@ -27,16 +28,12 @@ export function BigBrotherSelector({
   const [selectedId, setSelectedId] = useState(currentBigId ?? "");
   const [confirming, setConfirming] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
 
   const selectedMember = allMembers.find((m) => m.id === selectedId) ?? null;
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setSelectedId(e.target.value);
     setConfirming(false);
-    setError(null);
-    setSaved(false);
   }
 
   function handleRequestConfirm() {
@@ -47,15 +44,14 @@ export function BigBrotherSelector({
 
   async function handleConfirm() {
     setSaving(true);
-    setError(null);
     const result = await updateBigBrother(selectedId === "" ? null : selectedId);
     if ("error" in result) {
-      setError(result.error);
+      toastError(result.error);
       setSaving(false);
       setConfirming(false);
       return;
     }
-    setSaved(true);
+    toastSuccess("Big brother updated.");
     setConfirming(false);
     setSaving(false);
     router.refresh();
@@ -64,7 +60,6 @@ export function BigBrotherSelector({
   function handleCancel() {
     setSelectedId(currentBigId ?? "");
     setConfirming(false);
-    setError(null);
   }
 
   const hasChange = selectedId !== (currentBigId ?? "");
@@ -156,7 +151,7 @@ export function BigBrotherSelector({
       )}
 
       {/* Save trigger (only shown when a change is pending and not yet confirming) */}
-      {hasChange && !confirming && !saved && (
+      {hasChange && !confirming && (
         <Button
           size="sm"
           onClick={handleRequestConfirm}
@@ -164,14 +159,6 @@ export function BigBrotherSelector({
         >
           Save change
         </Button>
-      )}
-
-      {error !== null && (
-        <p className="text-red-400 text-xs">{error}</p>
-      )}
-
-      {saved && (
-        <p className="text-green-400 text-xs">Big Brother updated.</p>
       )}
     </div>
   );

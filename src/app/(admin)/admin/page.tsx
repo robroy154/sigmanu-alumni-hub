@@ -33,7 +33,7 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-white text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-sn-off-white text-2xl font-bold">Dashboard</h1>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -102,15 +102,15 @@ function StatCard({
       className={`rounded-xl border p-5 space-y-1 transition-colors hover:bg-white/5 ${
         accent
           ? "border-amber-500/40 bg-amber-500/10"
-          : "border-sn-gold/20 bg-sn-black"
+          : "border-sn-gold/20 bg-sn-surface"
       }`}
     >
-      <p className="text-white/50 text-xs uppercase tracking-wider">{label}</p>
-      <p className={`text-2xl font-bold ${accent ? "text-amber-400" : "text-white"}`}>
+      <p className="text-sn-gray-text text-xs uppercase tracking-wider">{label}</p>
+      <p className={`text-2xl font-bold ${accent ? "text-amber-400" : "text-sn-off-white"}`}>
         {value}
       </p>
       {sub !== undefined && (
-        <p className="text-white/40 text-xs">{sub}</p>
+        <p className="text-sn-gray-medium text-xs">{sub}</p>
       )}
     </Link>
   );
@@ -128,10 +128,10 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="rounded-xl border border-sn-gold/20 bg-sn-black p-5 hover:bg-white/5 transition-colors space-y-1"
+      className="rounded-xl border border-sn-gold/20 bg-sn-surface p-5 hover:bg-white/5 transition-colors space-y-1"
     >
-      <p className="text-white font-medium text-sm">{title} →</p>
-      <p className="text-white/50 text-xs">{description}</p>
+      <p className="text-sn-off-white font-medium text-sm">{title} →</p>
+      <p className="text-sn-gray-text text-xs">{description}</p>
     </Link>
   );
 }

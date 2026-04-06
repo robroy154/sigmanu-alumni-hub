@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface ReferralRow {
   id:         string;
@@ -24,16 +25,12 @@ export function ReferralForm({ initialReferrals }: ReferralFormProps) {
   const [lastName,  setLastName]  = useState("");
   const [email,     setEmail]     = useState("");
   const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
-  const [success,   setSuccess]   = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
 
     if (firstName.trim() === "" || lastName.trim() === "" || email.trim() === "") {
-      setError("All fields are required.");
+      toastError("All fields are required.");
       return;
     }
 
@@ -49,12 +46,12 @@ export function ReferralForm({ initialReferrals }: ReferralFormProps) {
       const json = await res.json() as { success?: boolean; firstName?: string; lastName?: string; error?: string };
 
       if (!res.ok || json.error !== undefined) {
-        setError(json.error ?? "Something went wrong. Please try again.");
+        toastError(json.error ?? "Something went wrong. Please try again.");
         setLoading(false);
         return;
       }
 
-      setSuccess(`Invite sent to ${json.firstName ?? firstName} ${json.lastName ?? lastName}!`);
+      toastSuccess(`Invite sent to ${json.firstName ?? firstName} ${json.lastName ?? lastName}!`);
       setFirstName("");
       setLastName("");
       setEmail("");
@@ -70,7 +67,7 @@ export function ReferralForm({ initialReferrals }: ReferralFormProps) {
       };
       setReferrals((prev) => [optimistic, ...prev].slice(0, 10));
     } catch {
-      setError("Network error. Please try again.");
+      toastError("Network error. Please try again.");
     }
 
     setLoading(false);
@@ -121,17 +118,6 @@ export function ReferralForm({ initialReferrals }: ReferralFormProps) {
             disabled={loading}
           />
         </div>
-
-        {error !== null && (
-          <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
-            {error}
-          </p>
-        )}
-        {success !== null && (
-          <p className="text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-md px-3 py-2">
-            {success}
-          </p>
-        )}
 
         <Button
           type="submit"

@@ -92,16 +92,16 @@ export default async function MemberProfilePage({ params }: Props) {
       : (member.city ?? member.state ?? null);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-8">
       <Link
         href="/directory"
-        className="inline-block text-white/50 hover:text-white text-sm transition-colors"
+        className="inline-block text-sn-gray-text hover:text-sn-off-white text-sm transition-colors"
       >
         ← Back to directory
       </Link>
 
       {/* Header card */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 flex items-start gap-6">
+      <div className="bg-sn-surface rounded-xl p-6 flex items-start gap-6">
         {/* Avatar */}
         <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-sn-black-secondary border-2 border-sn-gold/40 flex items-center justify-center select-none">
           {photoUrl !== null ? (
@@ -114,7 +114,7 @@ export default async function MemberProfilePage({ params }: Props) {
 
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-white text-xl font-semibold leading-tight">
+          <h1 className="text-sn-off-white text-xl font-semibold leading-tight">
             {fullName}
             {member.nickname !== null && member.nickname !== "" && (
               <span className="text-sn-gold text-base font-normal ml-2">
@@ -123,10 +123,10 @@ export default async function MemberProfilePage({ params }: Props) {
             )}
           </h1>
           {member.pledge_class !== null && (
-            <p className="text-white/60 text-sm mt-0.5">{member.pledge_class} Class</p>
+            <p className="text-sn-gray-text text-sm mt-0.5">{member.pledge_class} Class</p>
           )}
           {location !== null && (
-            <p className="text-white/50 text-sm">{location}</p>
+            <p className="text-sn-gray-text text-sm">{location}</p>
           )}
 
           {/* Badges */}
@@ -146,8 +146,8 @@ export default async function MemberProfilePage({ params }: Props) {
       </div>
 
       {/* Contact details */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
-        <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+      <div className="bg-sn-surface rounded-xl p-6 space-y-4">
+        <h2 className="text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
           Contact &amp; Details
         </h2>
         <dl className="space-y-3">
@@ -161,8 +161,8 @@ export default async function MemberProfilePage({ params }: Props) {
           <Row label="Pin number" value={member.pin_number} />
           {showAddress && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
             <div className="flex gap-3">
-              <dt className="w-28 shrink-0 text-white/50 text-sm">Address</dt>
-              <dd className="text-white text-sm">
+              <dt className="w-28 shrink-0 text-sn-gray-text text-sm">Address</dt>
+              <dd className="text-sn-off-white text-sm">
                 <span>{member.street_address}</span>
                 {(member.city !== null || member.state !== null || member.zip !== null) && (
                   <span className="block">
@@ -178,7 +178,7 @@ export default async function MemberProfilePage({ params }: Props) {
           )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
-              <dt className="w-28 shrink-0 text-white/50 text-sm">LinkedIn</dt>
+              <dt className="w-28 shrink-0 text-sn-gray-text text-sm">LinkedIn</dt>
               <dd>
                 <a
                   href={member.linkedin_url}
@@ -196,27 +196,27 @@ export default async function MemberProfilePage({ params }: Props) {
 
       {/* Family line */}
       {(bigMember !== null || (littles !== null && littles.length > 0)) && (
-        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
-          <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+        <div className="bg-sn-surface rounded-xl p-6 space-y-4">
+          <h2 className="text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
             Family Line
           </h2>
 
           {bigMember !== null && (
             <div>
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
               <Link
                 href={`/profile/${bigMember.id}`}
-                className="inline-flex items-center gap-2 text-white text-sm font-medium hover:text-sn-gold transition-colors"
+                className="inline-flex items-center gap-2 text-sn-off-white text-sm font-medium hover:text-sn-gold transition-colors"
               >
                 {bigMember.first_name} {bigMember.last_name}
-                <span className="text-white/30">→</span>
+                <span className="text-sn-gray-medium">→</span>
               </Link>
             </div>
           )}
 
           {littles !== null && littles.length > 0 && (
             <div>
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
                 Little Brother{littles.length !== 1 ? "s" : ""}
               </p>
               <div className="space-y-1.5">
@@ -224,11 +224,11 @@ export default async function MemberProfilePage({ params }: Props) {
                   <Link
                     key={l.id}
                     href={`/profile/${l.id}`}
-                    className="flex items-center gap-2 text-white text-sm hover:text-sn-gold transition-colors"
+                    className="flex items-center gap-2 text-sn-off-white text-sm hover:text-sn-gold transition-colors"
                   >
                     {l.first_name} {l.last_name}
                     {l.nickname !== null && l.nickname !== "" && (
-                      <span className="text-white/40 text-xs">&ldquo;{l.nickname}&rdquo;</span>
+                      <span className="text-sn-gray-medium text-xs">&ldquo;{l.nickname}&rdquo;</span>
                     )}
                   </Link>
                 ))}
@@ -245,8 +245,8 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex gap-3">
-      <dt className="w-28 shrink-0 text-white/50 text-sm">{label}</dt>
-      <dd className="text-white text-sm break-all">{value}</dd>
+      <dt className="w-28 shrink-0 text-sn-gray-text text-sm">{label}</dt>
+      <dd className="text-sn-off-white text-sm break-all">{value}</dd>
     </div>
   );
 }

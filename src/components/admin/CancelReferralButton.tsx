@@ -3,26 +3,24 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cancelReferral } from "@/lib/admin/actions";
+import { toastSuccess, toastError } from "@/lib/toast";
+import { X } from "lucide-react";
 
 export function CancelReferralButton({ referralId }: { referralId: string }) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState<string | null>(null);
 
   async function handleCancel() {
     setLoading(true);
-    setError(null);
     const result = await cancelReferral(referralId);
     if ("error" in result) {
-      setError(result.error);
+      toastError(result.error);
       setLoading(false);
       setConfirming(false);
+    } else {
+      toastSuccess("Referral cancelled.");
     }
     // On success, revalidatePath in the action re-renders the page.
-  }
-
-  if (error !== null) {
-    return <span className="text-red-400 text-xs">{error}</span>;
   }
 
   if (confirming) {
@@ -40,7 +38,7 @@ export function CancelReferralButton({ referralId }: { referralId: string }) {
         <button
           type="button"
           onClick={() => setConfirming(false)}
-          className="text-white/40 hover:text-white text-xs transition-colors"
+          className="text-sn-gray-medium hover:text-sn-off-white text-xs transition-colors"
         >
           Keep
         </button>
@@ -54,9 +52,9 @@ export function CancelReferralButton({ referralId }: { referralId: string }) {
       size="sm"
       variant="outline"
       onClick={() => setConfirming(true)}
-      className="h-6 px-2 text-xs bg-transparent border-white/20 text-white/50 hover:text-white hover:bg-white/10"
+      className="h-6 px-2 text-xs bg-transparent border-white/20 text-sn-gray-text hover:text-sn-off-white hover:bg-white/10"
     >
-      Cancel
+      <X className="w-3.5 h-3.5" />Cancel
     </Button>
   );
 }

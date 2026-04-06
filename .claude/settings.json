@@ -15,7 +15,8 @@
     ],
     "additionalDirectories": [
       "/Users/robertroy/Projects/sigmanu-alumni-hub/src/app/(admin)/admin/members",
-      "/private/tmp"
+      "/private/tmp",
+      "/Users/robertroy/Projects/sigmanu-alumni-hub/src/app/events"
     ]
   }
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toggleAnnouncement, deleteAnnouncement } from "@/lib/admin/announcement-actions";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface Props {
   announcementId: string;
@@ -12,30 +13,29 @@ interface Props {
 export function AnnouncementControls({ announcementId, isActive }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState<string | null>(null);
 
   async function handleToggle() {
     setLoading(true);
-    setError(null);
     const result = await toggleAnnouncement(announcementId, !isActive);
     setLoading(false);
-    if ("error" in result) setError(result.error);
+    if ("error" in result) {
+      toastError(result.error);
+    } else {
+      toastSuccess(isActive ? "Announcement deactivated." : "Announcement activated.");
+    }
   }
 
   async function handleDelete() {
     setLoading(true);
-    setError(null);
     const result = await deleteAnnouncement(announcementId);
     if ("error" in result) {
-      setError(result.error);
+      toastError(result.error);
       setLoading(false);
       setConfirming(false);
+    } else {
+      toastSuccess("Announcement deleted.");
     }
     // On success revalidatePath re-renders the page.
-  }
-
-  if (error !== null) {
-    return <span className="text-red-400 text-xs">{error}</span>;
   }
 
   return (
@@ -46,7 +46,7 @@ export function AnnouncementControls({ announcementId, isActive }: Props) {
         variant="outline"
         onClick={() => void handleToggle()}
         disabled={loading}
-        className="h-6 px-2 text-xs bg-transparent border-white/20 text-white/50 hover:text-white hover:bg-white/10"
+        className="h-6 px-2 text-xs bg-transparent border-white/20 text-sn-gray-text hover:text-sn-off-white hover:bg-white/10"
       >
         {isActive ? "Deactivate" : "Activate"}
       </Button>
@@ -65,7 +65,7 @@ export function AnnouncementControls({ announcementId, isActive }: Props) {
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="text-white/40 hover:text-white text-xs transition-colors"
+            className="text-sn-gray-medium hover:text-sn-off-white text-xs transition-colors"
           >
             Keep
           </button>
@@ -76,7 +76,7 @@ export function AnnouncementControls({ announcementId, isActive }: Props) {
           size="sm"
           variant="outline"
           onClick={() => setConfirming(true)}
-          className="h-6 px-2 text-xs bg-transparent border-white/20 text-white/50 hover:text-white hover:bg-white/10"
+          className="h-6 px-2 text-xs bg-transparent border-white/20 text-sn-gray-text hover:text-sn-off-white hover:bg-white/10"
         >
           Delete
         </Button>

@@ -56,18 +56,16 @@ interface MemberNodeProps {
 }
 
 function MemberNode({ data: m }: MemberNodeProps) {
-  const initials = (m.first_name[0] ?? "") + (m.last_name[0] ?? "");
-
   return (
     <div
       style={{ width: NODE_W }}
       className={[
-        "relative rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer transition-all select-none group",
+        "relative rounded-sm p-2.5 flex items-center gap-2.5 cursor-pointer transition-all select-none",
         m.isSelected
-          ? "bg-sn-black border-2 border-sn-gold shadow-[0_0_16px_rgba(201,168,76,0.35)]"
+          ? "bg-sn-surface border-l-2 border-l-sn-gold border-t border-t-transparent border-r border-r-transparent border-b border-b-transparent"
           : m.isDimmed
-            ? "bg-sn-black/40 border border-sn-gold/10"
-            : "bg-sn-black border border-sn-gold/30 hover:border-sn-gold/70",
+            ? "bg-sn-surface/40 border border-sn-gray-dark/30"
+            : "bg-sn-surface border border-sn-gray-dark hover:border-sn-gold/40",
       ].join(" ")}
     >
       <Handle
@@ -76,61 +74,33 @@ function MemberNode({ data: m }: MemberNodeProps) {
         style={{ background: "transparent", border: "none", width: 0, height: 0 }}
       />
 
-      {/* Avatar */}
-      <div
-        className={[
-          "w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0 transition-all",
-          m.isSelected
-            ? "border-2 border-sn-gold bg-sn-black-secondary"
-            : m.isDimmed
-              ? "border border-sn-gold/10 bg-sn-black-secondary/50"
-              : "border border-sn-gold/30 bg-sn-black-secondary group-hover:border-sn-gold/60",
-        ].join(" ")}
-      >
-        {m.photo_url !== null ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Avatar — only shown when photo exists */}
+      {m.photo_url !== null && (
+        <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={m.photo_url}
             alt={`${m.first_name} ${m.last_name}`}
             className={["w-full h-full object-cover", m.isDimmed ? "opacity-30" : ""].join(" ")}
           />
-        ) : (
-          <span
-            className={[
-              "font-bold text-xs",
-              m.isDimmed ? "text-sn-gold/20" : "text-sn-gold",
-            ].join(" ")}
-          >
-            {initials}
-          </span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Info */}
       <div className="min-w-0 flex-1">
         <p
           className={[
-            "text-[11px] font-semibold leading-tight truncate",
-            m.isDimmed ? "text-white/20" : "text-white",
+            "text-[11px] font-medium leading-tight truncate",
+            m.isDimmed ? "text-sn-off-white/20" : "text-sn-off-white",
           ].join(" ")}
         >
           {m.first_name} {m.last_name}
         </p>
-        {m.nickname !== null && m.nickname !== "" && (
-          <p
-            className={[
-              "text-[10px] truncate leading-tight mt-0.5",
-              m.isDimmed ? "text-sn-gold/15" : "text-sn-gold",
-            ].join(" ")}
-          >
-            &ldquo;{m.nickname}&rdquo;
-          </p>
-        )}
         {m.pledge_class !== null && (
           <p
             className={[
-              "text-[10px] leading-tight mt-0.5 truncate",
-              m.isDimmed ? "text-white/10" : "text-white/40",
+              "text-[9px] uppercase tracking-widest leading-tight mt-0.5 truncate",
+              m.isDimmed ? "text-sn-gray-text/20" : "text-sn-gray-text",
             ].join(" ")}
           >
             {m.pledge_class}
@@ -149,7 +119,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
         <Link
           href={`/profile/${m.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="absolute left-0 right-0 top-[calc(100%+5px)] bg-sn-gold text-sn-black text-[10px] font-bold py-1.5 px-2 rounded-lg text-center hover:bg-sn-gold-light transition-colors z-10 whitespace-nowrap"
+          className="absolute left-0 right-0 top-[calc(100%+5px)] bg-sn-gold text-sn-black text-[10px] font-bold py-1.5 px-2 rounded-sm text-center hover:bg-sn-gold-light transition-colors z-10 whitespace-nowrap"
         >
           View Profile →
         </Link>
@@ -309,7 +279,10 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
   const handleSearch = useCallback(
     (q: string) => {
       setQuery(q);
-      if (q.trim() === "") return;
+      if (q.trim() === "") {
+        void rf.fitView({ padding: 0.08, duration: 400 });
+        return;
+      }
       const lower = q.trim().toLowerCase();
       const match = members.find(
         (m) =>
@@ -317,7 +290,10 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           m.last_name.toLowerCase().includes(lower) ||
           (m.nickname ?? "").toLowerCase().includes(lower)
       );
-      if (match === undefined) return;
+      if (match === undefined) {
+        void rf.fitView({ padding: 0.08, duration: 400 });
+        return;
+      }
 
       // Use the position from the computed layout (dagre top-left → center)
       const node = layoutNodes.find((n) => n.id === match.id);
@@ -332,12 +308,26 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
     [members, layoutNodes, rf]
   );
 
-  // Click a node → select it (or deselect if already selected)
+  // Click a node → select it (or deselect if already selected), then fitView to it + direct littles
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      setSelected((prev) => (prev === node.id ? null : node.id));
+      const isDeselecting = selectedId === node.id;
+      setSelected(isDeselecting ? null : node.id);
+
+      if (!isDeselecting) {
+        const allNodes = rf.getNodes();
+        const directLittles = allNodes.filter(
+          (n) => (n.data as unknown as MemberNodeData).big_id === node.id
+        );
+        const targetNodes = [node, ...directLittles];
+        void rf.fitView({
+          nodes: targetNodes,
+          padding: directLittles.length > 0 ? 0.3 : 0.5,
+          duration: 600,
+        });
+      }
     },
-    []
+    [selectedId, rf]
   );
 
   // Click empty canvas → deselect
@@ -382,6 +372,10 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
+        panOnDrag={[1, 2]}
+        zoomOnPinch={true}
+        preventScrolling={true}
+        panOnScroll={false}
         colorMode="dark"
         style={{ background: "#111827" }}
       >
@@ -393,17 +387,19 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           style={{ opacity: 0.1 }}
         />
         <Controls showInteractive={false} />
-        <MiniMap
-          nodeColor={(n) => {
-            const data = n.data as unknown as MemberNodeData;
-            if (data.isSelected) return "#C6A75E";
-            if (data.isDimmed)   return "#333";
-            return "#C6A75E";
-          }}
-          maskColor="rgba(17, 24, 39, 0.85)"
-          style={{ background: "#0B0B0C", border: "1px solid rgba(198,167,94,0.2)" }}
-          position="bottom-right"
-        />
+        <div className="hidden md:block">
+          <MiniMap
+            nodeColor={(n) => {
+              const data = n.data as unknown as MemberNodeData;
+              if (data.isSelected) return "#C6A75E";
+              if (data.isDimmed)   return "#333";
+              return "#C6A75E";
+            }}
+            maskColor="rgba(17, 24, 39, 0.85)"
+            style={{ background: "#0B0B0C", border: "1px solid rgba(198,167,94,0.2)" }}
+            position="bottom-right"
+          />
+        </div>
       </ReactFlow>
     </div>
   );

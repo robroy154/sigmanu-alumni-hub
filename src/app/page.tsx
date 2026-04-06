@@ -44,7 +44,7 @@ export default async function HomePage() {
               <p className="text-sn-gold font-semibold text-sm leading-none">
                 Sigma Nu Fraternity
               </p>
-              <p className="text-white/60 text-xs leading-none mt-0.5">
+              <p className="text-sn-gray-text text-xs leading-none mt-0.5">
                 Mu Xi Chapter · Columbus State University
               </p>
             </div>
@@ -95,18 +95,18 @@ export default async function HomePage() {
               {event.title}
             </Badge>
 
-            <h1 className="text-4xl md:text-6xl font-bold text-white max-w-3xl leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-sn-off-white max-w-3xl leading-tight">
               Welcome Home,{" "}
               <span className="text-sn-gold">Brothers</span>
             </h1>
 
-            <p className="mt-6 text-lg text-white/70 max-w-xl leading-relaxed">
+            <p className="mt-6 text-lg text-sn-gray-text max-w-xl leading-relaxed">
               The Mu Xi Chapter alumni platform — your hub for events, the
               brother directory, and our chapter&apos;s family lineage.
             </p>
 
             {/* Event details */}
-            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-1 text-white/50 text-sm">
+            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-1 text-sn-gray-text text-sm">
               {formattedDate !== null && <span>{formattedDate}</span>}
               {event.location !== null && <span>{event.location}</span>}
               {event.ticket_price > 0 && (
@@ -150,11 +150,11 @@ export default async function HomePage() {
           </>
         ) : (
           <>
-            <h1 className="text-4xl md:text-6xl font-bold text-white max-w-3xl leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-sn-off-white max-w-3xl leading-tight">
               Welcome Home,{" "}
               <span className="text-sn-gold">Brothers</span>
             </h1>
-            <p className="mt-6 text-lg text-white/70 max-w-xl leading-relaxed">
+            <p className="mt-6 text-lg text-sn-gray-text max-w-xl leading-relaxed">
               The Mu Xi Chapter alumni platform — your hub for events, the
               brother directory, and our chapter&apos;s family lineage.
             </p>
@@ -185,7 +185,7 @@ export default async function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-sn-gold/20 px-6 py-6 text-center">
-        <p className="text-white/40 text-sm">
+        <p className="text-sn-gray-medium text-sm">
           Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University
         </p>
       </footer>

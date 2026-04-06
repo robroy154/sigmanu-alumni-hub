@@ -14,16 +14,16 @@ export function AnnouncementCard({ title, body, date }: Props) {
   const displayBody = !expanded && isLong ? body.slice(0, 200) + "…" : body;
 
   return (
-    <div className="bg-sn-black rounded-xl border border-sn-gold/20 px-5 py-4">
+    <div className="bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4">
       <div className="flex items-start justify-between gap-3 mb-2">
-        <h3 className="text-white font-semibold text-sm">{title}</h3>
-        <span className="text-white/30 text-xs shrink-0">
+        <h3 className="text-sn-off-white font-semibold text-sm">{title}</h3>
+        <span className="text-sn-gray-medium text-xs shrink-0">
           {new Date(date).toLocaleDateString("en-US", {
             month: "short", day: "numeric", year: "numeric",
           })}
         </span>
       </div>
-      <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">{displayBody}</p>
+      <p className="text-sn-gray-text text-sm leading-relaxed whitespace-pre-wrap">{displayBody}</p>
       {isLong && (
         <button
           type="button"

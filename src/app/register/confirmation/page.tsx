@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ConfirmationStatus } from "@/components/register/ConfirmationStatus";
 
 export const metadata: Metadata = { title: "Registration Confirmed" };
 
@@ -73,25 +74,8 @@ export default async function ConfirmationPage({ searchParams }: Props) {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      {/* Status banner */}
-      {isPaid ? (
-        <div className="rounded-xl bg-green-500/10 border border-green-500/30 p-6 text-center space-y-2">
-          <div className="text-green-400 text-3xl">✓</div>
-          <h1 className="text-white text-xl font-bold">You&apos;re registered!</h1>
-          <p className="text-white/60 text-sm">
-            Payment confirmed. We&apos;ll see you there, brother.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-6 text-center space-y-2">
-          <div className="text-amber-400 text-3xl">⏳</div>
-          <h1 className="text-white text-xl font-bold">Payment Processing</h1>
-          <p className="text-white/60 text-sm">
-            Your registration is saved. Payment confirmation may take a moment
-            to arrive — refresh this page if needed.
-          </p>
-        </div>
-      )}
+      {/* Status banner — client component with Realtime */}
+      <ConfirmationStatus registrationId={registration_id} initialIsPaid={isPaid} />
 
       {/* Registration summary */}
       <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
@@ -145,13 +129,13 @@ export default async function ConfirmationPage({ searchParams }: Props) {
       <div className="flex gap-3">
         <Link
           href="/"
-          className="flex-1 inline-flex h-9 items-center justify-center rounded-lg border border-white/20 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex-1 inline-flex h-9 items-center justify-center rounded-sm border border-white/20 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
           Back to home
         </Link>
         <Link
           href="/directory"
-          className="flex-1 inline-flex h-9 items-center justify-center rounded-lg bg-sn-gold text-sn-black text-sm font-semibold hover:bg-sn-gold-light transition-colors"
+          className="flex-1 inline-flex h-9 items-center justify-center rounded-sm bg-sn-gold text-sn-black text-sm font-semibold hover:bg-sn-gold-light transition-colors"
         >
           Member directory
         </Link>

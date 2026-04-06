@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 15 phases complete. Build clean at 30 routes.
+All 16 phases complete. Build clean at 31 routes.
 
-Last completed: Phase 15 — Authenticated Homepage + My Events. See memory file for full phase history.
+Last completed: Phase 16 — Design and UX Modernization. See memory file for full phase history.
 
 Completed phases summary:
 
@@ -109,6 +109,7 @@ Completed phases summary:
 - Phase 13: Profile expansion — street_address/zip/country/birthday/show_* columns; Google Places autocomplete; privacy toggles; react-image-crop before upload
 - Phase 14: Referral/invite system — referrals table, /join?token= public route, JoinForm, POST /api/referrals, completeReferral server action, invite section on profile page, admin referred_by display, /admin/referrals list with cancel
 - Phase 15: Authenticated homepage (/home) — welcome header, upcoming events, birthdays this month, announcements, quick links; /my-events with react-day-picker calendar; announcements table + admin CRUD (/admin/announcements)
+- Phase 16: Design and UX modernization — Syne/Inter fonts, sn-surface token, rounded-sm buttons, 4 button variants, card elevation, sonner toasts, skeleton loaders, Lucide icons, family tree restyling + touch + zoom, Supabase Realtime on payments, mobile overflow fix, focus rings
 
 Key runtime decisions:
 
@@ -136,6 +137,19 @@ Key runtime decisions:
 - referred_by on members: admin-only, SELECT revoked from authenticated role; only service role (admin client) can read it
 - CHAPTER_CONTACT_EMAIL env var: shown on expired/invalid invite error pages; hidden if unset
 - Token expiry maintenance: pg_cron nightly job — SQL in migration file comments, manual setup via Supabase dashboard
+- Fonts: Syne Bold (headings) and Inter (body/UI) via next/font/google; CSS vars --font-syne and --font-inter
+- New color tokens: sn-surface (#1a1a1d) for card backgrounds; sn-gray-text (#a1a1a6) for secondary text
+- Buttons: rounded-sm base, 4 canonical variants (default/outline/ghost/destructive); gold focus ring via focus-visible
+- Cards: bg-sn-surface lifts above bg-sn-black page backgrounds; event+announcement cards use border-t-2 border-t-sn-gold
+- Toast: sonner library, dark theme, bottom-right, toastSuccess/toastError wrappers in src/lib/toast.ts
+- Skeleton: src/components/ui/skeleton.tsx; loading.tsx files for home, directory, profile, my-events, admin, admin/members
+- Family tree nodes: sn-surface bg, rounded-sm, gold left border on selected; photo-only avatar (no initials fallback)
+- Family tree touch: panOnDrag=[1,2] (two-finger pan on mobile), zoomOnPinch, preventScrolling, panOnScroll=false
+- Family tree node click: fitView to clicked node + direct littles (duration 600ms)
+- Family tree search reset: fitView to all on empty/no-match query
+- Supabase Realtime: registrations UPDATE subscription in MyEventsClient and ConfirmationStatus — payment badge updates without reload
+- MyEventsClient.tsx: client component at src/components/my-events/MyEventsClient.tsx, server page passes rows+userId
+- ConfirmationStatus.tsx: client component at src/components/register/ConfirmationStatus.tsx for payment banner
 
 ---
 

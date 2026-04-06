@@ -34,17 +34,17 @@ export default async function PendingApprovalPage() {
   return (
     <Card className="w-full max-w-md bg-white/5 border-sn-gold/20 text-center">
       <CardHeader>
-        <CardTitle className="text-white text-2xl">
+        <CardTitle className="text-sn-off-white text-2xl">
           {firstName !== "" ? `Thanks, ${firstName}!` : "Account Pending"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
-          <p className="text-white/70 text-sm leading-relaxed">
+          <p className="text-sn-gray-text text-sm leading-relaxed">
             Your account is awaiting approval from a chapter admin. You&apos;ll
             get access to the full hub once they confirm your membership.
           </p>
-          <p className="text-white/50 text-sm">
+          <p className="text-sn-gray-text text-sm">
             In the meantime, you can still{" "}
             <span className="text-sn-gold">register for an event</span>{" "}
             using the button below.
@@ -63,7 +63,7 @@ export default async function PendingApprovalPage() {
             <Button
               type="submit"
               variant="ghost"
-              className="w-full text-white/50 hover:text-white hover:bg-white/10"
+              className="w-full text-sn-gray-text hover:text-sn-off-white hover:bg-white/10"
             >
               Sign out
             </Button>

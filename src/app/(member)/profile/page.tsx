@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { ReferralForm } from "@/components/profile/ReferralForm";
+import { Info, GitFork, UserPlus } from "lucide-react";
 
 export const metadata: Metadata = { title: "My Profile" };
 
@@ -77,7 +78,7 @@ export default async function ProfilePage() {
   const isIncomplete = missingFields.length > 0;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-8">
 
       {/* Completeness nudge */}
       {isIncomplete && (
@@ -86,7 +87,7 @@ export default async function ProfilePage() {
             <p className="text-sn-gold text-sm font-semibold leading-snug">
               Your profile is incomplete
             </p>
-            <p className="text-white/50 text-xs mt-0.5 leading-relaxed">
+            <p className="text-sn-gray-text text-xs mt-0.5 leading-relaxed">
               Missing: {missingFields.join(", ")}
             </p>
           </div>
@@ -100,7 +101,7 @@ export default async function ProfilePage() {
       )}
 
       {/* Header card */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 flex items-start gap-6">
+      <div className="bg-sn-surface rounded-xl p-6 flex items-start gap-6">
         {/* Avatar */}
         <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-sn-black-secondary border-2 border-sn-gold/40 flex items-center justify-center select-none">
           {photoUrl !== null ? (
@@ -115,7 +116,7 @@ export default async function ProfilePage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-white text-xl font-semibold leading-tight">
+              <h1 className="text-sn-off-white text-xl font-semibold leading-tight">
                 {fullName}
                 {member.nickname !== null && member.nickname !== "" && (
                   <span className="text-sn-gold text-base font-normal ml-2">
@@ -124,10 +125,10 @@ export default async function ProfilePage() {
                 )}
               </h1>
               {member.pledge_class !== null && (
-                <p className="text-white/60 text-sm mt-0.5">{member.pledge_class} Class</p>
+                <p className="text-sn-gray-text text-sm mt-0.5">{member.pledge_class} Class</p>
               )}
               {location !== null && (
-                <p className="text-white/50 text-sm">{location}</p>
+                <p className="text-sn-gray-text text-sm">{location}</p>
               )}
             </div>
             <Link
@@ -155,8 +156,9 @@ export default async function ProfilePage() {
       </div>
 
       {/* Contact details */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
-        <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+      <div className="bg-sn-surface rounded-xl p-6 space-y-4">
+        <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
+          <Info className="w-4 h-4" />
           Contact &amp; Details
         </h2>
         <dl className="space-y-3">
@@ -167,8 +169,8 @@ export default async function ProfilePage() {
           {/* Address — show full address on own profile */}
           {member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
             <div className="flex gap-3">
-              <dt className="w-28 shrink-0 text-white/50 text-sm">Address</dt>
-              <dd className="text-white text-sm">
+              <dt className="w-28 shrink-0 text-sn-gray-text text-sm">Address</dt>
+              <dd className="text-sn-off-white text-sm">
                 <span>{member.street_address}</span>
                 {(member.city !== null || member.state !== null || member.zip !== null) && (
                   <span className="block">
@@ -184,7 +186,7 @@ export default async function ProfilePage() {
           )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
-              <dt className="w-28 shrink-0 text-white/50 text-sm">LinkedIn</dt>
+              <dt className="w-28 shrink-0 text-sn-gray-text text-sm">LinkedIn</dt>
               <dd>
                 <a
                   href={member.linkedin_url}
@@ -202,27 +204,28 @@ export default async function ProfilePage() {
 
       {/* Family line */}
       {(bigMember !== null || (littles !== null && littles.length > 0)) && (
-        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
-          <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+        <div className="bg-sn-surface rounded-xl p-6 space-y-4">
+          <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
+            <GitFork className="w-4 h-4" />
             Family Line
           </h2>
 
           {bigMember !== null && (
             <div>
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
               <Link
                 href={`/profile/${bigMember.id}`}
-                className="inline-flex items-center gap-2 text-white text-sm font-medium hover:text-sn-gold transition-colors"
+                className="inline-flex items-center gap-2 text-sn-off-white text-sm font-medium hover:text-sn-gold transition-colors"
               >
                 {bigMember.first_name} {bigMember.last_name}
-                <span className="text-white/30">→</span>
+                <span className="text-sn-gray-medium">→</span>
               </Link>
             </div>
           )}
 
           {littles !== null && littles.length > 0 && (
             <div>
-              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
                 Little Brother{littles.length !== 1 ? "s" : ""}
               </p>
               <div className="space-y-1.5">
@@ -230,11 +233,11 @@ export default async function ProfilePage() {
                   <Link
                     key={l.id}
                     href={`/profile/${l.id}`}
-                    className="flex items-center gap-2 text-white text-sm hover:text-sn-gold transition-colors"
+                    className="flex items-center gap-2 text-sn-off-white text-sm hover:text-sn-gold transition-colors"
                   >
                     {l.first_name} {l.last_name}
                     {l.nickname !== null && l.nickname !== "" && (
-                      <span className="text-white/40 text-xs">&ldquo;{l.nickname}&rdquo;</span>
+                      <span className="text-sn-gray-medium text-xs">&ldquo;{l.nickname}&rdquo;</span>
                     )}
                   </Link>
                 ))}
@@ -245,12 +248,13 @@ export default async function ProfilePage() {
       )}
 
       {/* Invite a Brother */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-surface rounded-xl p-6 space-y-4">
         <div className="space-y-0.5">
-          <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+          <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
+            <UserPlus className="w-4 h-4" />
             Invite a Brother
           </h2>
-          <p className="text-white/40 text-xs">
+          <p className="text-sn-gray-medium text-xs">
             Send a personalized invite link to a brother not yet on the hub. Links expire after 7 days.
           </p>
         </div>
@@ -264,8 +268,8 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex gap-3">
-      <dt className="w-28 shrink-0 text-white/50 text-sm">{label}</dt>
-      <dd className="text-white text-sm break-all">{value}</dd>
+      <dt className="w-28 shrink-0 text-sn-gray-text text-sm">{label}</dt>
+      <dd className="text-sn-off-white text-sm break-all">{value}</dd>
     </div>
   );
 }

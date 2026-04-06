@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -23,7 +24,6 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export function SignupForm() {
   const router = useRouter();
-  const [serverError, setServerError]     = useState<string | null>(null);
   const [duplicate, setDuplicate]         = useState<DuplicateState>({ type: "none" });
   const [resetLoading, setResetLoading]   = useState(false);
 
@@ -38,7 +38,6 @@ export function SignupForm() {
   });
 
   async function onSubmit(data: SignupInput) {
-    setServerError(null);
     const supabase = createClient();
 
     const { data: signUpData, error } = await supabase.auth.signUp({
@@ -63,7 +62,7 @@ export function SignupForm() {
         return;
       }
 
-      setServerError(error.message);
+      toastError(error.message);
       return;
     }
 
@@ -357,12 +356,6 @@ export function SignupForm() {
           </p>
         )}
       </div>
-
-      {serverError !== null && (
-        <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
-          {serverError}
-        </p>
-      )}
 
       <Button
         type="submit"

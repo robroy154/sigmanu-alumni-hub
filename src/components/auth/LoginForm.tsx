@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { LoginSchema, type LoginInput } from "@/lib/auth/schemas";
+import { toastError } from "@/lib/toast";
 
 interface LoginFormProps {
   redirectTo: string | undefined;
@@ -17,7 +17,6 @@ interface LoginFormProps {
 
 export function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
-  const [serverError, setServerError] = useState<string | null>(null);
 
   const {
     register,
@@ -28,7 +27,6 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   });
 
   async function onSubmit(data: LoginInput) {
-    setServerError(null);
     const supabase = createClient();
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -37,7 +35,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     });
 
     if (error !== null) {
-      setServerError(
+      toastError(
         error.message === "Invalid login credentials"
           ? "Incorrect email or password."
           : error.message
@@ -51,7 +49,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     } = await supabase.auth.getUser();
 
     if (user === null) {
-      setServerError("Sign in failed. Please try again.");
+      toastError("Sign in failed. Please try again.");
       return;
     }
 
@@ -115,12 +113,6 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
           <p className="text-red-400 text-xs">{errors.password.message}</p>
         )}
       </div>
-
-      {serverError !== null && (
-        <p className="text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-md px-3 py-2">
-          {serverError}
-        </p>
-      )}
 
       <Button
         type="submit"

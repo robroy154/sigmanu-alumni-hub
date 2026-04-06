@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { ClipboardList } from "lucide-react";
 
 export const metadata: Metadata = { title: "Registrations — Admin" };
 
@@ -39,10 +40,10 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-white text-2xl font-bold">Registrations</h1>
+        <h1 className="text-sn-off-white text-2xl font-bold">Registrations</h1>
         <a
           href="/api/admin/registrations/export"
-          className="inline-flex h-8 items-center rounded-lg border border-sn-gold/40 px-3 text-sm text-sn-gold hover:bg-sn-gold/10 transition-colors"
+          className="inline-flex h-8 items-center rounded-sm border border-sn-gold/40 px-3 text-sm text-sn-gold hover:bg-sn-gold/10 transition-colors"
         >
           Export CSV
         </a>
@@ -50,13 +51,13 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
 
       {/* Summary strip */}
       <div className="flex flex-wrap gap-4 text-sm">
-        <span className="text-white/60">
-          <span className="text-white font-medium">{rows.length}</span> total
+        <span className="text-sn-gray-text">
+          <span className="text-sn-off-white font-medium">{rows.length}</span> total
         </span>
-        <span className="text-white/60">
+        <span className="text-sn-gray-text">
           <span className="text-green-400 font-medium">{paidRows.length}</span> paid
         </span>
-        <span className="text-white/60">
+        <span className="text-sn-gray-text">
           Revenue:{" "}
           <span className="text-sn-gold font-medium">
             ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -75,7 +76,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           <Link
             key={value}
             href={value === "" ? "/admin/registrations" : `/admin/registrations?status=${value}`}
-            className={`h-8 px-3 rounded-lg text-sm transition-colors flex items-center ${
+            className={`h-8 px-3 rounded-sm text-sm transition-colors flex items-center ${
               (filterStatus ?? "") === value
                 ? "bg-sn-gold text-sn-black font-semibold"
                 : "border border-white/20 text-white/70 hover:bg-white/10"
@@ -90,21 +91,24 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
       <div className="rounded-xl border border-sn-gold/20 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-sn-black border-b border-sn-gold/20">
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Email</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden lg:table-cell">Event</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Guests</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Amount</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium">Status</th>
-              <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Submitted</th>
+            <tr className="bg-sn-surface border-b border-sn-gold/20">
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Name</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Email</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden lg:table-cell">Event</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Guests</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Amount</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Submitted</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-white/40">
-                  No registrations found.
+                <td colSpan={7}>
+                  <div className="flex flex-col items-center gap-3 py-12 text-center">
+                    <ClipboardList className="size-8 text-sn-gray-medium" />
+                    <p className="text-sn-gray-text text-sm">No registrations yet.</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -124,23 +128,23 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                   className={`border-b border-white/5 ${i % 2 === 0 ? "bg-sn-black/60" : "bg-sn-black/30"}`}
                 >
                   <td className="px-4 py-3">
-                    <div className="text-white font-medium">{r.registrant_name}</div>
+                    <div className="text-sn-off-white font-medium">{r.registrant_name}</div>
                     {guests.length > 0 && (
-                      <div className="text-white/40 text-xs mt-0.5">
+                      <div className="text-sn-gray-medium text-xs mt-0.5">
                         + {guests.map((g: { guest_name: string }) => g.guest_name).join(", ")}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-white/60 hidden md:table-cell">{r.email}</td>
-                  <td className="px-4 py-3 text-white/60 hidden lg:table-cell">{eventTitle}</td>
-                  <td className="px-4 py-3 text-white/60">{r.guest_count ?? 0}</td>
-                  <td className="px-4 py-3 text-white">
+                  <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">{r.email}</td>
+                  <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">{eventTitle}</td>
+                  <td className="px-4 py-3 text-sn-gray-text">{r.guest_count ?? 0}</td>
+                  <td className="px-4 py-3 text-sn-off-white">
                     {price > 0 ? `$${amount.toFixed(2)}` : "Free"}
                   </td>
                   <td className="px-4 py-3">
                     <PaymentBadge status={r.payment_status} />
                   </td>
-                  <td className="px-4 py-3 text-white/40 hidden md:table-cell">
+                  <td className="px-4 py-3 text-sn-gray-medium hidden md:table-cell">
                     {new Date(r.submitted_at).toLocaleDateString("en-US", {
                       month: "short",
                       day:   "numeric",

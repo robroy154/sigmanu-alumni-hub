@@ -5,6 +5,7 @@ import {
   FamilyTreeClient,
   type FamilyTreeMember,
 } from "@/components/family-tree/FamilyTreeClient";
+import { GitFork } from "lucide-react";
 
 export const metadata: Metadata = { title: "Family Tree" };
 
@@ -66,7 +67,14 @@ export default async function FamilyTreePage() {
         </span>
       </div>
 
-      <FamilyTreeClient members={treeMembers} />
+      {treeMembers.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
+          <GitFork className="size-8 text-sn-gray-medium" />
+          <p className="text-sn-gray-text text-sm">No family tree data yet. Members can add their big brother from their profile.</p>
+        </div>
+      ) : (
+        <FamilyTreeClient members={treeMembers} />
+      )}
     </div>
   );
 }

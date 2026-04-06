@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EventForm } from "@/components/admin/EventForm";
 import { ArchiveEventButton } from "@/components/admin/ArchiveEventButton";
+import { CalendarDays } from "lucide-react";
 
 export const metadata: Metadata = { title: "Admin · Events" };
 
@@ -18,24 +19,25 @@ export default async function AdminEventsPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-white text-2xl font-bold">Events</h1>
+        <h1 className="text-sn-off-white text-2xl font-bold">Events</h1>
       </div>
 
       {/* Events table */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 overflow-hidden">
+      <div className="bg-sn-surface rounded-xl overflow-hidden">
         {events === null || events.length === 0 ? (
-          <p className="text-white/50 text-sm text-center py-12">
-            No events yet. Create one below.
-          </p>
+          <div className="flex flex-col items-center gap-3 py-12 text-center">
+            <CalendarDays className="size-8 text-sn-gray-medium" />
+            <p className="text-sn-gray-text text-sm">No events yet. Create your first event below.</p>
+          </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/10">
-                <th className="text-left px-4 py-3 text-white/50 font-medium">Event</th>
-                <th className="text-left px-4 py-3 text-white/50 font-medium">Date</th>
-                <th className="text-left px-4 py-3 text-white/50 font-medium">Price</th>
-                <th className="text-left px-4 py-3 text-white/50 font-medium">Capacity</th>
-                <th className="text-left px-4 py-3 text-white/50 font-medium">Status</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Event</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Date</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Price</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Capacity</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -49,18 +51,18 @@ export default async function AdminEventsPage() {
                 return (
                   <tr key={event.id} className="border-b border-white/5 last:border-0">
                     <td className="px-4 py-3">
-                      <span className="text-white font-medium">{event.title}</span>
+                      <span className="text-sn-off-white font-medium">{event.title}</span>
                       {event.location !== null && (
-                        <p className="text-white/40 text-xs mt-0.5">{event.location}</p>
+                        <p className="text-sn-gray-medium text-xs mt-0.5">{event.location}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-white/60">{date}</td>
-                    <td className="px-4 py-3 text-white/60">
+                    <td className="px-4 py-3 text-sn-gray-text">{date}</td>
+                    <td className="px-4 py-3 text-sn-gray-text">
                       {event.ticket_price > 0
                         ? `$${Number(event.ticket_price).toFixed(2)}`
                         : "Free"}
                     </td>
-                    <td className="px-4 py-3 text-white/60">
+                    <td className="px-4 py-3 text-sn-gray-text">
                       {event.capacity !== null ? event.capacity : "—"}
                     </td>
                     <td className="px-4 py-3">
@@ -91,8 +93,8 @@ export default async function AdminEventsPage() {
       </div>
 
       {/* Create new event */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
-        <h2 className="text-white font-semibold text-lg">New Event</h2>
+      <div className="bg-sn-surface rounded-xl p-6 space-y-4">
+        <h2 className="text-sn-off-white font-semibold text-lg">New Event</h2>
         <EventForm />
       </div>
     </div>
