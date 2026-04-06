@@ -144,7 +144,7 @@ Key runtime decisions:
 - Toast: sonner library, dark theme, bottom-right, toastSuccess/toastError wrappers in src/lib/toast.ts
 - Skeleton: src/components/ui/skeleton.tsx; loading.tsx files for home, directory, profile, my-events, admin, admin/members
 - Family tree nodes: sn-surface bg, rounded-sm, gold left border on selected; photo-only avatar (no initials fallback)
-- Family tree touch: panOnDrag=[1,2] (two-finger pan on mobile), zoomOnPinch, preventScrolling, panOnScroll=false
+- Family tree touch: panOnDrag=true (any touch pans; tree fills viewport so single-finger page scroll is moot), zoomOnPinch, preventScrolling, panOnScroll=false
 - Family tree node click: fitView to clicked node + direct littles (duration 600ms)
 - Family tree search reset: fitView to all on empty/no-match query
 - Supabase Realtime: registrations UPDATE subscription in MyEventsClient and ConfirmationStatus — payment badge updates without reload

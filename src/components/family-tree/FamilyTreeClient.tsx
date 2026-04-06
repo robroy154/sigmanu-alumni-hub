@@ -308,7 +308,8 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
     [members, layoutNodes, rf]
   );
 
-  // Click a node → select it (or deselect if already selected), then fitView to it + direct littles
+  // Click a node → select it (or deselect if already selected), then fitView to
+  // one level above + the node itself + one level below. maxZoom caps the zoom-in.
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       const isDeselecting = selectedId === node.id;
@@ -316,13 +317,26 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
 
       if (!isDeselecting) {
         const allNodes = rf.getNodes();
+
+        // One level below: direct littles
         const directLittles = allNodes.filter(
           (n) => (n.data as unknown as MemberNodeData).big_id === node.id
         );
-        const targetNodes = [node, ...directLittles];
+
+        // One level above: the node's big
+        const bigId = (node.data as unknown as MemberNodeData).big_id;
+        const bigNode = bigId !== null ? allNodes.find((n) => n.id === bigId) : undefined;
+
+        const targetNodes = [
+          ...(bigNode !== undefined ? [bigNode] : []),
+          node,
+          ...directLittles,
+        ];
+
         void rf.fitView({
-          nodes: targetNodes,
-          padding: directLittles.length > 0 ? 0.3 : 0.5,
+          nodes:   targetNodes,
+          padding: 0.35,
+          maxZoom: 1.0,
           duration: 600,
         });
       }
@@ -372,7 +386,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
-        panOnDrag={[1, 2]}
+        panOnDrag={true}
         zoomOnPinch={true}
         preventScrolling={true}
         panOnScroll={false}
