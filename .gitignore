@@ -43,7 +43,7 @@ supabase/.branches
 supabase/.temp
 
 # Auto-generated Supabase types — regenerate with: npm run db:types
-src/types/supabase.ts
+# src/types/supabase.ts  ← committed so Vercel can build without credentials
 
 # typescript
 *.tsbuildinfo
