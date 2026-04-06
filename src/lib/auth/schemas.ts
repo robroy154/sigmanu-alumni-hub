@@ -12,8 +12,14 @@ export const SignupSchema = z
     confirmPassword: z.string(),
     first_name: z.string().min(1, "First name is required"),
     last_name: z.string().min(1, "Last name is required"),
-    pledge_class: z.string().optional(),
-    phone: z.string().optional(),
+    pledge_class:   z.string().optional(),
+    phone:          z.string().optional(),
+    street_address: z.string().optional(),
+    city:           z.string().optional(),
+    state:          z.string().optional(),
+    zip:            z.string().optional(),
+    country:        z.string().optional(),
+    birthday:       z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

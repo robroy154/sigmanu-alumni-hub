@@ -22,7 +22,7 @@ export default async function ProfileEditPage() {
     supabase
       .from("members")
       .select(
-        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, big_id"
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
       )
       .eq("id", user.id)
       .single(),
@@ -56,14 +56,21 @@ export default async function ProfileEditPage() {
   }
 
   const defaultValues: ProfileUpdateInput = {
-    first_name:   member.first_name,
-    last_name:    member.last_name,
-    nickname:     member.nickname ?? undefined,
-    pledge_class: member.pledge_class ?? undefined,
-    phone:        member.phone ?? undefined,
-    city:         member.city ?? undefined,
-    state:        member.state ?? undefined,
-    linkedin_url: member.linkedin_url ?? undefined,
+    first_name:     member.first_name,
+    last_name:      member.last_name,
+    nickname:       member.nickname ?? undefined,
+    pledge_class:   member.pledge_class ?? undefined,
+    phone:          member.phone ?? undefined,
+    city:           member.city ?? undefined,
+    state:          member.state ?? undefined,
+    linkedin_url:   member.linkedin_url ?? undefined,
+    street_address: member.street_address ?? undefined,
+    zip:            member.zip ?? undefined,
+    country:        member.country ?? undefined,
+    birthday:       member.birthday ?? undefined,
+    show_address:   member.show_address,
+    show_birthday:  member.show_birthday,
+    show_phone:     member.show_phone,
   };
 
   return (

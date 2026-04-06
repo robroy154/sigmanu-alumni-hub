@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 12 phases complete. Build clean at 26 routes.
+All 13 phases complete. Build clean at 25 routes.
 
-Last completed: Phase 12 — Auth Hardening. See memory file for full phase history.
+Last completed: Phase 13 — Profile and Signup Expansion. See memory file for full phase history.
 
 Completed phases summary:
 
@@ -106,6 +106,7 @@ Completed phases summary:
 - Phase 10: Google OAuth button, custom 404, profile completeness nudge, Big/Littles on profiles
 - Phase 11: Event manager refactor — multi-event system, /events/[id] routes, admin event CRUD, status enum (draft/published/archived)
 - Phase 12: Auth hardening — forgot password flow, reset password page, duplicate email interception on signup
+- Phase 13: Profile expansion — street_address/zip/country/birthday/show_* columns; Google Places autocomplete; privacy toggles; react-image-crop before upload
 
 Key runtime decisions:
 
@@ -115,7 +116,7 @@ Key runtime decisions:
 - exactOptionalPropertyTypes: true — optional props need explicit `| undefined`
 - Stripe API version: "2026-03-25.dahlia" (stripe npm v22)
 - pin_number: set once by member (admin client action), unique DB constraint
-- Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side
+- Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side; cropped 1:1 at 512px before upload via react-image-crop
 - proxy.ts PUBLIC_ROUTES: `["/", "/auth/callback", "/auth/forgot-password", "/auth/reset-password", "/api/stripe", "/events"]`
 - proxy.ts PENDING_ALLOWED: `["/register", "/events"]`
 - Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
@@ -123,6 +124,8 @@ Key runtime decisions:
 - Events use status enum (draft/published/archived), not registration_open boolean, for visibility control
 - Canonical event routes: /events/[id] (public detail) and /events/[id]/register (auth required)
 - /register redirects to the next published event (legacy compat for pending-approval flow)
+- Privacy toggles (show_phone, show_address, show_birthday) enforced in app-layer queries; RLS grants SELECT to authenticated for these columns; admins bypass via admin client
+- Google Places API key: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY — optional; degrades to plain text input without it
 
 ---
 

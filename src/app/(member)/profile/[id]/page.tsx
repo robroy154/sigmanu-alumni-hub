@@ -31,11 +31,20 @@ export default async function MemberProfilePage({ params }: Props) {
   if (user === null) redirect("/login");
   if (id === user.id) redirect("/profile");
 
+  // Fetch viewer's status to determine if admin (admins bypass privacy filters).
+  const { data: viewer } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = viewer?.status === "admin";
+
   const [{ data: member }, { data: littles }] = await Promise.all([
     supabase
       .from("members")
       .select(
-        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id"
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
       )
       .eq("id", id)
       .in("status", ["member", "admin"])
@@ -49,6 +58,11 @@ export default async function MemberProfilePage({ params }: Props) {
   ]);
 
   if (member === null) notFound();
+
+  // Apply privacy filters (admins see everything).
+  const showPhone    = isAdmin || member.show_phone;
+  const showAddress  = isAdmin || member.show_address;
+  const showBirthday = isAdmin || member.show_birthday;
 
   // Resolve signed photo URL.
   let photoUrl: string | null = null;
@@ -137,8 +151,31 @@ export default async function MemberProfilePage({ params }: Props) {
           Contact &amp; Details
         </h2>
         <dl className="space-y-3">
-          <Row label="Phone"      value={member.phone} />
+          {showPhone && <Row label="Phone" value={member.phone} />}
+          {showBirthday && member.birthday !== null && member.birthday !== undefined && (
+            <Row
+              label="Birthday"
+              value={new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            />
+          )}
           <Row label="Pin number" value={member.pin_number} />
+          {showAddress && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
+            <div className="flex gap-3">
+              <dt className="w-28 shrink-0 text-white/50 text-sm">Address</dt>
+              <dd className="text-white text-sm">
+                <span>{member.street_address}</span>
+                {(member.city !== null || member.state !== null || member.zip !== null) && (
+                  <span className="block">
+                    {[member.city, member.state].filter(Boolean).join(", ")}
+                    {member.zip !== null && member.zip !== "" ? ` ${member.zip}` : ""}
+                  </span>
+                )}
+                {member.country !== null && member.country !== "" && member.country !== "USA" && (
+                  <span className="block">{member.country}</span>
+                )}
+              </dd>
+            </div>
+          )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-white/50 text-sm">LinkedIn</dt>

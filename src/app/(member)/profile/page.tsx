@@ -17,7 +17,7 @@ export default async function ProfilePage() {
     supabase
       .from("members")
       .select(
-        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id"
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday"
       )
       .eq("id", user.id)
       .single(),
@@ -155,7 +155,26 @@ export default async function ProfilePage() {
         <dl className="space-y-3">
           <Row label="Email"      value={user.email ?? null} />
           <Row label="Phone"      value={member.phone} />
+          <Row label="Birthday"   value={member.birthday !== null && member.birthday !== undefined ? new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null} />
           <Row label="Pin number" value={member.pin_number} />
+          {/* Address — show full address on own profile */}
+          {member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
+            <div className="flex gap-3">
+              <dt className="w-28 shrink-0 text-white/50 text-sm">Address</dt>
+              <dd className="text-white text-sm">
+                <span>{member.street_address}</span>
+                {(member.city !== null || member.state !== null || member.zip !== null) && (
+                  <span className="block">
+                    {[member.city, member.state].filter(Boolean).join(", ")}
+                    {member.zip !== null && member.zip !== "" ? ` ${member.zip}` : ""}
+                  </span>
+                )}
+                {member.country !== null && member.country !== "" && member.country !== "USA" && (
+                  <span className="block">{member.country}</span>
+                )}
+              </dd>
+            </div>
+          )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-white/50 text-sm">LinkedIn</dt>

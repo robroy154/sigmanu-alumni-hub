@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { notifyAdminsNewMember } from "@/lib/email";
+import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 
 type DuplicateState =
   | { type: "none" }
@@ -29,6 +30,8 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(SignupSchema),
@@ -65,15 +68,17 @@ export function SignupForm() {
     }
 
     // The handle_new_user trigger only copies first_name and last_name.
-    // Write pledge_class and phone directly now that we have a session.
+    // Write optional fields directly now that we have a session.
     if (signUpData.user !== null) {
-      const update: { pledge_class?: string; phone?: string } = {};
-      if (data.pledge_class !== undefined && data.pledge_class !== "") {
-        update.pledge_class = data.pledge_class;
-      }
-      if (data.phone !== undefined && data.phone !== "") {
-        update.phone = data.phone;
-      }
+      const update: Record<string, string> = {};
+      if (data.pledge_class !== undefined && data.pledge_class !== "") update.pledge_class   = data.pledge_class;
+      if (data.phone         !== undefined && data.phone         !== "") update.phone         = data.phone;
+      if (data.street_address !== undefined && data.street_address !== "") update.street_address = data.street_address;
+      if (data.city          !== undefined && data.city          !== "") update.city          = data.city;
+      if (data.state         !== undefined && data.state         !== "") update.state         = data.state;
+      if (data.zip           !== undefined && data.zip           !== "") update.zip           = data.zip;
+      if (data.country       !== undefined && data.country       !== "") update.country       = data.country;
+      if (data.birthday      !== undefined && data.birthday      !== "") update.birthday      = data.birthday;
       if (Object.keys(update).length > 0) {
         await supabase.from("members").update(update).eq("id", signUpData.user.id);
       }
@@ -240,6 +245,78 @@ export function SignupForm() {
             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
             {...register("phone")}
           />
+        </div>
+      </div>
+
+      {/* ── Birthday ──────────────────────────────────────────────── */}
+      <div className="space-y-1.5">
+        <Label htmlFor="birthday" className="text-white/80 text-sm">
+          Birthday{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="birthday"
+          type="date"
+          className="bg-white/10 border-white/20 text-white focus-visible:border-sn-gold scheme-dark"
+          {...register("birthday")}
+        />
+      </div>
+
+      {/* ── Address ───────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+          Address <span className="text-white/40 font-normal normal-case">(optional)</span>
+        </p>
+        <div className="space-y-1.5">
+          <Label htmlFor="street_address" className="text-white/80 text-sm">Street address</Label>
+          <Controller
+            name="street_address"
+            control={control}
+            render={({ field }) => (
+              <AddressAutocomplete
+                id="street_address"
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onPlaceSelect={(parts) => {
+                  field.onChange(parts.street);
+                  setValue("city",    parts.city);
+                  setValue("state",   parts.state);
+                  setValue("zip",     parts.zip);
+                  setValue("country", parts.country);
+                }}
+                className="h-9 w-full rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold transition-colors"
+                placeholder="123 Main St"
+              />
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="city" className="text-white/80 text-sm">City</Label>
+            <Input id="city" type="text" autoComplete="address-level2" placeholder="Columbus"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+              {...register("city")} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="state" className="text-white/80 text-sm">State</Label>
+            <Input id="state" type="text" autoComplete="address-level1" placeholder="GA" maxLength={2}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+              {...register("state")} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="zip" className="text-white/80 text-sm">ZIP code</Label>
+            <Input id="zip" type="text" autoComplete="postal-code" placeholder="31901"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+              {...register("zip")} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="country" className="text-white/80 text-sm">Country</Label>
+            <Input id="country" type="text" autoComplete="country-name" placeholder="USA"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+              {...register("country")} />
+          </div>
         </div>
       </div>
 

@@ -23,14 +23,22 @@ export async function updateProfile(
   const { error } = await supabase
     .from("members")
     .update({
-      first_name:   data.first_name,
-      last_name:    data.last_name,
-      nickname:     data.nickname ?? null,
-      pledge_class: data.pledge_class ?? null,
-      phone:        data.phone ?? null,
-      city:         data.city ?? null,
-      state:        data.state ?? null,
-      linkedin_url: data.linkedin_url ?? null,
+      first_name:     data.first_name,
+      last_name:      data.last_name,
+      nickname:       data.nickname ?? null,
+      pledge_class:   data.pledge_class ?? null,
+      phone:          data.phone ?? null,
+      street_address: data.street_address ?? null,
+      city:           data.city ?? null,
+      state:          data.state ?? null,
+      zip:            data.zip ?? null,
+      country:        data.country ?? "USA",
+      birthday:       data.birthday ?? null,
+      linkedin_url:   data.linkedin_url ?? null,
+      // Privacy toggles — undefined means "not submitted", preserve current value.
+      ...(data.show_address  !== undefined && { show_address:  data.show_address }),
+      ...(data.show_birthday !== undefined && { show_birthday: data.show_birthday }),
+      ...(data.show_phone    !== undefined && { show_phone:    data.show_phone }),
     })
     .eq("id", user.id);
 
@@ -40,6 +48,7 @@ export async function updateProfile(
 
   revalidatePath("/profile");
   revalidatePath("/profile/edit");
+  revalidatePath("/directory");
   return { success: true };
 }
 

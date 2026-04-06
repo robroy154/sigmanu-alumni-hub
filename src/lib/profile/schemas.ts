@@ -1,20 +1,30 @@
 import { z } from "zod";
 
 export const ProfileUpdateSchema = z.object({
-  first_name:   z.string().min(1, "First name is required"),
-  last_name:    z.string().min(1, "Last name is required"),
-  nickname:     z.string().optional(),
-  pledge_class: z.string().optional(),
-  phone:        z.string().optional(),
-  city:         z.string().optional(),
-  state:        z.string().optional(),
-  linkedin_url: z
+  first_name:    z.string().min(1, "First name is required"),
+  last_name:     z.string().min(1, "Last name is required"),
+  nickname:      z.string().optional(),
+  pledge_class:  z.string().optional(),
+  phone:         z.string().optional(),
+  // Structured address fields
+  street_address: z.string().optional(),
+  city:          z.string().optional(),
+  state:         z.string().optional(),
+  zip:           z.string().optional(),
+  country:       z.string().optional(),
+  // Birthday stored as ISO date string "YYYY-MM-DD" (date inputs return strings)
+  birthday:      z.string().optional(),
+  linkedin_url:  z
     .string()
     .optional()
     .refine(
       (val) => !val || val.startsWith("https://www.linkedin.com/") || val.startsWith("https://linkedin.com/"),
       { message: "Must be a LinkedIn URL" }
     ),
+  // Privacy toggles — only on profile edit, not signup
+  show_address:  z.boolean().optional(),
+  show_birthday: z.boolean().optional(),
+  show_phone:    z.boolean().optional(),
 });
 
 // Separate schema for the one-time pin number set.
