@@ -73,6 +73,7 @@ export function EventsCalendar({ eventDateStrings }: Props) {
         .rdp-day_button:hover { background: rgba(255,255,255,0.08); color: white; }
         .rdp-today .rdp-day_button { color: #C6A75E; font-weight: 700; }
         .rdp-outside .rdp-day_button { color: rgba(255,255,255,0.2); }
+        .rdp-event-day,
         .rdp-event-day .rdp-day_button {
           background: rgba(198,167,94,0.25) !important;
           color: #E0C97F !important;

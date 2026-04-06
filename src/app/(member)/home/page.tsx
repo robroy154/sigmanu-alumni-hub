@@ -83,7 +83,7 @@ export default async function HomePage() {
 
           {/* Upcoming events */}
           <section>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="text-sn-off-white font-semibold">Upcoming Events</h2>
               <Link
                 href="/events"
@@ -148,7 +148,7 @@ export default async function HomePage() {
           {/* Announcements */}
           {announcements.length > 0 && (
             <section>
-              <h2 className="text-sn-off-white font-semibold mb-3">Announcements</h2>
+              <h2 className="text-sn-off-white font-semibold mb-4">Announcements</h2>
               <div className="space-y-3">
                 {announcements.map((a) => (
                   <AnnouncementCard

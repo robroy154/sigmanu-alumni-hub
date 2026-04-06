@@ -74,7 +74,7 @@ export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
     <div className="lg:col-span-2 space-y-8">
       {/* Upcoming */}
       <section>
-        <h2 className="text-sn-off-white font-semibold mb-3">Upcoming</h2>
+        <h2 className="text-sn-off-white font-semibold mb-4">Upcoming</h2>
         {upcoming.length === 0 ? (
           <div className="bg-sn-surface rounded-sm px-5 py-8">
             <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -97,7 +97,7 @@ export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
       {/* Past */}
       {past.length > 0 && (
         <section>
-          <h2 className="text-sn-off-white font-semibold mb-3">Past</h2>
+          <h2 className="text-sn-off-white font-semibold mb-4">Past</h2>
           <div className="space-y-3">
             {past.map((r) => (
               <EventRow key={r.id} registration={r} past />
