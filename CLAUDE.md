@@ -87,7 +87,7 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 14 phases complete. Build clean at 27 routes.
+All 14 phases complete. Build clean at 28 routes.
 
 Last completed: Phase 14 — Referral / Invite System. See memory file for full phase history.
 
@@ -107,7 +107,7 @@ Completed phases summary:
 - Phase 11: Event manager refactor — multi-event system, /events/[id] routes, admin event CRUD, status enum (draft/published/archived)
 - Phase 12: Auth hardening — forgot password flow, reset password page, duplicate email interception on signup
 - Phase 13: Profile expansion — street_address/zip/country/birthday/show_* columns; Google Places autocomplete; privacy toggles; react-image-crop before upload
-- Phase 14: Referral/invite system — referrals table, /join?token= public route, JoinForm, POST /api/referrals, completeReferral server action, invite section on profile page, admin referred_by display
+- Phase 14: Referral/invite system — referrals table, /join?token= public route, JoinForm, POST /api/referrals, completeReferral server action, invite section on profile page, admin referred_by display, /admin/referrals list with cancel
 
 Key runtime decisions:
 

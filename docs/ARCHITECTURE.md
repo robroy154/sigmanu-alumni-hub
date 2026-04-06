@@ -498,6 +498,7 @@ A chronological record of every locked decision.
 | 33 | `referred_by` on members is admin-only visibility, enforced via `REVOKE SELECT (referred_by) ON members FROM authenticated` | Column-level revoke is the correct PostgreSQL mechanism for per-column access control; service role bypasses it |
 | 34 | Token expiry maintenance via pg_cron nightly job — setup documented in migration file comments | pg_cron runs inside Postgres, no external scheduler needed; SQL and dashboard steps are in `20260405000005_referrals.sql` |
 | 35 | No SMS — email only via Resend for all referral notifications (invite, confirmation to referrer, joined notification) | Resend is already integrated; SMS adds cost, complexity, and a phone number requirement for invitees |
+| 36 | Admin can cancel pending referrals at `/admin/referrals` — sets status to `expired`, no hard delete | Preserves audit trail; expired tokens show "already expired" on the invite link rather than "invalid" |
 
 ---
 

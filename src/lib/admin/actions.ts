@@ -138,6 +138,28 @@ export async function assignBadge(
   return { success: true };
 }
 
+// ── Cancel a pending referral ──────────────────────────────────────────────────
+export async function cancelReferral(
+  referralId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Only cancel if still pending — idempotent.
+  const { error } = await admin
+    .from("referrals")
+    .update({ status: "expired" })
+    .eq("id", referralId)
+    .eq("status", "pending");
+
+  if (error !== null) return { error: "Failed to cancel referral." };
+
+  revalidatePath("/admin/referrals");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,
