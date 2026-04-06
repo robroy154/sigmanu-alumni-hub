@@ -96,7 +96,7 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
         type="button"
         variant="outline"
         size="sm"
-        className="border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
+        className="bg-transparent border-white/20 text-white/80 hover:bg-white/10 hover:text-white"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
       >

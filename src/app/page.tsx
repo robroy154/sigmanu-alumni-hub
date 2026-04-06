@@ -130,7 +130,7 @@ export default async function HomePage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/30 text-white hover:bg-white/10 px-8"
+                    className="bg-transparent border-white/30 text-white hover:bg-white/10 px-8"
                   >
                     My Profile
                   </Button>
@@ -140,7 +140,7 @@ export default async function HomePage() {
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-white/30 text-white hover:bg-white/10 px-8"
+                    className="bg-transparent border-white/30 text-white hover:bg-white/10 px-8"
                   >
                     Member Sign In
                   </Button>
