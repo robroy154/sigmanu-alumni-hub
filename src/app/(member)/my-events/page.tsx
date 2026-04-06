@@ -18,7 +18,7 @@ export default async function MyEventsPage() {
     .from("registrations")
     .select("id, payment_status, guest_count, events(id, title, event_date, location, ticket_price)")
     .eq("member_id", user.id)
-    .order("created_at", { ascending: false });
+    .order("submitted_at", { ascending: false });
 
   const rows = (registrations ?? []) as RegistrationRow[];
 
