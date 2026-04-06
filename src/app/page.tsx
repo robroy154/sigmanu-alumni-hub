@@ -2,11 +2,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function HomePage() {
   // Use admin client — home page is public (unauthenticated), so RLS would
   // block the events query. We only expose open events.
   const admin = createAdminClient();
+
+  // Check if the visitor is already authenticated (best-effort — never redirect).
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = user !== null;
   const { data: event } = await admin
     .from("events")
     .select("title, event_date, location, ticket_price, registration_open")
@@ -44,23 +50,36 @@ export default async function HomePage() {
             </div>
           </div>
           <nav className="flex items-center gap-3">
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/80 hover:text-white hover:bg-white/10"
-              >
-                Member Login
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button
-                size="sm"
-                className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
-              >
-                Create Account
-              </Button>
-            </Link>
+            {isLoggedIn ? (
+              <Link href="/profile">
+                <Button
+                  size="sm"
+                  className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+                >
+                  My Profile
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/80 hover:text-white hover:bg-white/10"
+                  >
+                    Member Login
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button
+                    size="sm"
+                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+                  >
+                    Create Account
+                  </Button>
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
@@ -106,15 +125,27 @@ export default async function HomePage() {
                   Register Now
                 </Button>
               </Link>
-              <Link href="/login">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 px-8"
-                >
-                  Member Sign In
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link href="/profile">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/30 text-white hover:bg-white/10 px-8"
+                  >
+                    My Profile
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-white/30 text-white hover:bg-white/10 px-8"
+                  >
+                    Member Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </>
         ) : (
@@ -128,14 +159,25 @@ export default async function HomePage() {
               brother directory, and our chapter&apos;s family lineage.
             </p>
             <div className="mt-10">
-              <Link href="/login">
-                <Button
-                  size="lg"
-                  className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
-                >
-                  Member Sign In
-                </Button>
-              </Link>
+              {isLoggedIn ? (
+                <Link href="/profile">
+                  <Button
+                    size="lg"
+                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
+                  >
+                    My Profile
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button
+                    size="lg"
+                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
+                  >
+                    Member Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </>
         )}

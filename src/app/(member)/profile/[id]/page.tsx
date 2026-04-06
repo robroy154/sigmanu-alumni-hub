@@ -29,18 +29,24 @@ export default async function MemberProfilePage({ params }: Props) {
   } = await supabase.auth.getUser();
 
   if (user === null) redirect("/login");
-
-  // Redirect to own profile rather than viewing as a stranger.
   if (id === user.id) redirect("/profile");
 
-  const { data: member } = await supabase
-    .from("members")
-    .select(
-      "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status"
-    )
-    .eq("id", id)
-    .in("status", ["member", "admin"])
-    .single();
+  const [{ data: member }, { data: littles }] = await Promise.all([
+    supabase
+      .from("members")
+      .select(
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id"
+      )
+      .eq("id", id)
+      .in("status", ["member", "admin"])
+      .single(),
+    supabase
+      .from("members")
+      .select("id, first_name, last_name, nickname")
+      .eq("big_id", id)
+      .in("status", ["member", "admin"])
+      .order("last_name"),
+  ]);
 
   if (member === null) notFound();
 
@@ -53,10 +59,17 @@ export default async function MemberProfilePage({ params }: Props) {
     photoUrl = signed?.signedUrl ?? null;
   }
 
-  const { data: badges } = await supabase
-    .from("badges")
-    .select("id, badge_type")
-    .eq("member_id", id);
+  const [{ data: badges }, { data: bigMember }] = await Promise.all([
+    supabase.from("badges").select("id, badge_type").eq("member_id", id),
+    member.big_id !== null
+      ? supabase
+          .from("members")
+          .select("id, first_name, last_name")
+          .eq("id", member.big_id)
+          .in("status", ["member", "admin"])
+          .single()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const fullName = [member.first_name, member.last_name].join(" ");
   const location =
@@ -79,11 +92,7 @@ export default async function MemberProfilePage({ params }: Props) {
         <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-sn-navy-dark border-2 border-sn-gold/40 flex items-center justify-center select-none">
           {photoUrl !== null ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photoUrl}
-              alt={fullName}
-              className="w-full h-full object-cover"
-            />
+            <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
           ) : (
             <span className="text-sn-gold text-2xl font-bold">ΣΝ</span>
           )}
@@ -100,9 +109,7 @@ export default async function MemberProfilePage({ params }: Props) {
             )}
           </h1>
           {member.pledge_class !== null && (
-            <p className="text-white/60 text-sm mt-0.5">
-              {member.pledge_class} Class
-            </p>
+            <p className="text-white/60 text-sm mt-0.5">{member.pledge_class} Class</p>
           )}
           {location !== null && (
             <p className="text-white/50 text-sm">{location}</p>
@@ -124,14 +131,13 @@ export default async function MemberProfilePage({ params }: Props) {
         </div>
       </div>
 
-      {/* Details card */}
+      {/* Contact details */}
       <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
           Contact &amp; Details
         </h2>
-
         <dl className="space-y-3">
-          <Row label="Phone" value={member.phone} />
+          <Row label="Phone"      value={member.phone} />
           <Row label="Pin number" value={member.pin_number} />
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
@@ -150,17 +156,55 @@ export default async function MemberProfilePage({ params }: Props) {
           )}
         </dl>
       </div>
+
+      {/* Family line */}
+      {(bigMember !== null || (littles !== null && littles.length > 0)) && (
+        <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+          <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
+            Family Line
+          </h2>
+
+          {bigMember !== null && (
+            <div>
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
+              <Link
+                href={`/profile/${bigMember.id}`}
+                className="inline-flex items-center gap-2 text-white text-sm font-medium hover:text-sn-gold transition-colors"
+              >
+                {bigMember.first_name} {bigMember.last_name}
+                <span className="text-white/30">→</span>
+              </Link>
+            </div>
+          )}
+
+          {littles !== null && littles.length > 0 && (
+            <div>
+              <p className="text-white/50 text-xs uppercase tracking-wider mb-2">
+                Little Brother{littles.length !== 1 ? "s" : ""}
+              </p>
+              <div className="space-y-1.5">
+                {littles.map((l) => (
+                  <Link
+                    key={l.id}
+                    href={`/profile/${l.id}`}
+                    className="flex items-center gap-2 text-white text-sm hover:text-sn-gold transition-colors"
+                  >
+                    {l.first_name} {l.last_name}
+                    {l.nickname !== null && l.nickname !== "" && (
+                      <span className="text-white/40 text-xs">&ldquo;{l.nickname}&rdquo;</span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | null | undefined;
-}) {
+function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex gap-3">

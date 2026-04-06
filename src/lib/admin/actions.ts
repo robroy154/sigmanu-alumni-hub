@@ -31,6 +31,14 @@ export async function approveMember(
   if ("error" in guard) return guard;
 
   const admin = createAdminClient();
+
+  // Fetch name + email before updating so we can send the welcome email.
+  const { data: member } = await admin
+    .from("members")
+    .select("first_name, email")
+    .eq("id", memberId)
+    .single();
+
   const { error } = await admin
     .from("members")
     .update({ status: "member" })
@@ -38,6 +46,13 @@ export async function approveMember(
     .eq("status", "pending"); // Safety: only upgrade pending rows
 
   if (error !== null) return { error: "Failed to approve member." };
+
+  // Fire-and-forget — email failure must not block approval.
+  if (member !== null) {
+    void import("@/lib/email").then(({ sendWelcomeEmail }) =>
+      sendWelcomeEmail({ to: member.email, firstName: member.first_name })
+    );
+  }
 
   revalidatePath("/admin/members");
   revalidatePath("/admin");

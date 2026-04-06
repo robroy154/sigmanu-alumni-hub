@@ -1,0 +1,319 @@
+"use server";
+
+/**
+ * Email sending module — wraps Resend.
+ *
+ * Required env vars:
+ *   RESEND_API_KEY       — from resend.com dashboard
+ *   RESEND_FROM_EMAIL    — verified sender (e.g. "noreply@yourdomain.com")
+ *                          defaults to "onboarding@resend.dev" for local dev
+ *
+ * All send functions are fire-and-forget: they log errors but never throw,
+ * so a failed email never blocks the primary operation.
+ */
+
+import { Resend } from "resend";
+
+// ---------------------------------------------------------------------------
+// Client
+// ---------------------------------------------------------------------------
+
+function getResend(): Resend | null {
+  const key = process.env.RESEND_API_KEY;
+  if (key === undefined || key === "") {
+    console.warn("[email] RESEND_API_KEY not set — emails disabled.");
+    return null;
+  }
+  return new Resend(key);
+}
+
+const FROM =
+  process.env.RESEND_FROM_EMAIL !== undefined &&
+  process.env.RESEND_FROM_EMAIL !== ""
+    ? process.env.RESEND_FROM_EMAIL
+    : "Sigma Nu Mu Xi <onboarding@resend.dev>";
+
+// ---------------------------------------------------------------------------
+// Base HTML template
+// ---------------------------------------------------------------------------
+
+function baseTemplate(bodyHtml: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:32px 16px;background:#0f172a;font-family:Georgia,'Times New Roman',serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" role="presentation"
+             style="background:#1B2A47;border-radius:12px;overflow:hidden;border:1px solid rgba(201,168,76,0.25);">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:#1B2A47;border-bottom:2px solid #C9A84C;padding:24px 32px;text-align:center;">
+            <div style="display:inline-block;width:44px;height:44px;border-radius:50%;background:#C9A84C;
+                        line-height:44px;text-align:center;font-size:18px;font-weight:bold;color:#1B2A47;">ΣΝ</div>
+            <p style="margin:8px 0 0;color:#C9A84C;font-size:11px;letter-spacing:3px;
+                      text-transform:uppercase;font-family:Arial,sans-serif;">
+              Sigma Nu · Mu Xi Chapter
+            </p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px 36px;">
+            ${bodyHtml}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="border-top:1px solid rgba(201,168,76,0.15);padding:20px 32px;text-align:center;">
+            <p style="margin:0;color:rgba(255,255,255,0.35);font-size:11px;font-family:Arial,sans-serif;
+                      line-height:1.6;">
+              Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University<br>
+              This is an automated message — please do not reply directly.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+// Shared inline styles used in templates
+const h1 = `color:#ffffff;font-size:22px;font-weight:bold;margin:0 0 12px;line-height:1.3;`;
+const p  = `color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin:0 0 14px;font-family:Arial,sans-serif;`;
+const btn = `display:inline-block;background:#C9A84C;color:#1B2A47;font-family:Arial,sans-serif;
+             font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px;
+             text-decoration:none;letter-spacing:0.5px;`;
+const label = `color:#C9A84C;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
+               font-family:Arial,sans-serif;`;
+const value = `color:#ffffff;font-size:15px;font-family:Arial,sans-serif;`;
+const divider = `border:none;border-top:1px solid rgba(201,168,76,0.2);margin:20px 0;`;
+
+// ---------------------------------------------------------------------------
+// 1. Welcome email — sent when admin approves a member
+// ---------------------------------------------------------------------------
+
+export async function sendWelcomeEmail({
+  to,
+  firstName,
+}: {
+  to:        string;
+  firstName: string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">Welcome to the Brotherhood, ${firstName}!</h1>
+    <p style="${p}">
+      Your account has been approved by a chapter administrator. You now have
+      full access to the Mu Xi Alumni Hub.
+    </p>
+    <p style="${p}">Here's what you can do:</p>
+    <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px;">
+      <tr>
+        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
+          &bull;&nbsp; Browse the <strong style="color:#ffffff;">Brother Directory</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
+          &bull;&nbsp; Explore the <strong style="color:#ffffff;">Chapter Family Tree</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
+          &bull;&nbsp; Complete your <strong style="color:#ffffff;">member profile</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
+          &bull;&nbsp; Register for upcoming <strong style="color:#ffffff;">events</strong>
+        </td>
+      </tr>
+    </table>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/directory" style="${btn}">Go to the Hub →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: "You're approved — Welcome to the Mu Xi Alumni Hub",
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendWelcomeEmail failed:", error);
+  } catch (err) {
+    console.error("[email] sendWelcomeEmail threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Registration confirmation — sent after Stripe payment confirmed
+// ---------------------------------------------------------------------------
+
+export async function sendRegistrationConfirmation({
+  to,
+  name,
+  eventTitle,
+  eventDate,
+  eventLocation,
+  guestCount,
+  totalPaid,
+}: {
+  to:            string;
+  name:          string;
+  eventTitle:    string;
+  eventDate:     string; // pre-formatted
+  eventLocation: string | null;
+  guestCount:    number;
+  totalPaid:     number; // dollars
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const guestLine =
+    guestCount === 0
+      ? "No additional guests."
+      : `${guestCount} additional guest${guestCount !== 1 ? "s" : ""} included.`;
+
+  const body = `
+    <h1 style="${h1}">You&rsquo;re registered!</h1>
+    <p style="${p}">
+      Hi ${name}, your registration for <strong style="color:#C9A84C;">${eventTitle}</strong>
+      is confirmed. See you there!
+    </p>
+    <hr style="${divider}">
+    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;width:100%;">
+      <tr>
+        <td style="${label}">Event</td>
+        <td style="${value}">${eventTitle}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Date</td>
+        <td style="${value}">${eventDate}</td>
+      </tr>
+      ${eventLocation !== null ? `
+      <tr>
+        <td style="${label}">Location</td>
+        <td style="${value}">${eventLocation}</td>
+      </tr>` : ""}
+      <tr>
+        <td style="${label}">Guests</td>
+        <td style="${value}">${guestLine}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Total paid</td>
+        <td style="${value};color:#C9A84C;">$${totalPaid.toFixed(2)}</td>
+      </tr>
+    </table>
+    <hr style="${divider}">
+    <p style="${p}">
+      Questions? Reach out to a chapter administrator through the alumni hub.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}" style="${btn}">Visit the Hub →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: `Registration confirmed — ${eventTitle}`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendRegistrationConfirmation failed:", error);
+  } catch (err) {
+    console.error("[email] sendRegistrationConfirmation threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 3. New member alert — sent to all admins when someone signs up
+// ---------------------------------------------------------------------------
+
+export async function notifyAdminsNewMember(): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  // Import here to avoid circular deps — this file is "use server"
+  const { createClient }      = await import("@/lib/supabase/server");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user === null) return;
+
+  const adminDb = createAdminClient();
+
+  // Fetch the new member's data from DB (don't trust client-supplied values)
+  const { data: member } = await adminDb
+    .from("members")
+    .select("first_name, last_name, email")
+    .eq("id", user.id)
+    .single();
+  if (member === null) return;
+
+  // Fetch all admin email addresses
+  const { data: admins } = await adminDb
+    .from("members")
+    .select("email")
+    .eq("status", "admin");
+
+  const adminEmails = (admins ?? []).map((a) => a.email);
+  if (adminEmails.length === 0) {
+    console.warn("[email] notifyAdminsNewMember: no admin accounts found to notify.");
+    return;
+  }
+
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const fullName  = `${member.first_name} ${member.last_name}`;
+
+  const body = `
+    <h1 style="${h1}">New member signup</h1>
+    <p style="${p}">
+      A new member has created an account and is waiting for approval.
+    </p>
+    <hr style="${divider}">
+    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;">
+      <tr>
+        <td style="${label}">Name</td>
+        <td style="${value}">${fullName}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Email</td>
+        <td style="${value}">${member.email}</td>
+      </tr>
+    </table>
+    <hr style="${divider}">
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/admin/members" style="${btn}">Review in Admin Panel →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to:      adminEmails,
+      subject: `New member signup — ${fullName}`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] notifyAdminsNewMember failed:", error);
+  } catch (err) {
+    console.error("[email] notifyAdminsNewMember threw:", err);
+  }
+}

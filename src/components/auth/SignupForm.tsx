@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
+import { notifyAdminsNewMember } from "@/lib/email";
 
 export function SignupForm() {
   const router = useRouter();
@@ -62,6 +63,9 @@ export function SignupForm() {
         await supabase.from("members").update(update).eq("id", signUpData.user.id);
       }
     }
+
+    // Notify admins of the new signup — fire-and-forget, never block redirect.
+    void notifyAdminsNewMember();
 
     router.push("/pending-approval");
   }
