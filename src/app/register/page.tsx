@@ -70,7 +70,7 @@ export default async function RegisterPage({ searchParams }: Props) {
   return (
     <div className="space-y-6">
       {/* Event header */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-2">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-2">
         <h1 className="text-white text-2xl font-bold">{event.title}</h1>
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-white/60 text-sm">
           <span>{formattedDate} · {formattedTime}</span>
@@ -97,7 +97,7 @@ export default async function RegisterPage({ searchParams }: Props) {
       )}
 
       {/* Registration form */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <h2 className="text-white font-semibold">Your registration</h2>
         <RegistrationForm
           eventId={event.id}

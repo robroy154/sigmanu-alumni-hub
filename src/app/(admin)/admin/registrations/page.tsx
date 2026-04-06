@@ -77,7 +77,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
             href={value === "" ? "/admin/registrations" : `/admin/registrations?status=${value}`}
             className={`h-8 px-3 rounded-lg text-sm transition-colors flex items-center ${
               (filterStatus ?? "") === value
-                ? "bg-sn-gold text-sn-navy font-semibold"
+                ? "bg-sn-gold text-sn-black font-semibold"
                 : "border border-white/20 text-white/70 hover:bg-white/10"
             }`}
           >
@@ -90,7 +90,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
       <div className="rounded-xl border border-sn-gold/20 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-sn-navy border-b border-sn-gold/20">
+            <tr className="bg-sn-black border-b border-sn-gold/20">
               <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
               <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Email</th>
               <th className="text-left px-4 py-3 text-white/50 font-medium hidden lg:table-cell">Event</th>
@@ -121,7 +121,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
               return (
                 <tr
                   key={r.id}
-                  className={`border-b border-white/5 ${i % 2 === 0 ? "bg-sn-navy/60" : "bg-sn-navy/30"}`}
+                  className={`border-b border-white/5 ${i % 2 === 0 ? "bg-sn-black/60" : "bg-sn-black/30"}`}
                 >
                   <td className="px-4 py-3">
                     <div className="text-white font-medium">{r.registrant_name}</div>

@@ -139,11 +139,11 @@ export function RegistrationForm({
             {...register("tshirt_size")}
             aria-invalid={errors.tshirt_size !== undefined}
           >
-            <option value="" className="bg-sn-navy">
+            <option value="" className="bg-sn-black">
               Select size
             </option>
             {TSHIRT_SIZES.map((s) => (
-              <option key={s} value={s} className="bg-sn-navy">
+              <option key={s} value={s} className="bg-sn-black">
                 {s}
               </option>
             ))}
@@ -246,7 +246,7 @@ export function RegistrationForm({
 
       <Button
         type="submit"
-        className="w-full bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold h-10"
+        className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold h-10"
         disabled={isSubmitting}
       >
         {isSubmitting

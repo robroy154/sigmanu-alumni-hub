@@ -64,10 +64,10 @@ function MemberNode({ data: m }: MemberNodeProps) {
       className={[
         "relative rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer transition-all select-none group",
         m.isSelected
-          ? "bg-sn-navy border-2 border-sn-gold shadow-[0_0_16px_rgba(201,168,76,0.35)]"
+          ? "bg-sn-black border-2 border-sn-gold shadow-[0_0_16px_rgba(201,168,76,0.35)]"
           : m.isDimmed
-            ? "bg-sn-navy/40 border border-sn-gold/10"
-            : "bg-sn-navy border border-sn-gold/30 hover:border-sn-gold/70",
+            ? "bg-sn-black/40 border border-sn-gold/10"
+            : "bg-sn-black border border-sn-gold/30 hover:border-sn-gold/70",
       ].join(" ")}
     >
       <Handle
@@ -81,10 +81,10 @@ function MemberNode({ data: m }: MemberNodeProps) {
         className={[
           "w-10 h-10 rounded-full overflow-hidden flex items-center justify-center shrink-0 transition-all",
           m.isSelected
-            ? "border-2 border-sn-gold bg-sn-navy-dark"
+            ? "border-2 border-sn-gold bg-sn-black-secondary"
             : m.isDimmed
-              ? "border border-sn-gold/10 bg-sn-navy-dark/50"
-              : "border border-sn-gold/30 bg-sn-navy-dark group-hover:border-sn-gold/60",
+              ? "border border-sn-gold/10 bg-sn-black-secondary/50"
+              : "border border-sn-gold/30 bg-sn-black-secondary group-hover:border-sn-gold/60",
         ].join(" ")}
       >
         {m.photo_url !== null ? (
@@ -149,7 +149,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
         <Link
           href={`/profile/${m.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="absolute left-0 right-0 top-[calc(100%+5px)] bg-sn-gold text-sn-navy text-[10px] font-bold py-1.5 px-2 rounded-lg text-center hover:bg-sn-gold-light transition-colors z-10 whitespace-nowrap"
+          className="absolute left-0 right-0 top-[calc(100%+5px)] bg-sn-gold text-sn-black text-[10px] font-bold py-1.5 px-2 rounded-lg text-center hover:bg-sn-gold-light transition-colors z-10 whitespace-nowrap"
         >
           View Profile →
         </Link>
@@ -203,7 +203,7 @@ function buildLayout(members: FamilyTreeMember[]): {
         id:     `e-${m.big_id}-${m.id}`,
         source: m.big_id,
         target: m.id,
-        style:  { stroke: "#C9A84C", strokeWidth: 1.5, opacity: 0.45 },
+        style:  { stroke: "#C6A75E", strokeWidth: 1.5, opacity: 0.45 },
         type:   "smoothstep",
       });
     }
@@ -299,7 +299,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
       return {
         ...e,
         style: isActive
-          ? { stroke: "#C9A84C", strokeWidth: 3, opacity: 1 }
+          ? { stroke: "#C6A75E", strokeWidth: 3, opacity: 1 }
           : { stroke: "#555", strokeWidth: 1, opacity: 0.1 },
       };
     });
@@ -355,12 +355,12 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           value={query}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search brothers…"
-          className="h-9 rounded-lg border border-white/20 bg-sn-navy/90 backdrop-blur-sm px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
+          className="h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
         />
         {selectedId !== null && (
           <button
             onClick={() => setSelected(null)}
-            className="h-9 px-3 rounded-lg border border-white/20 bg-sn-navy/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
+            className="h-9 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
           >
             Clear
           </button>
@@ -389,19 +389,19 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           variant={BackgroundVariant.Dots}
           gap={20}
           size={1}
-          color="#C9A84C"
+          color="#C6A75E"
           style={{ opacity: 0.1 }}
         />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={(n) => {
             const data = n.data as unknown as MemberNodeData;
-            if (data.isSelected) return "#C9A84C";
+            if (data.isSelected) return "#C6A75E";
             if (data.isDimmed)   return "#333";
-            return "#C9A84C";
+            return "#C6A75E";
           }}
           maskColor="rgba(17, 24, 39, 0.85)"
-          style={{ background: "#1B2A47", border: "1px solid rgba(201,168,76,0.2)" }}
+          style={{ background: "#0B0B0C", border: "1px solid rgba(198,167,94,0.2)" }}
           position="bottom-right"
         />
       </ReactFlow>

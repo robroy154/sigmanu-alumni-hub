@@ -69,9 +69,15 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 ## Branding
 
-- Sigma Nu Navy: `#1B2A47`
-- Sigma Nu Gold: `#C9A84C`
-- Tailwind tokens: `sn-navy`, `sn-navy-dark`, `sn-gold`, `sn-gold-light`
+- Sigma Nu colors: Black, White, and Gold (navy was never an official color)
+- Primary Black: `#0B0B0C` — token `sn-black`
+- Secondary Black: `#121214` — token `sn-black-secondary`
+- Gold: `#C6A75E` — token `sn-gold`
+- Gold Light: `#E0C97F` — token `sn-gold-light`
+- Gray Dark: `#2A2A2E` — token `sn-gray-dark`
+- Gray Medium: `#6B6B73` — token `sn-gray-medium`
+- Gray Light: `#D1D1D6` — token `sn-gray-light`
+- Off White: `#F5F5F7` — token `sn-off-white`
 - shadcn/ui as base component library with Sigma Nu theming on top
 - Must not look like a generic template
 

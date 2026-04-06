@@ -387,28 +387,34 @@ Build in this sequence. Each phase produces something functional before moving t
 ### 9.1 Design Direction
 
 - **Reference:** sigmanu.org for official insignia, colors, and design guidelines
-- **Colors:** Sigma Nu Gold and Navy are the primary palette
+- **Colors:** Sigma Nu Black, White, and Gold are the official palette. Navy is not an official Sigma Nu color.
 - **Aesthetic:** Clean and modern — not dated fraternity website energy
 - **Graphics:** Placeholders provided in the build for custom assets (crest, chapter photo, event banner). Rob supplies actual graphics.
 - **Feel:** Should look like it belongs to this fraternity, not like a generic alumni portal template
 
-### 9.2 Color Tokens (Tailwind Config)
+### 9.2 Color Tokens (globals.css @theme inline)
 
-```js
-// tailwind.config.ts
-colors: {
-  'sn-navy':     '#1B2A47',
-  'sn-navy-dark':'#111C30',
-  'sn-gold':     '#C9A84C',
-  'sn-gold-light':'#F0D080',
-}
+Tailwind v4 uses CSS-based token definitions in `globals.css` — there is no `tailwind.config.ts` color map.
+
+```css
+/* @theme inline block in src/app/globals.css */
+--color-sn-black:           #0b0b0c;   /* Primary background */
+--color-sn-black-secondary: #121214;   /* Secondary background */
+--color-sn-gold:            #c6a75e;   /* Primary brand gold */
+--color-sn-gold-light:      #e0c97f;   /* Hover / highlight gold */
+--color-sn-gray-dark:       #2a2a2e;
+--color-sn-gray-medium:     #6b6b73;
+--color-sn-gray-light:      #d1d1d6;
+--color-sn-off-white:       #f5f5f7;
 ```
+
+Usage in components: `bg-sn-black`, `bg-sn-black-secondary`, `text-sn-gold`, `bg-sn-gold`, `hover:bg-sn-gold-light`, etc.
 
 ### 9.3 UI Component Approach
 
 - **Tailwind CSS** for all styling
 - **shadcn/ui** as the base component library — unstyled-first, Tailwind-compatible, no Bootstrap or MUI
-- Custom Sigma Nu theming applied on top via Tailwind config
+- Custom Sigma Nu theming applied on top via Tailwind v4 CSS token definitions in `globals.css`
 - The site must not look like a template
 
 ---

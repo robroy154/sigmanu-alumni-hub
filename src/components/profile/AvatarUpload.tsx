@@ -65,7 +65,7 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
   return (
     <div className="flex flex-col items-center gap-3">
       {/* Avatar display */}
-      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-sn-navy border-2 border-sn-gold/40 flex items-center justify-center select-none">
+      <div className="relative w-24 h-24 rounded-full overflow-hidden bg-sn-black border-2 border-sn-gold/40 flex items-center justify-center select-none">
         {previewUrl !== null ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

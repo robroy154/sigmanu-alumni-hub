@@ -87,9 +87,9 @@ export default async function MemberProfilePage({ params }: Props) {
       </Link>
 
       {/* Header card */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 flex items-start gap-6">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 flex items-start gap-6">
         {/* Avatar */}
-        <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-sn-navy-dark border-2 border-sn-gold/40 flex items-center justify-center select-none">
+        <div className="w-20 h-20 shrink-0 rounded-full overflow-hidden bg-sn-black-secondary border-2 border-sn-gold/40 flex items-center justify-center select-none">
           {photoUrl !== null ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
@@ -132,7 +132,7 @@ export default async function MemberProfilePage({ params }: Props) {
       </div>
 
       {/* Contact details */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
           Contact &amp; Details
         </h2>
@@ -159,7 +159,7 @@ export default async function MemberProfilePage({ params }: Props) {
 
       {/* Family line */}
       {(bigMember !== null || (littles !== null && littles.length > 0)) && (
-        <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
           <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
             Family Line
           </h2>

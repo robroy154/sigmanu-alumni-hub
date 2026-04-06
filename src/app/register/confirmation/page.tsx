@@ -94,7 +94,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
       )}
 
       {/* Registration summary */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <h2 className="text-white/70 text-xs font-semibold uppercase tracking-wider">
           Registration Summary
         </h2>
@@ -151,7 +151,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
         </Link>
         <Link
           href="/directory"
-          className="flex-1 inline-flex h-9 items-center justify-center rounded-lg bg-sn-gold text-sn-navy text-sm font-semibold hover:bg-sn-gold-light transition-colors"
+          className="flex-1 inline-flex h-9 items-center justify-center rounded-lg bg-sn-gold text-sn-black text-sm font-semibold hover:bg-sn-gold-light transition-colors"
         >
           Member directory
         </Link>

@@ -2,9 +2,9 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-sn-navy-dark flex flex-col items-center justify-center px-6 text-center">
+    <div className="min-h-screen bg-sn-black-secondary flex flex-col items-center justify-center px-6 text-center">
       {/* Crest */}
-      <div className="w-16 h-16 rounded-full bg-sn-gold flex items-center justify-center text-sn-navy font-bold text-2xl select-none mb-6">
+      <div className="w-16 h-16 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-2xl select-none mb-6">
         ΣΝ
       </div>
 
@@ -23,7 +23,7 @@ export default function NotFound() {
       <div className="flex flex-col sm:flex-row gap-3">
         <Link
           href="/"
-          className="inline-flex h-10 items-center justify-center rounded-lg bg-sn-gold px-6 text-sm font-semibold text-sn-navy hover:bg-sn-gold-light transition-colors"
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-sn-gold px-6 text-sm font-semibold text-sn-black hover:bg-sn-gold-light transition-colors"
         >
           Go home
         </Link>

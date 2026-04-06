@@ -29,7 +29,7 @@ export function ApproveButton({ memberId }: { memberId: string }) {
       <button
         onClick={handleApprove}
         disabled={loading}
-        className="inline-flex h-7 items-center rounded-lg bg-sn-gold px-3 text-xs font-semibold text-sn-navy hover:bg-sn-gold-light transition-colors disabled:opacity-50"
+        className="inline-flex h-7 items-center rounded-lg bg-sn-gold px-3 text-xs font-semibold text-sn-black hover:bg-sn-gold-light transition-colors disabled:opacity-50"
       >
         {loading ? "Approving…" : "Approve"}
       </button>

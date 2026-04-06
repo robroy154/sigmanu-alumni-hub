@@ -55,7 +55,7 @@ export default async function PendingApprovalPage() {
           {/* /register is built in Phase 5 */}
           <a
             href="/register"
-            className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-sn-gold px-4 text-sm font-semibold text-sn-navy hover:bg-sn-gold-light transition-colors"
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-sn-gold px-4 text-sm font-semibold text-sn-black hover:bg-sn-gold-light transition-colors"
           >
             Register for Reunion
           </a>

@@ -85,11 +85,11 @@ export function BigBrotherSelector({
         onChange={handleChange}
         className="h-9 w-full rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white focus:outline-none focus:border-sn-gold transition-colors"
       >
-        <option value="" className="bg-sn-navy">
+        <option value="" className="bg-sn-black">
           — No Big Brother —
         </option>
         {allMembers.map((m) => (
-          <option key={m.id} value={m.id} className="bg-sn-navy">
+          <option key={m.id} value={m.id} className="bg-sn-black">
             {m.first_name} {m.last_name}
             {m.pledge_class !== null ? ` (${m.pledge_class})` : ""}
           </option>
@@ -110,7 +110,7 @@ export function BigBrotherSelector({
               size="sm"
               onClick={handleConfirm}
               disabled={saving}
-              className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+              className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
             >
               {saving ? "Saving…" : "Confirm"}
             </Button>
@@ -138,7 +138,7 @@ export function BigBrotherSelector({
               size="sm"
               onClick={handleConfirm}
               disabled={saving}
-              className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+              className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
             >
               {saving ? "Saving…" : "Confirm"}
             </Button>
@@ -160,7 +160,7 @@ export function BigBrotherSelector({
         <Button
           size="sm"
           onClick={handleRequestConfirm}
-          className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+          className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
         >
           Save change
         </Button>

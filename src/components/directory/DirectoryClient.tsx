@@ -57,7 +57,7 @@ export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps
         <select
           value={classFilter}
           onChange={(e) => setClass(e.target.value)}
-          className="h-9 rounded-lg border border-white/20 bg-sn-navy px-3 text-sm text-white focus:outline-none focus:border-sn-gold"
+          className="h-9 rounded-lg border border-white/20 bg-sn-black px-3 text-sm text-white focus:outline-none focus:border-sn-gold"
         >
           <option value="">All pledge classes</option>
           {pledgeClasses.map((pc) => (
@@ -94,10 +94,10 @@ function MemberCard({ member: m }: { member: DirectoryMember }) {
   return (
     <Link
       href={`/profile/${m.id}`}
-      className="group bg-sn-navy rounded-xl border border-sn-gold/20 p-4 flex flex-col items-center text-center gap-3 hover:border-sn-gold/50 hover:bg-sn-navy/80 transition-colors"
+      className="group bg-sn-black rounded-xl border border-sn-gold/20 p-4 flex flex-col items-center text-center gap-3 hover:border-sn-gold/50 hover:bg-sn-black/80 transition-colors"
     >
       {/* Avatar */}
-      <div className="w-16 h-16 rounded-full overflow-hidden bg-sn-navy-dark border-2 border-sn-gold/30 flex items-center justify-center shrink-0 select-none group-hover:border-sn-gold/60 transition-colors">
+      <div className="w-16 h-16 rounded-full overflow-hidden bg-sn-black-secondary border-2 border-sn-gold/30 flex items-center justify-center shrink-0 select-none group-hover:border-sn-gold/60 transition-colors">
         {m.photo_url !== null ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

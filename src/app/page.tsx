@@ -32,12 +32,12 @@ export default async function HomePage() {
       : null;
 
   return (
-    <div className="min-h-screen bg-sn-navy flex flex-col">
+    <div className="min-h-screen bg-sn-black flex flex-col">
       {/* Header */}
       <header className="border-b border-sn-gold/20 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-sn-gold flex items-center justify-center text-sn-navy font-bold text-sm select-none">
+            <div className="w-10 h-10 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-sm select-none">
               ΣΝ
             </div>
             <div>
@@ -54,7 +54,7 @@ export default async function HomePage() {
               <Link href="/profile">
                 <Button
                   size="sm"
-                  className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+                  className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
                 >
                   My Profile
                 </Button>
@@ -73,7 +73,7 @@ export default async function HomePage() {
                 <Link href="/signup">
                   <Button
                     size="sm"
-                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+                    className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
                   >
                     Create Account
                   </Button>
@@ -120,7 +120,7 @@ export default async function HomePage() {
               <Link href="/register">
                 <Button
                   size="lg"
-                  className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
+                  className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8"
                 >
                   Register Now
                 </Button>
@@ -163,7 +163,7 @@ export default async function HomePage() {
                 <Link href="/profile">
                   <Button
                     size="lg"
-                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
+                    className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8"
                   >
                     My Profile
                   </Button>
@@ -172,7 +172,7 @@ export default async function HomePage() {
                 <Link href="/login">
                   <Button
                     size="lg"
-                    className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold px-8"
+                    className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8"
                   >
                     Member Sign In
                   </Button>

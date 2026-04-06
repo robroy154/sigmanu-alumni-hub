@@ -131,7 +131,7 @@ export function AdminMemberEditForm({
   return (
     <div className="space-y-8">
       {/* Profile fields */}
-      <section className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-5">
+      <section className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-5">
         <h2 className="text-white font-semibold">Profile</h2>
 
         <div className="grid grid-cols-2 gap-4">
@@ -154,9 +154,9 @@ export function AdminMemberEditForm({
 
         <Field label="Pledge class" labelClass={labelClass}>
           <select className={selectClass} value={form.pledge_class} onChange={set("pledge_class")}>
-            <option value="" className="bg-sn-navy">— not set —</option>
+            <option value="" className="bg-sn-black">— not set —</option>
             {PLEDGE_CLASSES.map((pc) => (
-              <option key={pc} value={pc} className="bg-sn-navy">{pc}</option>
+              <option key={pc} value={pc} className="bg-sn-black">{pc}</option>
             ))}
           </select>
         </Field>
@@ -184,25 +184,25 @@ export function AdminMemberEditForm({
       </section>
 
       {/* Account settings */}
-      <section className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-5">
+      <section className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-5">
         <h2 className="text-white font-semibold">Account</h2>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status" labelClass={labelClass}>
             <select className={selectClass} value={form.status} onChange={set("status")}>
-              <option value="pending" className="bg-sn-navy">Pending</option>
-              <option value="member"  className="bg-sn-navy">Member</option>
-              <option value="admin"   className="bg-sn-navy">Admin</option>
+              <option value="pending" className="bg-sn-black">Pending</option>
+              <option value="member"  className="bg-sn-black">Member</option>
+              <option value="admin"   className="bg-sn-black">Admin</option>
             </select>
           </Field>
 
           <Field label="Big brother" labelClass={labelClass}>
             <select className={selectClass} value={form.big_id} onChange={set("big_id")}>
-              <option value="" className="bg-sn-navy">— none —</option>
+              <option value="" className="bg-sn-black">— none —</option>
               {allMembers
                 .filter((m) => m.id !== member.id)
                 .map((m) => (
-                  <option key={m.id} value={m.id} className="bg-sn-navy">
+                  <option key={m.id} value={m.id} className="bg-sn-black">
                     {m.first_name} {m.last_name}
                   </option>
                 ))}
@@ -225,13 +225,13 @@ export function AdminMemberEditForm({
       <Button
         onClick={handleSave}
         disabled={saving}
-        className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+        className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
       >
         {saving ? "Saving…" : "Save changes"}
       </Button>
 
       {/* Badges */}
-      <section className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <section className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <h2 className="text-white font-semibold">Badges</h2>
 
         {badgeList.length > 0 && (
@@ -268,7 +268,7 @@ export function AdminMemberEditForm({
             size="sm"
             onClick={handleAssignBadge}
             disabled={newBadge.trim() === ""}
-            className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold shrink-0"
+            className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold shrink-0"
           >
             Assign
           </Button>

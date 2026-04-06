@@ -41,18 +41,18 @@ function baseTemplate(bodyHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:32px 16px;background:#0f172a;font-family:Georgia,'Times New Roman',serif;">
+<body style="margin:0;padding:32px 16px;background:#0B0B0C;font-family:Georgia,'Times New Roman',serif;">
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" role="presentation"
-             style="background:#1B2A47;border-radius:12px;overflow:hidden;border:1px solid rgba(201,168,76,0.25);">
+             style="background:#121214;border-radius:12px;overflow:hidden;border:1px solid rgba(198,167,94,0.25);">
 
         <!-- Header -->
         <tr>
-          <td style="background:#1B2A47;border-bottom:2px solid #C9A84C;padding:24px 32px;text-align:center;">
-            <div style="display:inline-block;width:44px;height:44px;border-radius:50%;background:#C9A84C;
-                        line-height:44px;text-align:center;font-size:18px;font-weight:bold;color:#1B2A47;">ΣΝ</div>
-            <p style="margin:8px 0 0;color:#C9A84C;font-size:11px;letter-spacing:3px;
+          <td style="background:#121214;border-bottom:2px solid #C6A75E;padding:24px 32px;text-align:center;">
+            <div style="display:inline-block;width:44px;height:44px;border-radius:50%;background:#C6A75E;
+                        line-height:44px;text-align:center;font-size:18px;font-weight:bold;color:#0B0B0C;">ΣΝ</div>
+            <p style="margin:8px 0 0;color:#C6A75E;font-size:11px;letter-spacing:3px;
                       text-transform:uppercase;font-family:Arial,sans-serif;">
               Sigma Nu · Mu Xi Chapter
             </p>
@@ -68,7 +68,7 @@ function baseTemplate(bodyHtml: string): string {
 
         <!-- Footer -->
         <tr>
-          <td style="border-top:1px solid rgba(201,168,76,0.15);padding:20px 32px;text-align:center;">
+          <td style="border-top:1px solid rgba(198,167,94,0.15);padding:20px 32px;text-align:center;">
             <p style="margin:0;color:rgba(255,255,255,0.35);font-size:11px;font-family:Arial,sans-serif;
                       line-height:1.6;">
               Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University<br>
@@ -87,13 +87,13 @@ function baseTemplate(bodyHtml: string): string {
 // Shared inline styles used in templates
 const h1 = `color:#ffffff;font-size:22px;font-weight:bold;margin:0 0 12px;line-height:1.3;`;
 const p  = `color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin:0 0 14px;font-family:Arial,sans-serif;`;
-const btn = `display:inline-block;background:#C9A84C;color:#1B2A47;font-family:Arial,sans-serif;
+const btn = `display:inline-block;background:#C6A75E;color:#0B0B0C;font-family:Arial,sans-serif;
              font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px;
              text-decoration:none;letter-spacing:0.5px;`;
-const label = `color:#C9A84C;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
+const label = `color:#C6A75E;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
                font-family:Arial,sans-serif;`;
 const value = `color:#ffffff;font-size:15px;font-family:Arial,sans-serif;`;
-const divider = `border:none;border-top:1px solid rgba(201,168,76,0.2);margin:20px 0;`;
+const divider = `border:none;border-top:1px solid rgba(198,167,94,0.2);margin:20px 0;`;
 
 // ---------------------------------------------------------------------------
 // 1. Welcome email — sent when admin approves a member
@@ -191,7 +191,7 @@ export async function sendRegistrationConfirmation({
   const body = `
     <h1 style="${h1}">You&rsquo;re registered!</h1>
     <p style="${p}">
-      Hi ${name}, your registration for <strong style="color:#C9A84C;">${eventTitle}</strong>
+      Hi ${name}, your registration for <strong style="color:#C6A75E;">${eventTitle}</strong>
       is confirmed. See you there!
     </p>
     <hr style="${divider}">
@@ -215,7 +215,7 @@ export async function sendRegistrationConfirmation({
       </tr>
       <tr>
         <td style="${label}">Total paid</td>
-        <td style="${value};color:#C9A84C;">$${totalPaid.toFixed(2)}</td>
+        <td style="${value};color:#C6A75E;">$${totalPaid.toFixed(2)}</td>
       </tr>
     </table>
     <hr style="${divider}">

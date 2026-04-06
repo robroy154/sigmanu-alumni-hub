@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(kill %1)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(node -e \"const l = require\\('/Users/robertroy/Projects/sigmanu-alumni-hub/node_modules/lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.includes\\('Chevron'\\)\\).slice\\(0,10\\)\\)\")",
+      "Bash(node -e \"const l = require\\('/Users/robertroy/Projects/sigmanu-alumni-hub/node_modules/lucide-react'\\); console.log\\('ChevronDownIcon:', !!l.ChevronDownIcon, 'CheckIcon:', !!l.CheckIcon, 'ChevronUpIcon:', !!l.ChevronUpIcon\\)\")",
+      "Bash(kill 58304)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(xargs sed:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/robertroy/Projects/sigmanu-alumni-hub/src/app/(admin)/admin/members",
+      "/private/tmp"
+    ]
+  }
+}

@@ -139,11 +139,11 @@ export function SignupForm() {
             className="h-8 w-full rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-sm text-white focus:outline-none focus:border-sn-gold"
             {...register("pledge_class")}
           >
-            <option value="" className="bg-sn-navy">
+            <option value="" className="bg-sn-black">
               Select class
             </option>
             {PLEDGE_CLASSES.map((pc) => (
-              <option key={pc} value={pc} className="bg-sn-navy">
+              <option key={pc} value={pc} className="bg-sn-black">
                 {pc}
               </option>
             ))}
@@ -212,7 +212,7 @@ export function SignupForm() {
 
       <Button
         type="submit"
-        className="w-full bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+        className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
         disabled={isSubmitting}
       >
         {isSubmitting ? "Creating account…" : "Create account"}

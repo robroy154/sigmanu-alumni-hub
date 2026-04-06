@@ -102,7 +102,7 @@ function StatCard({
       className={`rounded-xl border p-5 space-y-1 transition-colors hover:bg-white/5 ${
         accent
           ? "border-amber-500/40 bg-amber-500/10"
-          : "border-sn-gold/20 bg-sn-navy"
+          : "border-sn-gold/20 bg-sn-black"
       }`}
     >
       <p className="text-white/50 text-xs uppercase tracking-wider">{label}</p>
@@ -128,7 +128,7 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="rounded-xl border border-sn-gold/20 bg-sn-navy p-5 hover:bg-white/5 transition-colors space-y-1"
+      className="rounded-xl border border-sn-gold/20 bg-sn-black p-5 hover:bg-white/5 transition-colors space-y-1"
     >
       <p className="text-white font-medium text-sm">{title} →</p>
       <p className="text-white/50 text-xs">{description}</p>

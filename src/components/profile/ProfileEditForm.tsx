@@ -114,11 +114,11 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
           className={fieldClass}
           {...register("pledge_class")}
         >
-          <option value="" className="bg-sn-navy">
+          <option value="" className="bg-sn-black">
             Select your pledge class
           </option>
           {PLEDGE_CLASSES.map((pc) => (
-            <option key={pc} value={pc} className="bg-sn-navy">
+            <option key={pc} value={pc} className="bg-sn-black">
               {pc}
             </option>
           ))}
@@ -209,7 +209,7 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
 
       <Button
         type="submit"
-        className="w-full bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+        className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
         disabled={isSubmitting || !isDirty}
       >
         {isSubmitting ? "Saving…" : "Save changes"}

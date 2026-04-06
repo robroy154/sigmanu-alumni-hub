@@ -80,7 +80,7 @@ export default async function ProfileEditPage() {
       </div>
 
       {/* Photo upload */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 flex flex-col items-center gap-2">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 flex flex-col items-center gap-2">
         <p className="text-white/70 text-xs font-semibold uppercase tracking-wider self-start mb-2">
           Profile Photo
         </p>
@@ -89,7 +89,7 @@ export default async function ProfileEditPage() {
 
       {/* Pin number — only shown when not yet set */}
       {(member.pin_number === null || member.pin_number === "") && (
-        <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-3">
+        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-3">
           <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
             Pin Number
           </p>
@@ -98,7 +98,7 @@ export default async function ProfileEditPage() {
       )}
 
       {/* Big Brother */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-3">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-3">
         <div className="space-y-0.5">
           <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
             Big Brother
@@ -115,7 +115,7 @@ export default async function ProfileEditPage() {
       </div>
 
       {/* Profile fields */}
-      <div className="bg-sn-navy rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
         <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
           Profile Details
         </p>

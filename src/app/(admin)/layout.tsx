@@ -24,11 +24,11 @@ export default async function AdminLayout({
   if (member?.status !== "admin") redirect("/");
 
   return (
-    <div className="min-h-screen bg-sn-navy-dark flex flex-col">
+    <div className="min-h-screen bg-sn-black-secondary flex flex-col">
       <header className="bg-black/40 border-b border-sn-gold/30 px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 shrink-0">
-            <div className="w-7 h-7 rounded-full bg-sn-gold flex items-center justify-center text-sn-navy font-bold text-xs select-none">
+            <div className="w-7 h-7 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
               ΣΝ
             </div>
             <span className="text-sn-gold font-semibold text-sm">

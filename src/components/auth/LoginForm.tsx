@@ -118,7 +118,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
 
       <Button
         type="submit"
-        className="w-full bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+        className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
         disabled={isSubmitting}
       >
         {isSubmitting ? "Signing in…" : "Sign in"}

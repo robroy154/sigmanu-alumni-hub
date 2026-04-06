@@ -76,7 +76,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
               type="submit"
               className={`h-8 px-3 rounded-lg text-sm transition-colors ${
                 (filterStatus ?? "") === value
-                  ? "bg-sn-gold text-sn-navy font-semibold"
+                  ? "bg-sn-gold text-sn-black font-semibold"
                   : "border border-white/20 text-white/70 hover:bg-white/10"
               }`}
             >
@@ -90,7 +90,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
       <div className="rounded-xl border border-sn-gold/20 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-sn-navy border-b border-sn-gold/20">
+            <tr className="bg-sn-black border-b border-sn-gold/20">
               <th className="text-left px-4 py-3 text-white/50 font-medium">Name</th>
               <th className="text-left px-4 py-3 text-white/50 font-medium hidden md:table-cell">Email</th>
               <th className="text-left px-4 py-3 text-white/50 font-medium hidden lg:table-cell">Pledge Class</th>
@@ -111,7 +111,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
               <tr
                 key={m.id}
                 className={`border-b border-white/5 ${
-                  i % 2 === 0 ? "bg-sn-navy/60" : "bg-sn-navy/30"
+                  i % 2 === 0 ? "bg-sn-black/60" : "bg-sn-black/30"
                 }`}
               >
                 <td className="px-4 py-3">

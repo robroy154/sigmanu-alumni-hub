@@ -83,7 +83,7 @@ export function SetPinForm() {
         <Button
           type="submit"
           size="sm"
-          className="bg-sn-gold text-sn-navy hover:bg-sn-gold-light font-semibold"
+          className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
           disabled={isSubmitting}
         >
           {isSubmitting ? "Setting…" : "Set pin number"}
