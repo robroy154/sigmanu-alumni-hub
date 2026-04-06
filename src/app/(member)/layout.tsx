@@ -39,8 +39,10 @@ export default async function MemberLayout({
 
           {/* Nav */}
           <nav className="flex items-center gap-1">
+            <NavLink href="/home">Home</NavLink>
             <NavLink href="/directory">Directory</NavLink>
             <NavLink href="/family-tree">Family Tree</NavLink>
+            <NavLink href="/my-events">My Events</NavLink>
             <NavLink href="/profile">My Profile</NavLink>
             {isAdmin && <NavLink href="/admin">Admin</NavLink>}
           </nav>

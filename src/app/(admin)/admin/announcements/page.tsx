@@ -1,0 +1,82 @@
+import type { Metadata } from "next";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { AnnouncementForm } from "@/components/admin/AnnouncementForm";
+import { AnnouncementControls } from "@/components/admin/AnnouncementControls";
+
+export const metadata: Metadata = { title: "Announcements — Admin" };
+
+export default async function AdminAnnouncementsPage() {
+  const admin = createAdminClient();
+
+  const { data: announcements } = await admin
+    .from("announcements")
+    .select("id, title, body, is_active, created_at")
+    .order("created_at", { ascending: false });
+
+  const rows = announcements ?? [];
+  const active  = rows.filter((a) => a.is_active).length;
+  const inactive = rows.length - active;
+
+  return (
+    <div className="space-y-8">
+      <h1 className="text-white text-2xl font-bold">Announcements</h1>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label="Total"    value={rows.length} color="text-white" />
+        <StatCard label="Active"   value={active}      color="text-green-400" />
+        <StatCard label="Inactive" value={inactive}    color="text-white/40" />
+      </div>
+
+      {/* Create form */}
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 px-6 py-5">
+        <h2 className="text-white font-semibold mb-4">New Announcement</h2>
+        <AnnouncementForm />
+      </div>
+
+      {/* List */}
+      <div className="bg-sn-black rounded-xl border border-sn-gold/20 overflow-hidden">
+        {rows.length === 0 ? (
+          <p className="text-white/40 text-sm text-center py-12">No announcements yet.</p>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {rows.map((a) => (
+              <div key={a.id} className="px-5 py-4 flex items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-white font-medium text-sm truncate">{a.title}</p>
+                    {a.is_active ? (
+                      <span className="inline-flex items-center rounded-full bg-green-400/10 border border-green-400/30 px-2 py-0.5 text-xs text-green-400 shrink-0">
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-white/5 border border-white/15 px-2 py-0.5 text-xs text-white/40 shrink-0">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-white/50 text-xs line-clamp-2">{a.body}</p>
+                  <p className="text-white/30 text-xs mt-1">
+                    {new Date(a.created_at).toLocaleDateString("en-US", {
+                      month: "short", day: "numeric", year: "numeric",
+                    })}
+                  </p>
+                </div>
+                <AnnouncementControls announcementId={a.id} isActive={a.is_active} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <div className="bg-sn-black rounded-xl border border-sn-gold/20 px-5 py-4">
+      <p className="text-white/50 text-xs uppercase tracking-wider">{label}</p>
+      <p className={`${color} text-3xl font-bold mt-1`}>{value}</p>
+    </div>
+  );
+}

@@ -80,7 +80,7 @@ export async function proxy(request: NextRequest) {
 
   // Authenticated users on auth pages → redirect away from login/signup
   if (isAuthRoute && pathname !== "/pending-approval" && pathname !== "/complete-profile") {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/home", request.url));
   }
 
   // ── Pending ────────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ export async function proxy(request: NextRequest) {
   // ── Member ─────────────────────────────────────────────────────────────────
   if (status === "member") {
     if (matchesRoute(pathname, ADMIN_ROUTES)) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/home", request.url));
     }
     return supabaseResponse;
   }
@@ -111,7 +111,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Unknown status: fail safe — redirect to home
-  return NextResponse.redirect(new URL("/", request.url));
+  return NextResponse.redirect(new URL("/home", request.url));
 }
 
 export const config = {
