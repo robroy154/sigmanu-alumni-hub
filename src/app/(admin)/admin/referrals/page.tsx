@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CancelReferralButton } from "@/components/admin/CancelReferralButton";
+import { DeleteReferralButton } from "@/components/admin/DeleteReferralButton";
 
 export const metadata: Metadata = { title: "Referrals — Admin" };
 
@@ -94,9 +95,14 @@ export default async function AdminReferralsPage() {
                             })}
                       </td>
                       <td className="px-4 py-3">
-                        {r.status === "pending" && !isExpiredByDate && (
-                          <CancelReferralButton referralId={r.id} />
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {r.status === "pending" && !isExpiredByDate && (
+                            <CancelReferralButton referralId={r.id} />
+                          )}
+                          {effectiveStatus !== "completed" && (
+                            <DeleteReferralButton referralId={r.id} />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

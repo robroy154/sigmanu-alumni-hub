@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
-import { completeReferral } from "@/lib/referrals/actions";
+import { checkReferralToken, completeReferral } from "@/lib/referrals/actions";
+import { sendPendingConfirmation } from "@/lib/email";
 import { toastError } from "@/lib/toast";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -66,6 +67,15 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   async function onSubmit(data: JoinInput) {
     const supabase = createClient();
 
+    // Validate the token is still usable before calling signUp().
+    // Without this guard, a failed signUp() on an expired token creates a
+    // dangling auth.users row that blocks future re-invites to the same email.
+    const tokenCheck = await checkReferralToken(token);
+    if ("error" in tokenCheck) {
+      toastError(tokenCheck.error);
+      return;
+    }
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password: data.password,
@@ -105,6 +115,9 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
         console.warn("[JoinForm] completeReferral:", result.error);
       }
     }
+
+    // Confirm to the member their account is pending review — fire-and-forget.
+    void sendPendingConfirmation({ to: email, firstName: data.first_name });
 
     router.push("/pending-approval");
   }

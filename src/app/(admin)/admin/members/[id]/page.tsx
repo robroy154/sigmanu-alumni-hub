@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminMemberEditForm } from "@/components/admin/AdminMemberEditForm";
+import { DeleteMemberButton } from "@/components/admin/DeleteMemberButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -87,6 +88,18 @@ export default async function AdminMemberDetailPage({ params }: Props) {
         referrerName={referrerName}
         referrerId={referrerId}
       />
+
+      {/* Danger zone */}
+      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-3">
+        <p className="text-red-400 text-sm font-semibold uppercase tracking-wider">Danger Zone</p>
+        <p className="text-white/50 text-sm">
+          Permanently deletes this member&apos;s account and all associated data. This cannot be undone.
+        </p>
+        <DeleteMemberButton
+          memberId={member.id}
+          memberName={`${member.first_name} ${member.last_name}`}
+        />
+      </div>
     </div>
   );
 }

@@ -25,7 +25,8 @@ async function requireAdmin(): Promise<{ id: string } | { error: string }> {
 // ── Create announcement ───────────────────────────────────────────────────────
 export async function createAnnouncement(
   title: string,
-  body: string
+  body: string,
+  notifyMembers: boolean,
 ): Promise<{ error: string } | { success: true }> {
   const guard = await requireAdmin();
   if ("error" in guard) return guard;
@@ -35,12 +36,34 @@ export async function createAnnouncement(
 
   const admin = createAdminClient();
   const { error } = await admin.from("announcements").insert({
-    title:      title.trim(),
-    body:       body.trim(),
-    created_by: guard.id,
+    title:          title.trim(),
+    body:           body.trim(),
+    created_by:     guard.id,
+    notify_members: notifyMembers,
   });
 
   if (error !== null) return { error: "Failed to create announcement." };
+
+  // Send notification emails if requested — fire-and-forget.
+  if (notifyMembers) {
+    void (async () => {
+      const { data: members } = await admin
+        .from("members")
+        .select("email")
+        .in("status", ["member", "admin"])
+        .not("email", "is", null);
+
+      const emails = (members ?? []).map((m) => m.email);
+      if (emails.length > 0) {
+        const { sendAnnouncementNotification } = await import("@/lib/email");
+        await sendAnnouncementNotification({
+          title: title.trim(),
+          body:  body.trim(),
+          memberEmails: emails,
+        });
+      }
+    })();
+  }
 
   revalidatePath("/admin/announcements");
   revalidatePath("/home");

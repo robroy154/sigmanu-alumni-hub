@@ -16,31 +16,34 @@ export type Database = {
     Tables: {
       announcements: {
         Row: {
-          id:         string
-          title:      string
-          body:       string
-          is_active:  boolean
-          created_by: string
-          created_at: string
-          updated_at: string
+          id:             string
+          title:          string
+          body:           string
+          is_active:      boolean
+          notify_members: boolean
+          created_by:     string
+          created_at:     string
+          updated_at:     string
         }
         Insert: {
-          id?:        string
-          title:      string
-          body:       string
-          is_active?: boolean
-          created_by: string
-          created_at?: string
-          updated_at?: string
+          id?:             string
+          title:           string
+          body:            string
+          is_active?:      boolean
+          notify_members?: boolean
+          created_by:      string
+          created_at?:     string
+          updated_at?:     string
         }
         Update: {
-          id?:         string
-          title?:      string
-          body?:       string
-          is_active?:  boolean
-          created_by?: string
-          created_at?: string
-          updated_at?: string
+          id?:             string
+          title?:          string
+          body?:           string
+          is_active?:      boolean
+          notify_members?: boolean
+          created_by?:     string
+          created_at?:     string
+          updated_at?:     string
         }
         Relationships: [
           {

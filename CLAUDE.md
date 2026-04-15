@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 18 phases complete. Build clean at 34 routes.
+All 18 phases + Phase 19 hardening complete. Build clean at 34 routes.
 
-Last completed: Phase 18 — Post-Registration Guest Management.
+Last completed: Phase 19 — Auth hardening, admin delete, announcement notifications, production setup docs.
 
 Completed phases summary:
 
@@ -112,6 +112,7 @@ Completed phases summary:
 - Phase 16: Design and UX modernization — Syne/Inter fonts, sn-surface token, rounded-sm buttons, 4 button variants, card elevation, sonner toasts, skeleton loaders, Lucide icons, family tree restyling + touch + zoom, Supabase Realtime on payments, mobile overflow fix, focus rings
 - Phase 17: Guest registration flow — /events/[id]/register/guest (public form + confirmation), GuestRegistrationForm, GuestSignupCTA, guestActions.ts (admin client, email+event duplicate check), sessionStorage prefill on /signup; homepage "Register Now" → /events/[id]; ΣΝ logo clickable on all auth/join layouts
 - Phase 18: Post-registration guest management — ManageRegistration component on confirmation/my-events/home; edit guest names; add guests with Stripe payment (pending_guests pattern); registration_payments table; webhook branching on pending_guests; guest confirmation contact line
+- Phase 19: Hardening — pending confirmation email on signup/join; announcement batch notify (resend.batch.send); checkReferralToken pre-signUp guard; admin hard delete referrals (DeleteReferralButton); admin hard delete members (auth.admin.deleteUser cascade); docs/PRODUCTION_SETUP.md
 
 Key runtime decisions:
 
@@ -163,6 +164,12 @@ Key runtime decisions:
 - HomeEventsSection: client component at src/components/home/HomeEventsSection.tsx — extracted from home page to enable toggle state; shows "✓ Registered" badge and "Manage registration" toggle for registered events
 - registration_payments table: service-role-only inserts; RLS allows members to read own, admins read all
 - manageActions.ts: uses session client for auth checks, admin client for writes; ownership verified via member_id = user.id on registration lookup
+- Pending confirmation email: sendPendingConfirmation() called fire-and-forget in SignupForm and JoinForm before router.push("/pending-approval")
+- checkReferralToken: server action called in JoinForm before supabase.auth.signUp() — prevents dangling auth.users rows on expired tokens
+- deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
+- deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column
+- Announcement notifications: notify_members boolean on announcements; createAnnouncement fires resend.batch.send() to all member+admin emails, chunked at 100
+- Production setup reference: docs/PRODUCTION_SETUP.md — env vars, Supabase SMTP, Stripe webhook, Resend domain, Google OAuth, pg_cron, Vercel, pre-launch checklist
 
 ---
 

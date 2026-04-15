@@ -160,6 +160,64 @@ export async function cancelReferral(
   return { success: true };
 }
 
+// ── Hard delete a referral ────────────────────────────────────────────────────
+export async function deleteReferral(
+  referralId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Completed referrals represent membership history — block deletion.
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("status")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+  if (referral.status === "completed") {
+    return { error: "Cannot delete a completed referral." };
+  }
+
+  const { error } = await admin
+    .from("referrals")
+    .delete()
+    .eq("id", referralId);
+
+  if (error !== null) return { error: "Failed to delete referral." };
+
+  revalidatePath("/admin/referrals");
+  return { success: true };
+}
+
+// ── Hard delete a member ──────────────────────────────────────────────────────
+export async function deleteMember(
+  memberId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (memberId === guard.id) {
+    return { error: "You cannot delete your own account." };
+  }
+
+  const adminDb = createAdminClient();
+
+  // Deleting from auth.users cascades to public.members via FK + trigger.
+  const { error } = await adminDb.auth.admin.deleteUser(memberId);
+
+  if (error !== null) {
+    console.error("[deleteMember] auth.admin.deleteUser failed:", error.message);
+    return { error: "Failed to delete member." };
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,

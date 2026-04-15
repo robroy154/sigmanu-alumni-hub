@@ -319,7 +319,104 @@ export async function notifyAdminsNewMember(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Referral invite — sent to the person being invited
+// 4. Pending confirmation — sent to member immediately after signup
+// ---------------------------------------------------------------------------
+
+export async function sendPendingConfirmation({
+  to,
+  firstName,
+}: {
+  to:        string;
+  firstName: string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">Thanks for signing up, ${firstName}!</h1>
+    <p style="${p}">
+      Your account for the <strong style="color:#C6A75E;">Sigma Nu Mu Xi Chapter Alumni Hub</strong>
+      has been received and is pending review by a chapter administrator.
+    </p>
+    <p style="${p}">
+      You will receive an email as soon as your account is approved. This typically
+      happens within a day or two.
+    </p>
+    <p style="${p}">
+      In the meantime, you can return to sign in at any time — you'll be held at
+      the pending approval page until an admin activates your account.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/login" style="${btn}">Sign In →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: "Your Sigma Nu Mu Xi account is pending approval",
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendPendingConfirmation failed:", error);
+  } catch (err) {
+    console.error("[email] sendPendingConfirmation threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. Announcement notification — sent to all members when admin posts
+// ---------------------------------------------------------------------------
+
+export async function sendAnnouncementNotification({
+  title,
+  body: announcementBody,
+  memberEmails,
+}: {
+  title:        string;
+  body:         string;
+  memberEmails: string[];
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  if (memberEmails.length === 0) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const emailHtml = baseTemplate(`
+    <h1 style="${h1}">${title}</h1>
+    <p style="${p}">${announcementBody}</p>
+    <hr style="${divider}">
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/home" style="${btn}">Visit the Hub →</a>
+    </p>
+  `);
+
+  // Resend batch is capped at 100 per call — chunk if needed.
+  const CHUNK = 100;
+  for (let i = 0; i < memberEmails.length; i += CHUNK) {
+    const chunk = memberEmails.slice(i, i + CHUNK);
+    const messages = chunk.map((email) => ({
+      from:    FROM,
+      to:      email,
+      subject: `New announcement: ${title}`,
+      html:    emailHtml,
+    }));
+
+    try {
+      const { error } = await resend.batch.send(messages);
+      if (error !== null) console.error("[email] sendAnnouncementNotification batch failed:", error);
+    } catch (err) {
+      console.error("[email] sendAnnouncementNotification batch threw:", err);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Referral invite — sent to the person being invited
 // ---------------------------------------------------------------------------
 
 export async function sendReferralInvite({
@@ -373,7 +470,7 @@ export async function sendReferralInvite({
 }
 
 // ---------------------------------------------------------------------------
-// 5. Referral sent confirmation — sent to the referring member
+// 7. Referral sent confirmation — sent to the referring member
 // ---------------------------------------------------------------------------
 
 export async function sendReferralSentConfirmation({
@@ -419,7 +516,7 @@ export async function sendReferralSentConfirmation({
 }
 
 // ---------------------------------------------------------------------------
-// 6. Referral completed — sent to the referring member when invitee joins
+// 8. Referral completed — sent to the referring member when invitee joins
 // ---------------------------------------------------------------------------
 
 export async function sendReferralCompleted({

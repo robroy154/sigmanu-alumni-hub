@@ -3,6 +3,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+// ── Lightweight token check — called before signUp() in JoinForm ──────────────
+// Returns the invitee's name and email if the token is valid and pending,
+// or an error string if not. Never creates any DB rows.
+export async function checkReferralToken(
+  token: string
+): Promise<{ valid: true; firstName: string; email: string } | { error: string }> {
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("first_name, email, status, expires_at")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (referral === null) {
+    return { error: "This invite link is invalid or has already been used." };
+  }
+
+  if (referral.status === "completed") {
+    return { error: "This invite link has already been used." };
+  }
+
+  if (referral.status === "expired" || new Date(referral.expires_at) < new Date()) {
+    return { error: "This invite link has expired." };
+  }
+
+  return { valid: true, firstName: referral.first_name, email: referral.email };
+}
+
 interface OptionalProfileFields {
   pledge_class?:   string | undefined;
   phone?:          string | undefined;
