@@ -181,9 +181,10 @@ One record per person per event. `member_id` is nullable to support pending-appr
 | `phone` | `text` | YES | |
 | `dietary_restrictions` | `text` | YES | |
 | `tshirt_size` | `text` | YES | Enum: `S` \| `M` \| `L` \| `XL` \| `XXL` |
-| `guest_count` | `integer` | NO | Default: `0` |
+| `guest_count` | `integer` | NO | Default: `0`. Incremented when guests added post-payment. |
 | `payment_status` | `text` | NO | Enum: `unpaid` \| `paid` \| `refunded`. Default: `unpaid`. |
-| `stripe_payment_id` | `text` | YES | Stripe transaction reference. Set on payment confirmation. |
+| `stripe_payment_id` | `text` | YES | Stripe payment reference for original registration payment only. New payments go to `registration_payments`. |
+| `pending_guests` | `jsonb` | YES | Temporarily holds new guest names during add-guests Stripe checkout. Written by `addGuestsToRegistration`, cleared by webhook after payment. Null at rest. |
 | `submitted_at` | `timestamptz` | NO | Auto-set |
 
 ### 3.5 `referrals`
@@ -226,6 +227,19 @@ Individual guest names stored as separate rows rather than a comma-separated blo
 | `id` | `uuid` | NO | Primary key |
 | `registration_id` | `uuid` | NO | FK → registrations.id |
 | `guest_name` | `text` | NO | |
+
+### 3.8 `registration_payments`
+
+Records each post-registration guest payment separately. The original registration payment is tracked only on `registrations.stripe_payment_id`; this table is for add-guest payments only. Inserts via service role (webhook); members can read their own via RLS.
+
+| Column | Type | Nullable | Notes |
+|---|---|---|---|
+| `id` | `uuid` | NO | Primary key |
+| `registration_id` | `uuid` | NO | FK → registrations.id (cascade delete) |
+| `stripe_payment_id` | `text` | NO | Stripe PaymentIntent id |
+| `amount` | `numeric(10,2)` | NO | Total charged. Check: `> 0`. |
+| `guest_count_delta` | `integer` | NO | Number of guests added. Check: `> 0`. |
+| `created_at` | `timestamptz` | NO | Auto-set |
 
 ### 3.6 Pledge Class Enum
 
@@ -527,6 +541,13 @@ A chronological record of every locked decision.
 | 46 | GuestSignupCTA writes `sessionStorage["guest_prefill"]` before navigating to `/signup`; SignupForm reads and clears it on mount | sessionStorage is tab-scoped and never sent to the server; cleared immediately on mount so it doesn't bleed into future visits |
 | 47 | Homepage "Register Now" links to `/events/[id]` (detail page) instead of directly to `/events/[id]/register` | Routes all users through the split CTA page so guests can choose their path rather than being immediately sent to the auth-gated alumni form |
 | 48 | ΣΝ logo in `(auth)/layout.tsx`, `auth/layout.tsx`, and `join/layout.tsx` wrapped in a Link to `/` | Ensures every page a logged-out user lands on has a navigable route back to the landing page |
+| 49 | Post-registration guest management gated on `registration_open` only — no separate cutoff logic | Single boolean is sufficient; admin controls the window by toggling `registration_open` on the event |
+| 50 | New guest payments write to `registration_payments` table, not `registrations.stripe_payment_id` | Stripe payment id column on registrations is a single value; multiple add-guest payments per registration require a separate payments table |
+| 51 | `pending_guests jsonb` written before Stripe redirect, consumed and nulled by webhook on `checkout.session.completed` | Webhook is the only guaranteed-once handler; storing names server-side means no client round-trips needed after Stripe redirect. jsonb allows arbitrary array without schema changes. |
+| 52 | Webhook branches on `pending_guests IS NOT NULL` to distinguish original vs add-guests payments | Both flows use the same `metadata.registration_id` pattern; the presence of `pending_guests` is the definitive signal of an add-guests payment |
+| 53 | `ManageRegistration` is a single shared client component used on confirmation, my-events, and home | Single source of truth for edit/add-guest logic; each mount point passes registration+guests as props from its own server fetch |
+| 54 | Home page upcoming event cards extracted into `HomeEventsSection` client component | Cards need toggle state (expand/collapse manage panel) which requires `useState`; extracted to keep the server page itself as a pure async server component |
+| 55 | `manageActions.ts` uses session client for ownership check, then admin client for writes | Session client verifies `member_id = user.id`; admin client bypasses RLS for the subsequent update/insert operations that the authenticated role may not have explicit write policies for |
 
 ---
 

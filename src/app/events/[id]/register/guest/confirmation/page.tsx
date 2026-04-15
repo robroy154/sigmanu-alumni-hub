@@ -180,6 +180,17 @@ export default async function GuestConfirmationPage({ params, searchParams }: Pr
           phone={registration.phone ?? undefined}
         />
 
+        {/* Contact line for guests who need to make changes */}
+        <p className="text-white/40 text-sm text-center">
+          Need to make changes to your registration?{" "}
+          <a
+            href="mailto:info@csusigmanu.com"
+            className="text-sn-gold hover:text-sn-gold-light underline"
+          >
+            Email us at info@csusigmanu.com
+          </a>
+        </p>
+
         {/* Navigation */}
         <div className="flex gap-3">
           <Link

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementCard } from "@/components/home/AnnouncementCard";
-import { CalendarOff, MapPin, Ticket } from "lucide-react";
+import { HomeEventsSection } from "@/components/home/HomeEventsSection";
 
 export const metadata: Metadata = { title: "Home — Sigma Nu Mu Xi Alumni" };
 
@@ -25,7 +25,7 @@ export default async function HomePage() {
 
     supabase
       .from("events")
-      .select("id, title, event_date, location, ticket_price")
+      .select("id, title, event_date, location, ticket_price, registration_open")
       .eq("status", "published")
       .gte("event_date", new Date().toISOString())
       .order("event_date", { ascending: true })
@@ -47,10 +47,34 @@ export default async function HomePage() {
       .limit(5),
   ]);
 
-  const member       = memberResult.data;
-  const events       = eventsResult.data ?? [];
-  const allBirthdays = birthdayResult.data ?? [];
+  const member        = memberResult.data;
+  const events        = eventsResult.data ?? [];
+  const allBirthdays  = birthdayResult.data ?? [];
   const announcements = announcementsResult.data ?? [];
+
+  // Fetch this user's registrations for the upcoming events shown on the home page.
+  const eventIds = events.map((e) => e.id);
+  const myRegistrations =
+    eventIds.length > 0
+      ? ((
+          await supabase
+            .from("registrations")
+            .select("id, event_id, guest_count, payment_status")
+            .eq("member_id", user!.id)
+            .in("event_id", eventIds)
+        ).data ?? [])
+      : ([] as { id: string; event_id: string; guest_count: number; payment_status: string }[]);
+
+  const regIds = myRegistrations.map((r) => r.id);
+  const myGuests =
+    regIds.length > 0
+      ? ((
+          await supabase
+            .from("registration_guests")
+            .select("id, registration_id, guest_name")
+            .in("registration_id", regIds)
+        ).data ?? [])
+      : ([] as { id: string; registration_id: string; guest_name: string }[]);
 
   // Filter birthdays to current month
   const nowMonth = new Date().getMonth() + 1; // 1-indexed
@@ -92,57 +116,11 @@ export default async function HomePage() {
                 View all →
               </Link>
             </div>
-            {events.length === 0 ? (
-              <div className="bg-sn-surface rounded-xl px-5 py-8">
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <CalendarOff className="size-8 text-sn-gray-medium" />
-                  <p className="text-sn-gray-text text-sm">No upcoming events at this time.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {events.map((event) => {
-                  const eventDate = new Date(event.event_date);
-                  return (
-                    <Link
-                      key={event.id}
-                      href={`/events/${event.id}`}
-                      className="block bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
-                    >
-                      <div className="flex items-start gap-4">
-                        {/* Date badge */}
-                        <div className="shrink-0 text-center bg-sn-gold/10 border border-sn-gold/20 rounded-lg px-3 py-2 min-w-[52px]">
-                          <p className="text-sn-gold text-xs font-medium uppercase">
-                            {eventDate.toLocaleDateString("en-US", { month: "short" })}
-                          </p>
-                          <p className="text-sn-off-white font-bold text-lg leading-tight">
-                            {eventDate.getDate()}
-                          </p>
-                        </div>
-                        {/* Details */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sn-off-white font-medium text-sm group-hover:text-sn-gold-light transition-colors">
-                            {event.title}
-                          </p>
-                          {event.location !== null && (
-                            <p className="flex items-center gap-1 text-sn-gray-text text-xs mt-0.5">
-                              <MapPin className="w-3 h-3 text-sn-gray-medium" />
-                              {event.location}
-                            </p>
-                          )}
-                          <p className="flex items-center gap-1 text-sn-gray-medium text-xs mt-1">
-                            <Ticket className="w-3 h-3 text-sn-gray-medium" />
-                            {event.ticket_price > 0
-                              ? `$${event.ticket_price.toFixed(2)}`
-                              : "Free"}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+            <HomeEventsSection
+              events={events}
+              myRegistrations={myRegistrations}
+              myGuests={myGuests}
+            />
           </section>
 
           {/* Announcements */}

@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 17 phases complete. Build clean at 34 routes.
+All 18 phases complete. Build clean at 34 routes.
 
-Last completed: Phase 17 — Guest Registration Flow + Navigation fixes.
+Last completed: Phase 18 — Post-Registration Guest Management.
 
 Completed phases summary:
 
@@ -111,6 +111,7 @@ Completed phases summary:
 - Phase 15: Authenticated homepage (/home) — welcome header, upcoming events, birthdays this month, announcements, quick links; /my-events with react-day-picker calendar; announcements table + admin CRUD (/admin/announcements)
 - Phase 16: Design and UX modernization — Syne/Inter fonts, sn-surface token, rounded-sm buttons, 4 button variants, card elevation, sonner toasts, skeleton loaders, Lucide icons, family tree restyling + touch + zoom, Supabase Realtime on payments, mobile overflow fix, focus rings
 - Phase 17: Guest registration flow — /events/[id]/register/guest (public form + confirmation), GuestRegistrationForm, GuestSignupCTA, guestActions.ts (admin client, email+event duplicate check), sessionStorage prefill on /signup; homepage "Register Now" → /events/[id]; ΣΝ logo clickable on all auth/join layouts
+- Phase 18: Post-registration guest management — ManageRegistration component on confirmation/my-events/home; edit guest names; add guests with Stripe payment (pending_guests pattern); registration_payments table; webhook branching on pending_guests; guest confirmation contact line
 
 Key runtime decisions:
 
@@ -155,8 +156,13 @@ Key runtime decisions:
 - Family tree node click: fitView to clicked node + direct littles (duration 600ms)
 - Family tree search reset: fitView to all on empty/no-match query
 - Supabase Realtime: registrations UPDATE subscription in MyEventsClient and ConfirmationStatus — payment badge updates without reload
-- MyEventsClient.tsx: client component at src/components/my-events/MyEventsClient.tsx, server page passes rows+userId
+- MyEventsClient.tsx: client component at src/components/my-events/MyEventsClient.tsx, server page passes rows+userId+guests
 - ConfirmationStatus.tsx: client component at src/components/register/ConfirmationStatus.tsx for payment banner
+- Post-registration guest management: members can edit guest names and add guests while `registration_open = true`. New payments write to `registration_payments` table, not `registrations.stripe_payment_id`. Pending guest names stored in `registrations.pending_guests jsonb` before Stripe redirect, consumed and nulled by webhook on confirmation.
+- ManageRegistration component: shared client component at src/components/registration/ManageRegistration.tsx; mounted on alumni confirmation page, /my-events EventRow (toggle), and home page HomeEventsSection (toggle)
+- HomeEventsSection: client component at src/components/home/HomeEventsSection.tsx — extracted from home page to enable toggle state; shows "✓ Registered" badge and "Manage registration" toggle for registered events
+- registration_payments table: service-role-only inserts; RLS allows members to read own, admins read all
+- manageActions.ts: uses session client for auth checks, admin client for writes; ownership verified via member_id = user.id on registration lookup
 
 ---
 

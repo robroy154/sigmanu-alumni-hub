@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ConfirmationStatus } from "@/components/register/ConfirmationStatus";
+import { ManageRegistration } from "@/components/registration/ManageRegistration";
 
 export const metadata: Metadata = { title: "Registration Confirmed" };
 
@@ -40,13 +41,13 @@ export default async function ConfirmationPage({ searchParams }: Props) {
 
   const { data: event } = await admin
     .from("events")
-    .select("title, event_date, location, ticket_price")
+    .select("title, event_date, location, ticket_price, registration_open")
     .eq("id", registration.event_id)
     .single();
 
   const { data: guests } = await admin
     .from("registration_guests")
-    .select("guest_name")
+    .select("id, guest_name")
     .eq("registration_id", registration_id);
 
   const isPaid = registration.payment_status === "paid";
@@ -124,6 +125,19 @@ export default async function ConfirmationPage({ searchParams }: Props) {
           </div>
         )}
       </div>
+
+      {/* Guest management */}
+      <ManageRegistration
+        registration={{
+          id:             registration.id,
+          guest_count:    registration.guest_count ?? 0,
+          payment_status: registration.payment_status,
+          event_id:       registration.event_id,
+        }}
+        guests={guests ?? []}
+        eventTicketPrice={event?.ticket_price ?? 0}
+        registrationOpen={event?.registration_open ?? false}
+      />
 
       {/* Navigation */}
       <div className="flex gap-3">

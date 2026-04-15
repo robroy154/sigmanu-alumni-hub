@@ -40,43 +40,104 @@ export async function POST(request: NextRequest) {
 
     // Use admin client — webhook is unauthenticated, no session to check.
     const admin = createAdminClient();
-    const { error } = await admin
+
+    // Fetch registration to check whether this is an add-guests payment or
+    // the original registration payment.
+    const { data: reg } = await admin
       .from("registrations")
-      .update({
-        payment_status:    "paid",
-        stripe_payment_id: paymentIntentId,
-      })
-      .eq("id", registrationId);
+      .select("id, pending_guests, email, registrant_name, guest_count, event_id, events(title, event_date, location, ticket_price)")
+      .eq("id", registrationId)
+      .single();
 
-    if (error !== null) {
-      console.error("Failed to update registration after payment:", error.message);
-      // Return 200 anyway — returning 4xx/5xx causes Stripe to retry.
-    } else {
-      // Fetch registration + event details for the confirmation email.
-      const { data: reg } = await admin
+    if (reg === null) {
+      console.error("checkout.session.completed: registration not found:", registrationId);
+      // Return 200 — Stripe should not retry a missing registration.
+      return NextResponse.json({ received: true });
+    }
+
+    if (reg.pending_guests !== null && Array.isArray(reg.pending_guests)) {
+      // Add-guests payment: insert new guest rows, increment guest_count,
+      // null out pending_guests, and record the payment in registration_payments.
+      const newGuestNames = reg.pending_guests as string[];
+      const newCount      = newGuestNames.length;
+
+      const guestRows = newGuestNames.map((name) => ({
+        registration_id: registrationId,
+        guest_name:      name,
+      }));
+
+      const { error: guestInsertError } = await admin
+        .from("registration_guests")
+        .insert(guestRows);
+
+      if (guestInsertError !== null) {
+        console.error("Failed to insert new guest rows:", guestInsertError.message);
+      }
+
+      const { error: regUpdateError } = await admin
         .from("registrations")
-        .select("registrant_name, email, guest_count, event_id, events(title, event_date, location, ticket_price)")
-        .eq("id", registrationId)
-        .single();
+        .update({
+          guest_count:    reg.guest_count + newCount,
+          pending_guests: null,
+        })
+        .eq("id", registrationId);
 
-      if (reg !== null && reg.events !== null) {
-        const ev         = Array.isArray(reg.events) ? reg.events[0] : reg.events;
-        const totalPaid  = Number(ev.ticket_price) * (1 + reg.guest_count);
-        const eventDate  = new Date(ev.event_date).toLocaleDateString("en-US", {
-          weekday: "long", month: "long", day: "numeric", year: "numeric",
-        });
+      if (regUpdateError !== null) {
+        console.error("Failed to update guest_count / clear pending_guests:", regUpdateError.message);
+      }
 
-        void import("@/lib/email").then(({ sendRegistrationConfirmation }) =>
-          sendRegistrationConfirmation({
-            to:            reg.email,
-            name:          reg.registrant_name,
-            eventTitle:    ev.title,
-            eventDate,
-            eventLocation: ev.location,
-            guestCount:    reg.guest_count,
-            totalPaid,
-          })
-        );
+      // Record the payment — amount is derived from guest count × ticket price.
+      const ev          = reg.events !== null ? (Array.isArray(reg.events) ? reg.events[0] : reg.events) : null;
+      const ticketPrice = ev !== null ? Number(ev.ticket_price) : 0;
+      const amount      = newCount * ticketPrice;
+
+      if (paymentIntentId !== null && amount > 0) {
+        const { error: paymentRecordError } = await admin
+          .from("registration_payments")
+          .insert({
+            registration_id:   registrationId,
+            stripe_payment_id: paymentIntentId,
+            amount,
+            guest_count_delta: newCount,
+          });
+
+        if (paymentRecordError !== null) {
+          console.error("Failed to record registration_payment:", paymentRecordError.message);
+        }
+      }
+    } else {
+      // Original registration payment: mark paid and send confirmation email.
+      const { error } = await admin
+        .from("registrations")
+        .update({
+          payment_status:    "paid",
+          stripe_payment_id: paymentIntentId,
+        })
+        .eq("id", registrationId);
+
+      if (error !== null) {
+        console.error("Failed to update registration after payment:", error.message);
+        // Return 200 anyway — returning 4xx/5xx causes Stripe to retry.
+      } else {
+        if (reg.events !== null) {
+          const ev        = Array.isArray(reg.events) ? reg.events[0] : reg.events;
+          const totalPaid = Number(ev.ticket_price) * (1 + reg.guest_count);
+          const eventDate = new Date(ev.event_date).toLocaleDateString("en-US", {
+            weekday: "long", month: "long", day: "numeric", year: "numeric",
+          });
+
+          void import("@/lib/email").then(({ sendRegistrationConfirmation }) =>
+            sendRegistrationConfirmation({
+              to:            reg.email,
+              name:          reg.registrant_name,
+              eventTitle:    ev.title,
+              eventDate,
+              eventLocation: ev.location,
+              guestCount:    reg.guest_count,
+              totalPaid,
+            })
+          );
+        }
       }
     }
   }

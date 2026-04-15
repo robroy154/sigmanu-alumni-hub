@@ -298,6 +298,41 @@ export type Database = {
           },
         ]
       }
+      registration_payments: {
+        Row: {
+          amount:            number
+          created_at:        string
+          guest_count_delta: number
+          id:                string
+          registration_id:   string
+          stripe_payment_id: string
+        }
+        Insert: {
+          amount:            number
+          created_at?:       string
+          guest_count_delta: number
+          id?:               string
+          registration_id:   string
+          stripe_payment_id: string
+        }
+        Update: {
+          amount?:            number
+          created_at?:        string
+          guest_count_delta?: number
+          id?:                string
+          registration_id?:   string
+          stripe_payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registration_payments_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registrations: {
         Row: {
           dietary_restrictions: string | null
@@ -307,6 +342,7 @@ export type Database = {
           id: string
           member_id: string | null
           payment_status: string
+          pending_guests: Json | null
           phone: string | null
           registrant_name: string
           stripe_payment_id: string | null
@@ -321,6 +357,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           payment_status?: string
+          pending_guests?: Json | null
           phone?: string | null
           registrant_name: string
           stripe_payment_id?: string | null
@@ -335,6 +372,7 @@ export type Database = {
           id?: string
           member_id?: string | null
           payment_status?: string
+          pending_guests?: Json | null
           phone?: string | null
           registrant_name?: string
           stripe_payment_id?: string | null

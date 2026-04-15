@@ -4,26 +4,35 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { ManageRegistration } from "@/components/registration/ManageRegistration";
 
 export interface RegistrationRow {
   id:             string;
   payment_status: string;
   guest_count:    number;
   events: {
-    id:           string;
-    title:        string;
-    event_date:   string;
-    location:     string | null;
-    ticket_price: number;
+    id:                string;
+    title:             string;
+    event_date:        string;
+    location:          string | null;
+    ticket_price:      number;
+    registration_open: boolean;
   } | null;
+}
+
+interface GuestRow {
+  id:              string;
+  registration_id: string;
+  guest_name:      string;
 }
 
 interface MyEventsClientProps {
   initialRows: RegistrationRow[];
   userId:      string;
+  guests:      GuestRow[];
 }
 
-export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
+export function MyEventsClient({ initialRows, userId, guests }: MyEventsClientProps) {
   const [rows, setRows] = useState<RegistrationRow[]>(initialRows);
 
   useEffect(() => {
@@ -88,7 +97,7 @@ export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
         ) : (
           <div className="space-y-3">
             {upcoming.map((r) => (
-              <EventRow key={r.id} registration={r} />
+              <EventRow key={r.id} registration={r} guests={guests} />
             ))}
           </div>
         )}
@@ -100,7 +109,7 @@ export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
           <h2 className="text-sn-off-white font-semibold mb-4">Past</h2>
           <div className="space-y-3">
             {past.map((r) => (
-              <EventRow key={r.id} registration={r} past />
+              <EventRow key={r.id} registration={r} guests={guests} past />
             ))}
           </div>
         </section>
@@ -111,80 +120,114 @@ export function MyEventsClient({ initialRows, userId }: MyEventsClientProps) {
 
 function EventRow({
   registration,
+  guests,
   past = false,
 }: {
   registration: RegistrationRow;
-  past?: boolean;
+  guests:       GuestRow[];
+  past?:        boolean;
 }) {
   const event = registration.events;
   if (event === null) return null;
 
-  const eventDate = new Date(event.event_date);
-  const total = event.ticket_price * (1 + registration.guest_count);
+  const [expanded, setExpanded] = useState(false);
+
+  const myGuests    = guests.filter((g) => g.registration_id === registration.id);
+  const eventDate   = new Date(event.event_date);
+  const total       = event.ticket_price * (1 + registration.guest_count);
 
   return (
-    <Link
-      href={`/events/${event.id}`}
-      className="block bg-sn-surface rounded-sm border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
-    >
-      <div className="flex items-start gap-4">
-        {/* Date badge */}
-        <div
-          className={`shrink-0 text-center rounded-sm px-3 py-2 min-w-[52px] border ${
-            past ? "bg-white/5 border-white/10" : "bg-sn-gold/10 border-sn-gold/20"
-          }`}
-        >
-          <p
-            className={`text-xs font-medium uppercase ${
-              past ? "text-sn-gray-medium" : "text-sn-gold"
+    <div>
+      <Link
+        href={`/events/${event.id}`}
+        className="block bg-sn-surface rounded-sm border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
+      >
+        <div className="flex items-start gap-4">
+          {/* Date badge */}
+          <div
+            className={`shrink-0 text-center rounded-sm px-3 py-2 min-w-13 border ${
+              past ? "bg-white/5 border-white/10" : "bg-sn-gold/10 border-sn-gold/20"
             }`}
           >
-            {eventDate.toLocaleDateString("en-US", { month: "short" })}
-          </p>
-          <p
-            className={`font-bold text-lg leading-tight ${
-              past ? "text-sn-gray-medium" : "text-sn-off-white"
-            }`}
-          >
-            {eventDate.getDate()}
-          </p>
-        </div>
-
-        {/* Details */}
-        <div className="flex-1 min-w-0">
-          <p
-            className={`font-medium text-sm transition-colors ${
-              past
-                ? "text-sn-gray-text"
-                : "text-sn-off-white group-hover:text-sn-gold-light"
-            }`}
-          >
-            {event.title}
-          </p>
-          {event.location !== null && (
-            <p className="flex items-center gap-1 text-sn-gray-medium text-xs mt-0.5">
-              <MapPin className="w-3 h-3" />
-              {event.location}
+            <p
+              className={`text-xs font-medium uppercase ${
+                past ? "text-sn-gray-medium" : "text-sn-gold"
+              }`}
+            >
+              {eventDate.toLocaleDateString("en-US", { month: "short" })}
             </p>
-          )}
-          <div className="flex items-center gap-3 mt-1.5">
-            <PaymentBadge status={registration.payment_status} />
-            {registration.guest_count > 0 && (
-              <span className="text-sn-gray-medium text-xs">
-                +{registration.guest_count} guest
-                {registration.guest_count !== 1 ? "s" : ""}
-              </span>
+            <p
+              className={`font-bold text-lg leading-tight ${
+                past ? "text-sn-gray-medium" : "text-sn-off-white"
+              }`}
+            >
+              {eventDate.getDate()}
+            </p>
+          </div>
+
+          {/* Details */}
+          <div className="flex-1 min-w-0">
+            <p
+              className={`font-medium text-sm transition-colors ${
+                past
+                  ? "text-sn-gray-text"
+                  : "text-sn-off-white group-hover:text-sn-gold-light"
+              }`}
+            >
+              {event.title}
+            </p>
+            {event.location !== null && (
+              <p className="flex items-center gap-1 text-sn-gray-medium text-xs mt-0.5">
+                <MapPin className="w-3 h-3" />
+                {event.location}
+              </p>
             )}
-            {total > 0 && (
-              <span className="flex items-center gap-1 text-sn-gray-medium text-xs">
-                <Ticket className="w-3 h-3" />
-                ${total.toFixed(2)}
-              </span>
-            )}
+            <div className="flex items-center gap-3 mt-1.5">
+              <PaymentBadge status={registration.payment_status} />
+              {registration.guest_count > 0 && (
+                <span className="text-sn-gray-medium text-xs">
+                  +{registration.guest_count} guest
+                  {registration.guest_count !== 1 ? "s" : ""}
+                </span>
+              )}
+              {total > 0 && (
+                <span className="flex items-center gap-1 text-sn-gray-medium text-xs">
+                  <Ticket className="w-3 h-3" />
+                  ${total.toFixed(2)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      {/* Manage registration toggle — upcoming events only */}
+      {!past && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="w-full text-sn-gold hover:text-sn-gold-light text-xs py-2 px-5 text-left transition-colors"
+        >
+          {expanded ? "Hide details ▲" : "Manage registration ▼"}
+        </button>
+      )}
+
+      {expanded && !past && (
+        <div className="pt-1">
+          <ManageRegistration
+            registration={{
+              id:             registration.id,
+              guest_count:    registration.guest_count,
+              payment_status: registration.payment_status,
+              event_id:       event.id,
+            }}
+            guests={myGuests}
+            eventTicketPrice={event.ticket_price}
+            registrationOpen={event.registration_open}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

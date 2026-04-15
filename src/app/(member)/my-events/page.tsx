@@ -16,11 +16,20 @@ export default async function MyEventsPage() {
 
   const { data: registrations } = await supabase
     .from("registrations")
-    .select("id, payment_status, guest_count, events(id, title, event_date, location, ticket_price)")
+    .select("id, payment_status, guest_count, events(id, title, event_date, location, ticket_price, registration_open)")
     .eq("member_id", user.id)
     .order("submitted_at", { ascending: false });
 
   const rows = (registrations ?? []) as RegistrationRow[];
+
+  const registrationIds = rows.map((r) => r.id);
+  const { data: guestRows } =
+    registrationIds.length > 0
+      ? await supabase
+          .from("registration_guests")
+          .select("id, registration_id, guest_name")
+          .in("registration_id", registrationIds)
+      : { data: [] as { id: string; registration_id: string; guest_name: string }[] };
 
   // ISO strings for calendar highlights — Date objects lose type through RSC serialisation
   const eventDateStrings = rows
@@ -33,7 +42,7 @@ export default async function MyEventsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Event lists — client component with Realtime */}
-        <MyEventsClient initialRows={rows} userId={user.id} />
+        <MyEventsClient initialRows={rows} userId={user.id} guests={guestRows ?? []} />
 
         {/* Calendar sidebar */}
         <div className="lg:sticky lg:top-6">
