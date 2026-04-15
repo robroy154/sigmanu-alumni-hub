@@ -29,7 +29,7 @@ export default async function EventDetailPage({ params }: Props) {
 
   const { data: event } = await admin
     .from("events")
-    .select("id, title, description, event_date, location, ticket_price, capacity, status")
+    .select("id, title, description, event_date, location, ticket_price, capacity, status, registration_open")
     .eq("id", id)
     .eq("status", "published")
     .maybeSingle();
@@ -40,6 +40,7 @@ export default async function EventDetailPage({ params }: Props) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const isLoggedIn = user !== null;
+  const canRegister = event.registration_open === true;
 
   const eventDate = new Date(event.event_date);
   const formattedDate = eventDate.toLocaleDateString("en-US", {
@@ -131,32 +132,34 @@ export default async function EventDetailPage({ params }: Props) {
           )}
 
           {/* CTA */}
-          <div className="pt-4 flex flex-col sm:flex-row gap-4">
-            {isLoggedIn ? (
-              <Link href={`/events/${event.id}/register`}>
-                <Button size="lg" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8">
-                  Register Now
-                </Button>
-              </Link>
-            ) : (
-              <>
-                <Link href={`/login?redirectTo=/events/${event.id}/register`}>
+          {canRegister && (
+            <div className="pt-4 flex flex-col sm:flex-row gap-4">
+              {isLoggedIn ? (
+                <Link href={`/events/${event.id}/register`}>
                   <Button size="lg" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8">
-                    Sign In to Register
+                    Register as Alumni
                   </Button>
                 </Link>
-                <Link href="/signup">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="bg-transparent border-white/30 text-white hover:bg-white/10 px-8"
-                  >
-                    Create Account
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <Link href={`/login?redirectTo=/events/${event.id}/register`}>
+                    <Button size="lg" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8">
+                      Register as Alumni
+                    </Button>
+                  </Link>
+                  <Link href={`/events/${event.id}/register/guest`}>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="bg-transparent border-white/30 text-white hover:bg-white/10 px-8"
+                    >
+                      Register as Guest
+                    </Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

@@ -1,0 +1,114 @@
+"use server";
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe/client";
+import type { GuestRegistrationInput } from "@/lib/registration/schemas";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+export async function createGuestRegistration(
+  eventId: string,
+  data: GuestRegistrationInput
+): Promise<{ checkoutUrl: string } | { confirmationUrl: string } | { error: string }> {
+  const admin = createAdminClient();
+
+  // Validate event exists, is published, and registration is open.
+  const { data: event } = await admin
+    .from("events")
+    .select("id, title, ticket_price, status, registration_open")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (event === null || event.status !== "published" || event.registration_open !== true) {
+    return { error: "This event is not currently open for registration." };
+  }
+
+  // Guard against duplicate registration by email + event.
+  const { data: existing } = await admin
+    .from("registrations")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("email", data.email)
+    .maybeSingle();
+
+  if (existing !== null) {
+    return { error: "A registration with this email address already exists for this event." };
+  }
+
+  const guestCount = data.guest_names.length;
+  const totalAttendees = 1 + guestCount;
+  const registrantName = `${data.first_name} ${data.last_name}`.trim();
+
+  // Insert the registration row with member_id = null.
+  const { data: registration, error: regError } = await admin
+    .from("registrations")
+    .insert({
+      event_id:             eventId,
+      member_id:            null,
+      registrant_name:      registrantName,
+      email:                data.email,
+      phone:                data.phone ?? null,
+      dietary_restrictions: data.dietary_restrictions ?? null,
+      tshirt_size:          data.tshirt_size,
+      guest_count:          guestCount,
+      payment_status:       "unpaid",
+    })
+    .select("id")
+    .single();
+
+  if (regError !== null || registration === null) {
+    return { error: "Failed to create registration. Please try again." };
+  }
+
+  // Insert guest rows.
+  if (guestCount > 0) {
+    const guestRows = data.guest_names.map((name) => ({
+      registration_id: registration.id,
+      guest_name:      name,
+    }));
+
+    const { error: guestError } = await admin
+      .from("registration_guests")
+      .insert(guestRows);
+
+    if (guestError !== null) {
+      console.error("Failed to insert guest rows:", guestError.message);
+    }
+  }
+
+  // Free event — mark paid immediately, skip Stripe.
+  if (event.ticket_price === 0) {
+    await admin
+      .from("registrations")
+      .update({ payment_status: "paid" })
+      .eq("id", registration.id);
+
+    return {
+      confirmationUrl: `${APP_URL}/events/${eventId}/register/guest/confirmation?registration_id=${registration.id}`,
+    };
+  }
+
+  // Paid event — create Stripe Checkout session.
+  const session = await stripe.checkout.sessions.create({
+    mode:       "payment",
+    line_items: [
+      {
+        price_data: {
+          currency:     "usd",
+          product_data: { name: `${event.title} — Ticket` },
+          unit_amount:  Math.round(event.ticket_price * 100),
+        },
+        quantity: totalAttendees,
+      },
+    ],
+    metadata:    { registration_id: registration.id },
+    success_url: `${APP_URL}/events/${eventId}/register/guest/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url:  `${APP_URL}/events/${eventId}/register/guest`,
+  });
+
+  if (session.url === null) {
+    return { error: "Failed to create checkout session. Please try again." };
+  }
+
+  return { checkoutUrl: session.url };
+}

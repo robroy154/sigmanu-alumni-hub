@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +26,7 @@ export function SignupForm() {
   const router = useRouter();
   const [duplicate, setDuplicate]         = useState<DuplicateState>({ type: "none" });
   const [resetLoading, setResetLoading]   = useState(false);
+  const [hasPrefill, setHasPrefill]       = useState(false);
 
   const {
     register,
@@ -36,6 +37,29 @@ export function SignupForm() {
   } = useForm<SignupInput>({
     resolver: zodResolver(SignupSchema),
   });
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem("guest_prefill");
+    if (raw === null) return;
+    sessionStorage.removeItem("guest_prefill");
+    try {
+      const prefill = JSON.parse(raw) as {
+        first_name: string;
+        last_name:  string;
+        email:      string;
+        phone?:     string;
+      };
+      setValue("first_name", prefill.first_name);
+      setValue("last_name",  prefill.last_name);
+      setValue("email",      prefill.email);
+      if (prefill.phone !== undefined && prefill.phone !== "") {
+        setValue("phone", prefill.phone);
+      }
+      setHasPrefill(true);
+    } catch {
+      // Malformed storage — ignore.
+    }
+  }, [setValue]);
 
   async function onSubmit(data: SignupInput) {
     const supabase = createClient();
@@ -200,10 +224,16 @@ export function SignupForm() {
           type="email"
           autoComplete="email"
           placeholder="you@example.com"
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+          readOnly={hasPrefill}
+          className={`bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold${hasPrefill ? " cursor-not-allowed opacity-70" : ""}`}
           {...register("email")}
           aria-invalid={errors.email !== undefined}
         />
+        {hasPrefill && (
+          <p className="text-white/40 text-xs">
+            To use a different email address, clear this field.
+          </p>
+        )}
         {errors.email !== undefined && (
           <p className="text-red-400 text-xs">{errors.email.message}</p>
         )}

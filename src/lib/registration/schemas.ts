@@ -14,3 +14,15 @@ export const RegistrationSchema = z.object({
 });
 
 export type RegistrationInput = z.infer<typeof RegistrationSchema>;
+
+export const GuestRegistrationSchema = z.object({
+  first_name:           z.string().min(1, "First name is required"),
+  last_name:            z.string().min(1, "Last name is required"),
+  email:                z.string().email("Enter a valid email address"),
+  phone:                z.string().optional(),
+  dietary_restrictions: z.string().optional(),
+  tshirt_size:          z.enum(TSHIRT_SIZES, { message: "Select a shirt size" }),
+  guest_names:          z.array(z.string().min(1, "Guest name is required")),
+});
+
+export type GuestRegistrationInput = z.infer<typeof GuestRegistrationSchema>;
