@@ -149,7 +149,7 @@ One record per event. Admin creates and manages. Reusable for future events — 
 | `ticket_price` | `numeric(10,2)` | NO | `0.00` for free events |
 | `capacity` | `integer` | YES | Null = unlimited |
 | `status` | `event_status` | NO | Enum: `draft` \| `published` \| `archived`. Default: `draft`. |
-| `registration_open` | `boolean` | NO | Legacy column — superseded by `status`. Do not use in new queries. |
+| `registration_open` | `boolean` | NO | Controls whether registration CTA buttons render on `/events/[id]`. Set independently of `status` — an event can be `published` (visible) but have `registration_open = false` (no registration buttons). |
 | `created_at` | `timestamptz` | NO | Auto-set |
 | `updated_at` | `timestamptz` | NO | Auto-updated via trigger |
 
@@ -161,13 +161,15 @@ One record per event. Admin creates and manages. Reusable for future events — 
 
 **Canonical routes:**
 
-- `/events/[id]` — public event detail page (unauthenticated accessible)
-- `/events/[id]/register` — registration form (auth required: pending, member, admin)
+- `/events/[id]` — public event detail page (unauthenticated accessible); shows registration CTAs only when `registration_open = true`
+- `/events/[id]/register` — alumni registration form (auth required); lives in `(alumni)` route group so its auth layout does not block the guest sibling
+- `/events/[id]/register/guest` — public guest registration form (no auth); uses admin client for all DB writes
+- `/events/[id]/register/guest/confirmation` — public guest confirmation; verifies payment via Stripe session or reads registration_id directly for free events
 - `/admin/events` — admin list, create, edit, archive
 
 ### 3.4 `registrations`
 
-One record per person per event. `member_id` is nullable to support pending-approval users who have registered but not yet been granted full access, and to allow non-member guests.
+One record per person per event. `member_id` is nullable to support pending-approval users who have registered but not yet been granted full access, and to allow non-member guests. Guest rows always have `member_id = null`; duplicate prevention for guests is enforced by unique `email + event_id` check in the server action (not a DB constraint).
 
 | Column | Type | Nullable | Notes |
 |---|---|---|---|
@@ -518,6 +520,13 @@ A chronological record of every locked decision.
 | 39 | Birthdays this month on `/home` fetched via admin client (bypasses show_birthday RLS to get all consenting members), then month-filtered client-side | Admin client required since show_birthday=true members need to be cross-checked; client-side month filter avoids raw SQL substring on birthday text column |
 | 40 | react-day-picker v9 used for My Events calendar; styled via CSS custom properties + scoped `<style>` tag in EventsCalendar client component | Avoids global CSS contamination; dark theme achieved by overriding `--rdp-accent-color` with sn-gold token |
 | 41 | Social links (NEXT_PUBLIC_ALUMNI_FB_URL, NEXT_PUBLIC_ACTIVE_CHAPTER_FB_URL) are optional env vars; links hidden on /home if unset | Keeps the homepage useful even before FB groups exist; external links open in new tab with rel="noopener noreferrer" |
+| 42 | Guest registration at `/events/[id]/register/guest` — public route, no auth, `member_id = null`, admin client for all DB writes | Allows non-alumni to register for events without creating an account; service role bypasses RLS that blocks anon inserts |
+| 43 | Alumni register route moved into `(alumni)` route group — `src/app/events/[id]/register/(alumni)/` | Route groups are URL-transparent; this scopes the auth layout to alumni only, leaving the `guest/` sibling accessible without authentication |
+| 44 | Guest duplicate check by `email + event_id` (not `member_id`) | Guests have no member_id; email is the only available identity token for deduplication |
+| 45 | Guest Stripe confirmation verifies payment via `stripe.checkout.sessions.retrieve(session_id)` server-side; no Realtime | Guests are unauthenticated so Supabase Realtime with session cookies is unavailable; Stripe session status is authoritative at redirect time |
+| 46 | GuestSignupCTA writes `sessionStorage["guest_prefill"]` before navigating to `/signup`; SignupForm reads and clears it on mount | sessionStorage is tab-scoped and never sent to the server; cleared immediately on mount so it doesn't bleed into future visits |
+| 47 | Homepage "Register Now" links to `/events/[id]` (detail page) instead of directly to `/events/[id]/register` | Routes all users through the split CTA page so guests can choose their path rather than being immediately sent to the auth-gated alumni form |
+| 48 | ΣΝ logo in `(auth)/layout.tsx`, `auth/layout.tsx`, and `join/layout.tsx` wrapped in a Link to `/` | Ensures every page a logged-out user lands on has a navigable route back to the landing page |
 
 ---
 

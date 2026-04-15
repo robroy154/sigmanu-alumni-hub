@@ -117,7 +117,7 @@ export default async function HomePage() {
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href={`/events/${event.id}/register`}>
+              <Link href={`/events/${event.id}`}>
                 <Button
                   size="lg"
                   className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold px-8"

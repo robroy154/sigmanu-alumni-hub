@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 16 phases complete. Build clean at 31 routes.
+All 17 phases complete. Build clean at 34 routes.
 
-Last completed: Phase 16 — Design and UX Modernization. See memory file for full phase history.
+Last completed: Phase 17 — Guest Registration Flow + Navigation fixes.
 
 Completed phases summary:
 
@@ -110,6 +110,7 @@ Completed phases summary:
 - Phase 14: Referral/invite system — referrals table, /join?token= public route, JoinForm, POST /api/referrals, completeReferral server action, invite section on profile page, admin referred_by display, /admin/referrals list with cancel
 - Phase 15: Authenticated homepage (/home) — welcome header, upcoming events, birthdays this month, announcements, quick links; /my-events with react-day-picker calendar; announcements table + admin CRUD (/admin/announcements)
 - Phase 16: Design and UX modernization — Syne/Inter fonts, sn-surface token, rounded-sm buttons, 4 button variants, card elevation, sonner toasts, skeleton loaders, Lucide icons, family tree restyling + touch + zoom, Supabase Realtime on payments, mobile overflow fix, focus rings
+- Phase 17: Guest registration flow — /events/[id]/register/guest (public form + confirmation), GuestRegistrationForm, GuestSignupCTA, guestActions.ts (admin client, email+event duplicate check), sessionStorage prefill on /signup; homepage "Register Now" → /events/[id]; ΣΝ logo clickable on all auth/join layouts
 
 Key runtime decisions:
 
@@ -127,8 +128,14 @@ Key runtime decisions:
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)
 - Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
 - Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true
-- Events use status enum (draft/published/archived), not registration_open boolean, for visibility control
-- Canonical event routes: /events/[id] (public detail) and /events/[id]/register (auth required)
+- Events use status enum (draft/published/archived) for visibility; registration_open boolean controls whether CTA buttons appear on /events/[id]
+- Canonical event routes: /events/[id] (public detail), /events/[id]/register (auth-required alumni form), /events/[id]/register/guest (public guest form)
+- Alumni register at /events/[id]/register lives in src/app/events/[id]/register/(alumni)/ route group — (alumni) layout auth-gates it without blocking the guest/ sibling
+- Guest registration: member_id=null, duplicate check by email+event_id, uses createAdminClient(); Stripe success_url → /events/[id]/register/guest/confirmation?session_id=...
+- GuestSignupCTA: writes sessionStorage "guest_prefill" {first_name, last_name, email, phone} then router.push("/signup")
+- SignupForm: reads "guest_prefill" from sessionStorage on mount, prefills fields, renders email as readOnly with note; removes key immediately
+- Homepage "Register Now" links to /events/[id] (event detail page) not directly to /register
+- ΣΝ logo in (auth)/layout.tsx, auth/layout.tsx, join/layout.tsx is wrapped in a Next.js Link to "/" — clickable back to landing
 - /register redirects to the next published event (legacy compat for pending-approval flow)
 - Privacy toggles (show_phone, show_address, show_birthday) enforced in app-layer queries; RLS grants SELECT to authenticated for these columns; admins bypass via admin client
 - Google Places API key: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY — optional; degrades to plain text input without it
