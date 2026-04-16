@@ -47,6 +47,29 @@ export default async function AdminMemberDetailPage({ params }: Props) {
 
   if (member === null) notFound();
 
+  // Resolve big brother name for display — must include stubs because a stub's
+  // big_id can point to another stub. allMembers only has member+admin (for the
+  // dropdown); if big_id isn't found there, fetch it separately.
+  let resolvedBigName: string | null = null;
+  if (member.big_id !== null) {
+    const bigInList = (allMembers ?? []).find((m) => m.id === member.big_id);
+    if (bigInList !== undefined) {
+      resolvedBigName = `${bigInList.first_name} ${bigInList.last_name}`;
+    } else {
+      const { data: bigMember } = await admin
+        .from("members")
+        .select("first_name, last_name, status")
+        .eq("id", member.big_id)
+        .single();
+      if (bigMember !== null) {
+        resolvedBigName =
+          bigMember.status === "stub"
+            ? `${bigMember.first_name} ${bigMember.last_name} (unclaimed stub)`
+            : `${bigMember.first_name} ${bigMember.last_name}`;
+      }
+    }
+  }
+
   // Resolve referrer name for display (admin-only field).
   let referrerName: string | null = null;
   let referrerId:   string | null = null;
@@ -85,6 +108,7 @@ export default async function AdminMemberDetailPage({ params }: Props) {
         member={member}
         badges={badges ?? []}
         allMembers={allMembers ?? []}
+        resolvedBigName={resolvedBigName}
         referrerName={referrerName}
         referrerId={referrerId}
       />

@@ -35,6 +35,7 @@ interface AdminMemberEditFormProps {
   member: Member;
   badges: Badge[];
   allMembers: { id: string; first_name: string; last_name: string }[];
+  resolvedBigName?: string | null | undefined;
   referrerName?: string | null;
   referrerId?:   string | null;
 }
@@ -43,6 +44,7 @@ export function AdminMemberEditForm({
   member,
   badges,
   allMembers,
+  resolvedBigName,
   referrerName,
   referrerId,
 }: AdminMemberEditFormProps) {
@@ -211,6 +213,16 @@ export function AdminMemberEditForm({
                   </option>
                 ))}
             </select>
+            {/* Show resolved name when big_id points to a stub not in the dropdown */}
+            {form.big_id !== "" &&
+              !allMembers.some((m) => m.id === form.big_id) &&
+              resolvedBigName !== null &&
+              resolvedBigName !== undefined && (
+                <p className="text-white/50 text-xs mt-1">
+                  Currently linked to:{" "}
+                  <span className="text-white/70">{resolvedBigName}</span>
+                </p>
+            )}
           </Field>
         </div>
 

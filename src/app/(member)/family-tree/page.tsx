@@ -63,15 +63,6 @@ export default async function FamilyTreePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-white text-2xl font-bold">Chapter Family Tree</h1>
-        <span className="text-white/40 text-sm">
-          {(() => {
-            const claimed = treeMembers.filter((m) => !m.is_stub).length;
-            const stubs   = treeMembers.filter((m) => m.is_stub).length;
-            return stubs > 0
-              ? `${claimed} member${claimed !== 1 ? "s" : ""} · ${stubs} unclaimed`
-              : `${claimed} member${claimed !== 1 ? "s" : ""}`;
-          })()}
-        </span>
       </div>
 
       {treeMembers.length === 0 ? (

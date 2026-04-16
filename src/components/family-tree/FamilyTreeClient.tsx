@@ -9,8 +9,6 @@ import {
   BackgroundVariant,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   useReactFlow,
   Handle,
   Position,
@@ -61,8 +59,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
     <div
       style={{ width: NODE_W }}
       className={[
-        "relative rounded-sm p-2.5 flex items-center gap-2.5 transition-all select-none",
-        m.is_stub ? "cursor-default" : "cursor-pointer",
+        "relative rounded-sm p-2.5 flex items-center gap-2.5 transition-all select-none cursor-pointer",
         m.isSelected
           ? "bg-sn-surface border-l-2 border-l-sn-gold border-t border-t-transparent border-r border-r-transparent border-b border-b-transparent"
           : m.isDimmed
@@ -134,8 +131,8 @@ function MemberNode({ data: m }: MemberNodeProps) {
         style={{ background: "transparent", border: "none", width: 0, height: 0 }}
       />
 
-      {/* Profile link — floats below the node when selected */}
-      {m.isSelected && (
+      {/* Profile link — floats below the node when selected; stubs have no profile */}
+      {m.isSelected && !m.is_stub && (
         <Link
           href={`/profile/${m.id}`}
           onClick={(e) => e.stopPropagation()}
@@ -151,7 +148,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
 const nodeTypes = { member: MemberNode };
 
 // ---------------------------------------------------------------------------
-// Dagre layout — runs once when members are loaded
+// Dagre layout — recomputed whenever the member set changes
 // ---------------------------------------------------------------------------
 
 function buildLayout(members: FamilyTreeMember[]): {
@@ -212,7 +209,6 @@ function getConnectedIds(
 ): Set<string> {
   const result = new Set<string>([selectedId]);
 
-  // Build maps
   const bigMap: Record<string, string | null> = {};
   const littlesMap: Record<string, string[]> = {};
 
@@ -252,51 +248,83 @@ function getConnectedIds(
 function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
   const rf = useReactFlow();
   const searchRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery]         = useState("");
-  const [selectedId, setSelected] = useState<string | null>(null);
+  const [query, setQuery]           = useState("");
+  const [selectedId, setSelected]   = useState<string | null>(null);
+  const [hideIsolated, setHideIsolated] = useState(false);
 
-  const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildLayout(members),
-    [members]
+  // ── Isolated node detection ───────────────────────────────────────────────
+  // A node is isolated when it has no big_id (no parent) AND no other node
+  // has big_id pointing to it (no children). These float disconnected.
+  const isolatedIds = useMemo(() => {
+    const hasChildrenOf = new Set(
+      members.map((m) => m.big_id).filter((id): id is string => id !== null)
+    );
+    return new Set(
+      members
+        .filter((m) => m.big_id === null && !hasChildrenOf.has(m.id))
+        .map((m) => m.id)
+    );
+  }, [members]);
+
+  // ── Visible members (filtered when hideIsolated is on) ───────────────────
+  const visibleMembers = useMemo(
+    () => (hideIsolated ? members.filter((m) => !isolatedIds.has(m.id)) : members),
+    [hideIsolated, members, isolatedIds]
   );
 
-  const [nodes, , onNodesChange] = useNodesState(layoutNodes);
-  const [edges, , onEdgesChange] = useEdgesState(layoutEdges);
+  // ── Dagre layout — recomputed only when visible members change ───────────
+  const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
+    () => buildLayout(visibleMembers),
+    [visibleMembers]
+  );
 
-  // fitView timing fix: the fitView prop fires before React Flow finishes
-  // mounting all nodes (especially large trees with 200+ nodes). Instead, defer
-  // until after the first paint via setTimeout so all node positions are registered.
+  // ── fitView: deferred on initial load so all nodes are registered first ──
   const hasFitViewRef = useRef(false);
   useEffect(() => {
-    if (hasFitViewRef.current || nodes.length === 0) return;
+    if (hasFitViewRef.current || layoutNodes.length === 0) return;
     hasFitViewRef.current = true;
     const timer = setTimeout(() => {
       void rf.fitView({ padding: 0.15, maxZoom: 1.2 });
     }, 100);
     return () => clearTimeout(timer);
-  }, [nodes.length, rf]);
+  }, [layoutNodes.length, rf]);
 
-  // Connected ID set — recomputed only when selection changes
+  // ── fitView: re-fit when hideIsolated toggle changes (skip initial mount) ─
+  const isFirstMount = useRef(true);
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+    const timer = setTimeout(() => {
+      void rf.fitView({ padding: 0.15, maxZoom: 1.2, duration: 400 });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [hideIsolated, rf]);
+
+  // ── Connected ID set — recomputed when selection or visible set changes ───
   const connectedIds = useMemo(
-    () => (selectedId !== null ? getConnectedIds(selectedId, members) : null),
-    [selectedId, members]
+    () => (selectedId !== null ? getConnectedIds(selectedId, visibleMembers) : null),
+    [selectedId, visibleMembers]
   );
 
-  // Derive display nodes with selection/dim flags applied
+  // ── Display nodes: layout positions + selection/dim flags ────────────────
+  // Using layoutNodes directly (no useNodesState) because nodes are not
+  // draggable — no internal state needed beyond what we derive here.
   const displayNodes = useMemo(() => {
-    return nodes.map((n) => ({
+    return layoutNodes.map((n) => ({
       ...n,
       data: {
         ...(n.data as unknown as MemberNodeData),
-        isSelected:  n.id === selectedId,
-        isDimmed:    connectedIds !== null && !connectedIds.has(n.id),
+        isSelected: n.id === selectedId,
+        isDimmed:   connectedIds !== null && !connectedIds.has(n.id),
       },
     }));
-  }, [nodes, selectedId, connectedIds]);
+  }, [layoutNodes, selectedId, connectedIds]);
 
-  // Derive display edges with highlight applied
+  // ── Display edges: highlight connected path ───────────────────────────────
   const displayEdges = useMemo(() => {
-    return edges.map((e) => {
+    return layoutEdges.map((e) => {
       if (connectedIds === null) return e;
       const isActive = connectedIds.has(e.source) && connectedIds.has(e.target);
       return {
@@ -306,9 +334,9 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           : { stroke: "#555", strokeWidth: 1, opacity: 0.1 },
       };
     });
-  }, [edges, connectedIds]);
+  }, [layoutEdges, connectedIds]);
 
-  // Search: fly to matching node using its dagre-computed center position
+  // ── Search: fly to matching visible node ─────────────────────────────────
   const handleSearch = useCallback(
     (q: string) => {
       setQuery(q);
@@ -317,7 +345,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         return;
       }
       const lower = q.trim().toLowerCase();
-      const match = members.find(
+      const match = visibleMembers.find(
         (m) =>
           m.first_name.toLowerCase().includes(lower) ||
           m.last_name.toLowerCase().includes(lower) ||
@@ -328,7 +356,6 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         return;
       }
 
-      // Use the position from the computed layout (dagre top-left → center)
       const node = layoutNodes.find((n) => n.id === match.id);
       if (node === undefined) return;
 
@@ -338,31 +365,27 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         { zoom: 1.5, duration: 700 }
       );
     },
-    [members, layoutNodes, rf]
+    [visibleMembers, layoutNodes, rf]
   );
 
-  // Click a node → select it (or deselect if already selected), then fitView to
-  // one level above + the node itself + one level below. maxZoom caps the zoom-in.
-  // Stub nodes are not clickable — clicking does nothing.
+  // ── Node click: zoom for all nodes; profile link only for non-stubs ───────
+  // Stub nodes zoom in the same way as member nodes but do not navigate to a
+  // profile (stubs have no profile page).
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       const nodeData = node.data as unknown as MemberNodeData;
-      if (nodeData.is_stub) return;
-
       const isDeselecting = selectedId === node.id;
       setSelected(isDeselecting ? null : node.id);
 
       if (!isDeselecting) {
-        const allNodes = rf.getNodes();
+        const allRfNodes = rf.getNodes();
 
-        // One level below: direct littles
-        const directLittles = allNodes.filter(
+        const directLittles = allRfNodes.filter(
           (n) => (n.data as unknown as MemberNodeData).big_id === node.id
         );
 
-        // One level above: the node's big
-        const bigId = (node.data as unknown as MemberNodeData).big_id;
-        const bigNode = bigId !== null ? allNodes.find((n) => n.id === bigId) : undefined;
+        const bigId = nodeData.big_id;
+        const bigNode = bigId !== null ? allRfNodes.find((n) => n.id === bigId) : undefined;
 
         const targetNodes = [
           ...(bigNode !== undefined ? [bigNode] : []),
@@ -371,9 +394,9 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         ];
 
         void rf.fitView({
-          nodes:   targetNodes,
-          padding: 0.35,
-          maxZoom: 1.0,
+          nodes:    targetNodes,
+          padding:  0.35,
+          maxZoom:  1.0,
           duration: 600,
         });
       }
@@ -381,14 +404,31 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
     [selectedId, rf]
   );
 
-  // Click empty canvas → deselect
+  // ── Click empty canvas → deselect ────────────────────────────────────────
   const handlePaneClick = useCallback(() => {
     setSelected(null);
   }, []);
 
+  // ── Count display (visible vs. total) ────────────────────────────────────
+  const totalClaimed  = members.filter((m) => !m.is_stub).length;
+  const totalStubs    = members.filter((m) => m.is_stub).length;
+  const visibleClaimed = visibleMembers.filter((m) => !m.is_stub).length;
+  const visibleStubs   = visibleMembers.filter((m) => m.is_stub).length;
+
+  const countLabel = (() => {
+    if (!hideIsolated) {
+      return totalStubs > 0
+        ? `${totalClaimed} member${totalClaimed !== 1 ? "s" : ""} · ${totalStubs} unclaimed`
+        : `${totalClaimed} member${totalClaimed !== 1 ? "s" : ""}`;
+    }
+    return visibleStubs > 0
+      ? `${visibleClaimed} member${visibleClaimed !== 1 ? "s" : ""} · ${visibleStubs} unclaimed (filtered)`
+      : `${visibleClaimed} member${visibleClaimed !== 1 ? "s" : ""} (filtered)`;
+  })();
+
   return (
     <div className="relative w-full" style={{ height: "calc(100vh - 10rem)" }}>
-      {/* Search overlay */}
+      {/* ── Top-left overlay: search + hide-isolated toggle ─────────────── */}
       <div className="absolute top-3 left-3 z-10 flex items-center gap-2">
         <input
           ref={searchRef}
@@ -398,6 +438,18 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
           placeholder="Search brothers…"
           className="h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
         />
+        <button
+          type="button"
+          onClick={() => setHideIsolated((v) => !v)}
+          className={[
+            "h-9 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
+            hideIsolated
+              ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
+              : "bg-sn-black/90 border-white/20 text-white/50 hover:text-white",
+          ].join(" ")}
+        >
+          Hide unlinked
+        </button>
         {selectedId !== null && (
           <button
             onClick={() => setSelected(null)}
@@ -408,11 +460,16 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         )}
       </div>
 
+      {/* ── Top-right overlay: member count ─────────────────────────────── */}
+      <div className="absolute top-3 right-3 z-10 pointer-events-none">
+        <span className="text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+          {countLabel}
+        </span>
+      </div>
+
       <ReactFlow
         nodes={displayNodes as Node[]}
         edges={displayEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
