@@ -24,13 +24,14 @@ async function requireAdmin(): Promise<{ id: string } | { error: string }> {
 
 // ── Validation schema ─────────────────────────────────────────────────────────
 const eventSchema = z.object({
-  title:       z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  event_date:  z.string().min(1, "Date is required"),
-  location:    z.string().optional(),
-  ticket_price: z.coerce.number().min(0, "Price cannot be negative"),
-  capacity:    z.coerce.number().int().positive().optional().or(z.literal("")),
-  status:      z.enum(["draft", "published", "archived"]),
+  title:             z.string().min(1, "Title is required"),
+  description:       z.string().optional(),
+  event_date:        z.string().min(1, "Date is required"),
+  location:          z.string().optional(),
+  ticket_price:      z.coerce.number().min(0, "Price cannot be negative"),
+  capacity:          z.coerce.number().int().positive().optional().or(z.literal("")),
+  status:            z.enum(["draft", "published", "archived"]),
+  registration_open: z.boolean(),
 });
 
 export type EventFormInput = z.infer<typeof eventSchema>;
@@ -57,7 +58,8 @@ export async function createEvent(
       capacity:     parsed.data.capacity !== "" && parsed.data.capacity !== undefined
         ? Number(parsed.data.capacity)
         : null,
-      status:       parsed.data.status as EventStatus,
+      status:            parsed.data.status as EventStatus,
+      registration_open: parsed.data.registration_open,
     })
     .select("id")
     .single();
@@ -94,8 +96,9 @@ export async function updateEvent(
       capacity:     parsed.data.capacity !== "" && parsed.data.capacity !== undefined
         ? Number(parsed.data.capacity)
         : null,
-      status:       parsed.data.status as EventStatus,
-      updated_at:   new Date().toISOString(),
+      status:            parsed.data.status as EventStatus,
+      registration_open: parsed.data.registration_open,
+      updated_at:        new Date().toISOString(),
     })
     .eq("id", id);
 

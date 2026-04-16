@@ -40,6 +40,7 @@ export function EventForm({ event }: Props) {
   const [status, setStatus]           = useState<"draft" | "published" | "archived">(
     (event?.status as "draft" | "published" | "archived") ?? "draft"
   );
+  const [registrationOpen, setRegistrationOpen] = useState(event?.registration_open ?? true);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
@@ -54,8 +55,9 @@ export function EventForm({ event }: Props) {
       event_date:   new Date(eventDate).toISOString(),
       location:     location || undefined,
       ticket_price: parseFloat(price) || 0,
-      capacity:     capacity !== "" ? Number(capacity) : "",
+      capacity:          capacity !== "" ? Number(capacity) : "",
       status,
+      registration_open: registrationOpen,
     };
 
     const result = isEdit
@@ -152,6 +154,16 @@ export function EventForm({ event }: Props) {
           <option value="archived">Archived — hidden, history preserved</option>
         </select>
       </Field>
+
+      <label className="flex items-center gap-3 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={registrationOpen}
+          onChange={(e) => setRegistrationOpen(e.target.checked)}
+          className="w-4 h-4 rounded border border-white/20 bg-sn-gray-dark accent-sn-gold"
+        />
+        <span className="text-white/70 text-sm">Registration open</span>
+      </label>
 
       {error !== null && (
         <p className="text-red-400 text-sm">{error}</p>
