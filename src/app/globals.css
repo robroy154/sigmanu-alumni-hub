@@ -180,6 +180,12 @@
 }
 .rich-text-content a:hover { color: #e0c97f; }
 .rich-text-content strong { font-weight: 600; }
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
 
 /* Tiptap editor placeholder */
 .tiptap p.is-editor-empty:first-child::before {

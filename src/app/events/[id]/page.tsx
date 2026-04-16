@@ -36,10 +36,10 @@ export default async function EventDetailPage({ params }: Props) {
   const { data: event } = await (
     filter.column === "id"
       ? admin.from("events")
-          .select("id, title, slug, description, rich_description, event_date, location, ticket_price, capacity, capacity_mode, status, registration_open, banner_image_url, event_type, early_bird_price, early_bird_ends_at, registration_closes_at")
+          .select("id, title, slug, description, rich_description, event_date, location, ticket_price, capacity, capacity_mode, status, registration_open, banner_image_url, flyer_url, event_type, early_bird_price, early_bird_ends_at, registration_closes_at")
           .eq("id", filter.value).eq("status", "published")
       : admin.from("events")
-          .select("id, title, slug, description, rich_description, event_date, location, ticket_price, capacity, capacity_mode, status, registration_open, banner_image_url, event_type, early_bird_price, early_bird_ends_at, registration_closes_at")
+          .select("id, title, slug, description, rich_description, event_date, location, ticket_price, capacity, capacity_mode, status, registration_open, banner_image_url, flyer_url, event_type, early_bird_price, early_bird_ends_at, registration_closes_at")
           .eq("slug", filter.value).eq("status", "published")
   ).maybeSingle();
 
@@ -275,6 +275,30 @@ export default async function EventDetailPage({ params }: Props) {
                 {event.description}
               </p>
             )}
+          </div>
+        )}
+
+        {/* Event flyer */}
+        {event.flyer_url !== null && (
+          <div className="border-t border-white/5 pt-8">
+            <div className="mx-auto max-w-150 bg-sn-surface rounded-xl border-t-2 border-t-sn-gold border border-white/10 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={event.flyer_url}
+                alt={`${event.title} flyer`}
+                className="w-full h-auto object-contain"
+              />
+              <div className="px-4 py-3 text-center">
+                <a
+                  href={event.flyer_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sn-gold hover:text-sn-gold-light text-sm transition-colors"
+                >
+                  View Full Size ↗
+                </a>
+              </div>
+            </div>
           </div>
         )}
 

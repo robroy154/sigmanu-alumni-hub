@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { EventBannerUpload } from "@/components/admin/EventBannerUpload";
+import { EventFlyerUpload } from "@/components/admin/EventFlyerUpload";
 import { EventFieldsBuilder, type EventFieldDraft } from "@/components/admin/EventFieldsBuilder";
 import { titleToSlug } from "@/lib/events/slug";
 import { Edit2, Check, X } from "lucide-react";
@@ -68,6 +69,7 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
   const [location, setLocation]           = useState(event?.location ?? "");
   const [description, setDescription]     = useState(event?.rich_description ?? event?.description ?? "");
   const [bannerUrl, setBannerUrl]         = useState(event?.banner_image_url ?? "");
+  const [flyerUrl, setFlyerUrl]           = useState(event?.flyer_url ?? "");
 
   // ── Pricing & Capacity ──────────────────────────────────────────────────────
   const [price, setPrice]                 = useState(String(event?.ticket_price ?? "0"));
@@ -161,6 +163,7 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
       registration_open:      registrationOpen,
       event_type:             eventType,
       banner_image_url:       bannerUrl !== "" ? bannerUrl : undefined,
+      flyer_url:              flyerUrl !== "" ? flyerUrl : undefined,
     };
 
     const result = isEdit
@@ -335,6 +338,14 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
             eventId={isEdit ? event?.id ?? null : null}
             currentUrl={bannerUrl !== "" ? bannerUrl : null}
             onUpload={(url) => setBannerUrl(url)}
+          />
+        </Field>
+
+        <Field label="Event Flyer (optional)">
+          <EventFlyerUpload
+            eventId={isEdit ? event?.id ?? null : null}
+            currentUrl={flyerUrl !== "" ? flyerUrl : null}
+            onUpload={(url) => setFlyerUrl(url)}
           />
         </Field>
       </section>

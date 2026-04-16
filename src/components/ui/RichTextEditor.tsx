@@ -6,6 +6,9 @@ import Typography from "@tiptap/extension-typography";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+// Images must be externally hosted URLs (Supabase Storage public URLs, etc.)
+// base64 is disabled to prevent bloated database storage
+import Image from "@tiptap/extension-image";
 import {
   Bold,
   Italic,
@@ -19,6 +22,7 @@ import {
   Minus,
   Link2,
   RemoveFormatting,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface Props {
@@ -37,6 +41,7 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
       Underline,
       Link.configure({ openOnClick: false, autolink: true }),
       Placeholder.configure({ placeholder: placeholder ?? "Write something…" }),
+      Image.configure({ inline: false, allowBase64: false }),
     ],
     content: value,
     onUpdate: ({ editor: e }) => {
@@ -52,6 +57,12 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
   if (editor === null) return null;
 
   const charCount = editor.storage.characterCount?.characters?.() as number | undefined;
+
+  function insertImage() {
+    const url = window.prompt("Image URL:");
+    if (url === null || url.trim() === "") return;
+    editor?.chain().focus().setImage({ src: url.trim() }).run();
+  }
 
   function setLink() {
     const prev = editor?.getAttributes("link").href as string | undefined;
@@ -84,6 +95,8 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
     { type: "sep" },
     { type: "button", label: "Link",          icon: <Link2 size={14} />,          action: setLink,                                                  active: editor.isActive("link") },
     { type: "button", label: "Clear Format",  icon: <RemoveFormatting size={14} />, action: () => editor.chain().focus().clearNodes().unsetAllMarks().run(), active: false },
+    { type: "sep" },
+    { type: "button", label: "Insert Image",  icon: <ImageIcon size={14} />,        action: insertImage,                                                    active: false },
   ];
 
   return (

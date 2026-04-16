@@ -42,6 +42,7 @@ const eventSchema = z.object({
   registration_open:      z.boolean(),
   event_type:             z.enum(["internal", "external"]),
   banner_image_url:       z.string().optional(),
+  flyer_url:              z.string().optional(),
 });
 
 export type EventFormInput = z.infer<typeof eventSchema>;
@@ -93,6 +94,7 @@ export async function createEvent(
       registration_open:      d.registration_open,
       event_type:             d.event_type as EventType,
       banner_image_url:       d.banner_image_url ?? null,
+      flyer_url:              d.flyer_url ?? null,
     })
     .select("id")
     .single();
@@ -140,6 +142,7 @@ export async function updateEvent(
       registration_open:      d.registration_open,
       event_type:             d.event_type as EventType,
       banner_image_url:       d.banner_image_url ?? null,
+      flyer_url:              d.flyer_url ?? null,
       updated_at:             new Date().toISOString(),
     })
     .eq("id", id);

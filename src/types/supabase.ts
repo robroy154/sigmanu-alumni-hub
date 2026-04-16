@@ -225,6 +225,7 @@ export type Database = {
         Row: {
           banner_image_url:       string | null
           capacity:               number | null
+          flyer_url:              string | null
           capacity_mode:          string
           created_at:             string
           description:            string | null
@@ -253,6 +254,7 @@ export type Database = {
           early_bird_price?:       number | null
           event_date:              string
           event_type?:             string
+          flyer_url?:              string | null
           id?:                     string
           location?:               string | null
           registration_closes_at?: string | null
@@ -267,6 +269,7 @@ export type Database = {
         Update: {
           banner_image_url?:       string | null
           capacity?:               number | null
+          flyer_url?:              string | null
           capacity_mode?:          string
           created_at?:             string
           description?:            string | null

@@ -187,6 +187,8 @@ Key runtime decisions:
 - Banner images: uploaded to event-banners (public Supabase Storage bucket) via uploadEventBanner server action (base64); EventBannerUpload component in admin; displayed as background-image div with bg-black/50 overlay on event detail page
 - iCal export: ICalButton client component generates .ics string (manual VCALENDAR/VEVENT construction), triggers Blob download via URL.createObjectURL; event end time = start + 3 hours
 - Guest count display: "X attendees (you + N guests)" format used in MyEventsClient, admin registrations page; 1 attendee shows no parenthetical
+- flyer_url column added to events; uploaded to event-banners bucket at [eventId]-flyer/flyer.[ext]; rendered below event description as a contained image with "View Full Size" link; EventFlyerUpload component in admin EventForm Details section
+- Tiptap image extension enabled for inline images in rich text description; base64 disabled (externally hosted URLs only); Insert Image toolbar button prompts for URL via window.prompt; img tags allowed through RichTextContent sanitizer (src/alt/width/height attrs; javascript: src blocked)
 
 ---
 
