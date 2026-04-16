@@ -17,6 +17,16 @@ export default async function FamilyTreePage() {
   } = await supabase.auth.getUser();
   if (user === null) redirect("/login");
 
+  // Fetch viewer's own status (for "Invite to claim" button on stub panels)
+  const { data: viewer } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  const viewerStatus: "member" | "admin" =
+    viewer?.status === "admin" ? "admin" : "member";
+
   const { data: rows } = await supabase
     .from("members")
     .select(
@@ -58,6 +68,7 @@ export default async function FamilyTreePage() {
       : null,
     big_id:       m.big_id,
     is_stub:      m.status === "stub",
+    status:       m.status as "member" | "admin" | "stub",
   }));
 
   return (
@@ -72,7 +83,7 @@ export default async function FamilyTreePage() {
           <p className="text-sn-gray-text text-sm">No family tree data yet. Members can add their big brother from their profile.</p>
         </div>
       ) : (
-        <FamilyTreeClient members={treeMembers} />
+        <FamilyTreeClient members={treeMembers} viewerStatus={viewerStatus} />
       )}
     </div>
   );
