@@ -108,12 +108,14 @@ export function RegistrationForm({
 
   const inputClass =
     "bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold";
+  const readOnlyClass =
+    "bg-white/5 border-white/10 text-white/50 cursor-default focus-visible:border-white/10";
   const labelClass = "text-white/80 text-sm";
   const errorClass = "text-red-400 text-xs mt-0.5";
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      {/* Registrant info */}
+      {/* Registrant info — read-only for authenticated members, sourced from profile */}
       <div className="space-y-1.5">
         <Label htmlFor="registrant_name" className={labelClass}>
           Your name
@@ -121,13 +123,10 @@ export function RegistrationForm({
         <Input
           id="registrant_name"
           type="text"
-          className={inputClass}
+          readOnly
+          className={readOnlyClass}
           {...register("registrant_name")}
-          aria-invalid={errors.registrant_name !== undefined}
         />
-        {errors.registrant_name !== undefined && (
-          <p className={errorClass}>{errors.registrant_name.message}</p>
-        )}
       </div>
 
       <div className="space-y-1.5">
@@ -137,14 +136,10 @@ export function RegistrationForm({
         <Input
           id="email"
           type="email"
-          autoComplete="email"
-          className={inputClass}
+          readOnly
+          className={readOnlyClass}
           {...register("email")}
-          aria-invalid={errors.email !== undefined}
         />
-        {errors.email !== undefined && (
-          <p className={errorClass}>{errors.email.message}</p>
-        )}
       </div>
 
       <div className="space-y-1.5">
