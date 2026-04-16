@@ -108,7 +108,7 @@ export function SignupForm() {
     }
 
     // Notify admins + send pending confirmation — fire-and-forget, never block redirect.
-    void sendSignupNotifications({ to: data.email, firstName: data.first_name });
+    void sendSignupNotifications({ to: data.email, firstName: data.first_name, lastName: data.last_name });
 
     router.push("/pending-approval");
   }

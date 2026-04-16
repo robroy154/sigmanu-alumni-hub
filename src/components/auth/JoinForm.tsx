@@ -117,7 +117,7 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     }
 
     // Confirm to the member their account is pending review — fire-and-forget.
-    void sendSignupNotifications({ to: email, firstName: data.first_name });
+    void sendSignupNotifications({ to: email, firstName: data.first_name, lastName: data.last_name });
 
     router.push("/pending-approval");
   }

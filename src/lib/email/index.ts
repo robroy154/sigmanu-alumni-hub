@@ -244,29 +244,48 @@ export async function sendRegistrationConfirmation({
 // 3. New member alert — sent to all admins when someone signs up
 // ---------------------------------------------------------------------------
 
-export async function notifyAdminsNewMember(): Promise<void> {
+export async function notifyAdminsNewMember(member?: {
+  firstName: string;
+  lastName:  string;
+  email:     string;
+}): Promise<void> {
   const resend = getResend();
   if (resend === null) return;
 
   // Import here to avoid circular deps — this file is "use server"
-  const { createClient }      = await import("@/lib/supabase/server");
   const { createAdminClient } = await import("@/lib/supabase/admin");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user === null) return;
+  let resolvedMember: { first_name: string; last_name: string; email: string };
+
+  if (member !== undefined) {
+    // Caller supplied member data directly — skip session lookup.
+    // This is the reliable path when called immediately after signUp(),
+    // where the session cookie may not yet be available on the server.
+    resolvedMember = {
+      first_name: member.firstName,
+      last_name:  member.lastName,
+      email:      member.email,
+    };
+  } else {
+    // Fallback: derive member from the active session.
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user === null) return;
+
+    const adminDb = createAdminClient();
+    const { data: fetched } = await adminDb
+      .from("members")
+      .select("first_name, last_name, email")
+      .eq("id", user.id)
+      .single();
+    if (fetched === null) return;
+    resolvedMember = fetched;
+  }
 
   const adminDb = createAdminClient();
-
-  // Fetch the new member's data from DB (don't trust client-supplied values)
-  const { data: member } = await adminDb
-    .from("members")
-    .select("first_name, last_name, email")
-    .eq("id", user.id)
-    .single();
-  if (member === null) return;
 
   // Fetch all admin email addresses
   const { data: admins } = await adminDb
@@ -281,7 +300,7 @@ export async function notifyAdminsNewMember(): Promise<void> {
   }
 
   const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const fullName  = `${member.first_name} ${member.last_name}`;
+  const fullName  = `${resolvedMember.first_name} ${resolvedMember.last_name}`;
 
   const body = `
     <h1 style="${h1}">New member signup</h1>
@@ -296,7 +315,7 @@ export async function notifyAdminsNewMember(): Promise<void> {
       </tr>
       <tr>
         <td style="${label}">Email</td>
-        <td style="${value}">${member.email}</td>
+        <td style="${value}">${resolvedMember.email}</td>
       </tr>
     </table>
     <hr style="${divider}">
