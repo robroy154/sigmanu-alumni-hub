@@ -28,6 +28,7 @@ export interface FamilyTreeMember {
   last_name:    string;
   nickname:     string | null;
   pledge_class: string | null;
+  pin_number:   string | null;
   photo_url:    string | null;
   big_id:       string | null;
   is_stub:      boolean;
@@ -43,8 +44,8 @@ interface MemberNodeData extends FamilyTreeMember {
 // Node dimensions — must match what dagre uses for positioning
 // ---------------------------------------------------------------------------
 
-const NODE_W = 168;
-const NODE_H = 80;
+const NODE_W = 190;
+const NODE_H = 88;
 
 // ---------------------------------------------------------------------------
 // Custom member node
@@ -55,6 +56,11 @@ interface MemberNodeProps {
 }
 
 function MemberNode({ data: m }: MemberNodeProps) {
+  const pinDisplay =
+    m.pin_number !== null && m.pin_number !== ""
+      ? `ΜΞ ${String(m.pin_number).padStart(3, "0")}`
+      : null;
+
   return (
     <div
       style={{ width: NODE_W }}
@@ -75,25 +81,29 @@ function MemberNode({ data: m }: MemberNodeProps) {
         style={{ background: "transparent", border: "none", width: 0, height: 0 }}
       />
 
-      {/* "Unclaimed" badge for stub nodes */}
+      {/* "Unclaimed" badge — stub nodes only, pinned to top-right corner.
+          The info section uses pr-16 when stub to guarantee the name text
+          never reaches this badge, regardless of name length or font size. */}
       {m.is_stub && (
-        <span className="absolute top-1 right-1 bg-white/10 text-white/40 text-[10px] px-1.5 py-0.5 rounded-full leading-none">
+        <span className="absolute top-1.5 right-1.5 bg-white/10 text-white/40 text-[9px] px-1.5 py-0.5 rounded-full leading-none pointer-events-none z-10">
           Unclaimed
         </span>
       )}
 
       {/* Avatar — initials at half-opacity for stubs; photo for claimed members */}
       {m.is_stub ? (
-        <div className={[
-          "w-5 h-5 rounded-full bg-white/10 flex items-center justify-center shrink-0",
-          m.isDimmed ? "opacity-20" : "opacity-50",
-        ].join(" ")}>
-          <span className="text-[7px] text-white/60 font-semibold leading-none">
+        <div
+          className={[
+            "w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0",
+            m.isDimmed ? "opacity-20" : "opacity-50",
+          ].join(" ")}
+        >
+          <span className="text-[8px] text-white/60 font-semibold leading-none">
             {m.first_name[0]}{m.last_name[0]}
           </span>
         </div>
       ) : m.photo_url !== null ? (
-        <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
+        <div className="w-6 h-6 rounded-full overflow-hidden shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={m.photo_url}
@@ -103,8 +113,8 @@ function MemberNode({ data: m }: MemberNodeProps) {
         </div>
       ) : null}
 
-      {/* Info */}
-      <div className="min-w-0 flex-1">
+      {/* Info — pr-16 on stub nodes ensures name text stays clear of the Unclaimed badge */}
+      <div className={["min-w-0 flex-1", m.is_stub ? "pr-16" : ""].join(" ")}>
         <p
           className={[
             "text-[11px] font-medium leading-tight truncate",
@@ -121,6 +131,16 @@ function MemberNode({ data: m }: MemberNodeProps) {
             ].join(" ")}
           >
             {m.pledge_class}
+          </p>
+        )}
+        {pinDisplay !== null && (
+          <p
+            className={[
+              "text-[9px] tracking-wide leading-tight mt-0.5 truncate",
+              m.isDimmed ? "text-sn-gray-text/20" : "text-sn-gray-text",
+            ].join(" ")}
+          >
+            {pinDisplay}
           </p>
         )}
       </div>
@@ -157,7 +177,7 @@ function buildLayout(members: FamilyTreeMember[]): {
 } {
   const g = new Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 64, ranksep: 100, marginx: 40, marginy: 40 });
+  g.setGraph({ rankdir: "TB", nodesep: 70, ranksep: 120, marginx: 40, marginy: 40 });
 
   const memberIds = new Set(members.map((m) => m.id));
 
@@ -250,7 +270,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
   const searchRef = useRef<HTMLInputElement>(null);
   const [query, setQuery]           = useState("");
   const [selectedId, setSelected]   = useState<string | null>(null);
-  const [hideIsolated, setHideIsolated] = useState(false);
+  const [hideIsolated, setHideIsolated] = useState(true);
 
   // ── Isolated node detection ───────────────────────────────────────────────
   // A node is isolated when it has no big_id (no parent) AND no other node
@@ -448,7 +468,7 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
               : "bg-sn-black/90 border-white/20 text-white/50 hover:text-white",
           ].join(" ")}
         >
-          Hide unlinked
+          {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
         </button>
         {selectedId !== null && (
           <button

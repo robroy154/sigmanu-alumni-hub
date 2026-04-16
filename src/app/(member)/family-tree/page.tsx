@@ -20,7 +20,7 @@ export default async function FamilyTreePage() {
   const { data: rows } = await supabase
     .from("members")
     .select(
-      "id, first_name, last_name, nickname, pledge_class, profile_photo_url, big_id, status"
+      "id, first_name, last_name, nickname, pledge_class, pin_number, profile_photo_url, big_id, status"
     )
     .in("status", ["member", "admin", "stub"])
     .order("last_name");
@@ -52,6 +52,7 @@ export default async function FamilyTreePage() {
     last_name:    m.last_name,
     nickname:     m.nickname,
     pledge_class: m.pledge_class,
+    pin_number:   m.pin_number,
     photo_url:    m.profile_photo_url !== null
       ? (photoUrlMap[m.profile_photo_url] ?? null)
       : null,
