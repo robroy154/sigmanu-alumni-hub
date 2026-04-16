@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -84,7 +85,16 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
   const needsOptions =
     field.field_type === "dropdown" || field.field_type === "multi_select";
 
-  const optionsValue = field.field_options?.options.join(", ") ?? "";
+  // Keep a local raw string for the options input so typing commas isn't
+  // stripped on each keystroke. Only parse into the options array on blur.
+  const [optionsText, setOptionsText] = useState(
+    () => field.field_options?.options.join(", ") ?? ""
+  );
+
+  // Sync when options change from outside (e.g., field type resets to no-options)
+  useEffect(() => {
+    setOptionsText(field.field_options?.options.join(", ") ?? "");
+  }, [field.field_options]);
 
   function handleTypeChange(newType: FieldType) {
     onUpdate({
@@ -96,10 +106,12 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
     });
   }
 
-  function handleOptionsChange(raw: string) {
+  function handleOptionsBlur() {
     onUpdate({
       ...field,
-      field_options: { options: raw.split(",").map((s) => s.trim()).filter(Boolean) },
+      field_options: {
+        options: optionsText.split(",").map((s) => s.trim()).filter(Boolean),
+      },
     });
   }
 
@@ -178,8 +190,9 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
         <div className="pl-6">
           <input
             type="text"
-            value={optionsValue}
-            onChange={(e) => handleOptionsChange(e.target.value)}
+            value={optionsText}
+            onChange={(e) => setOptionsText(e.target.value)}
+            onBlur={handleOptionsBlur}
             placeholder="Option 1, Option 2, Option 3 (comma-separated)"
             className="w-full rounded bg-sn-black border border-white/10 text-white/80 text-xs px-2 py-1.5 focus:outline-none focus:border-sn-gold/50 placeholder:text-white/25"
           />
