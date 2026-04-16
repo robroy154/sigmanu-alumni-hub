@@ -116,7 +116,7 @@ export function OAuthButtons() {
           </button>
           {provider.id === "google" && (
             <p className="text-xs text-white/40 text-center mt-1">
-              Google sign-in will show a csusigmanu.com authorization screen — this is expected and secure.
+              Google sign-in routes through a secure Supabase authentication screen — this is expected and your data is safe.
             </p>
           )}
         </div>
