@@ -165,6 +165,7 @@ Key runtime decisions:
 - registration_payments table: service-role-only inserts; RLS allows members to read own, admins read all
 - manageActions.ts: uses session client for auth checks, admin client for writes; ownership verified via member_id = user.id on registration lookup
 - Signup notifications: sendSignupNotifications() server action in src/lib/auth/signup-notifications.ts wraps sendPendingConfirmation + notifyAdminsNewMember; called fire-and-forget from SignupForm and JoinForm (client components cannot import "use server" email functions directly); passes firstName/lastName/email directly to notifyAdminsNewMember to bypass session lookup — session cookie is not reliably available on the server immediately after client-side signUp()
+- proxy.ts Next-Action guard: server action POSTs carry a Next-Action header; proxy passes them through unconditionally before any redirect logic — without this, server actions invoked from auth route pages (e.g. /signup) get 307'd by the authenticated-user-on-auth-route redirect before the action code runs
 - checkReferralToken: server action called in JoinForm before supabase.auth.signUp() — prevents dangling auth.users rows on expired tokens
 - deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column

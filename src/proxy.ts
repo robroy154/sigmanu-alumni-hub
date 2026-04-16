@@ -56,6 +56,12 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Server action requests carry a Next-Action header. Let them through
+  // unconditionally — they have their own auth checks inside the action.
+  if (request.headers.has("Next-Action")) {
+    return supabaseResponse;
+  }
+
   const isPublicRoute = matchesRoute(pathname, PUBLIC_ROUTES);
   const isAuthRoute = matchesRoute(pathname, AUTH_ROUTES);
 
