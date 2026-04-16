@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminMemberEditForm } from "@/components/admin/AdminMemberEditForm";
 import { DeleteMemberButton } from "@/components/admin/DeleteMemberButton";
+import { MergeStubSection } from "@/components/admin/MergeStubSection";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -46,6 +47,16 @@ export default async function AdminMemberDetailPage({ params }: Props) {
     ]);
 
   if (member === null) notFound();
+
+  // Fetch stubs whose last name matches — only relevant for non-stub members
+  const { data: matchingStubs } =
+    member.status !== "stub"
+      ? await admin
+          .from("members")
+          .select("id, first_name, last_name, pledge_class, pin_number")
+          .eq("status", "stub")
+          .ilike("last_name", member.last_name)
+      : { data: null };
 
   // Resolve big brother name for display — must include stubs because a stub's
   // big_id can point to another stub. allMembers only has member+admin (for the
@@ -112,6 +123,15 @@ export default async function AdminMemberDetailPage({ params }: Props) {
         referrerName={referrerName}
         referrerId={referrerId}
       />
+
+      {/* Merge stub record — only for non-stub members with a matching stub by last name */}
+      {member.status !== "stub" && (matchingStubs ?? []).length > 0 && (
+        <MergeStubSection
+          realMemberId={member.id}
+          realMemberName={`${member.first_name} ${member.last_name}`}
+          matchingStubs={matchingStubs ?? []}
+        />
+      )}
 
       {/* Danger zone */}
       <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-5 space-y-3">

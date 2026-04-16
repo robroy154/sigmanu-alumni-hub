@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface StubMatch {
@@ -51,4 +53,73 @@ export async function findStubMatches(input: {
     pinNumber:   row.pin_number,
     similarity:  row.similarity,
   }));
+}
+
+// ── Claim a stub for an already-authenticated user (OAuth post-signup path) ──
+// Gets the caller's identity from the session — never accepts userId as a param.
+export async function claimStubForExistingUser(
+  stubId: string
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user === null) return { error: "Not authenticated." };
+
+  const admin = createAdminClient();
+
+  // Fetch stub — confirm it's still unclaimed
+  const { data: stub } = await admin
+    .from("members")
+    .select("id, pledge_class, pin_number, big_id, nickname, status")
+    .eq("id", stubId)
+    .single();
+
+  if (stub === null || stub.status !== "stub") {
+    return { error: "Stub record not found or already claimed." };
+  }
+
+  // Fetch the real member row to know which fields are already set
+  const { data: realMember } = await admin
+    .from("members")
+    .select("id, pledge_class, pin_number, big_id, nickname")
+    .eq("id", user.id)
+    .single();
+
+  if (realMember === null) return { error: "Member record not found." };
+
+  // Only overwrite fields that are currently null on the real row
+  const updates: Record<string, string | null> = {};
+  if (realMember.pledge_class === null && stub.pledge_class !== null)
+    updates.pledge_class = stub.pledge_class;
+  if (realMember.pin_number === null && stub.pin_number !== null)
+    updates.pin_number = stub.pin_number;
+  if (realMember.big_id === null && stub.big_id !== null)
+    updates.big_id = stub.big_id;
+  if (realMember.nickname === null && stub.nickname !== null)
+    updates.nickname = stub.nickname;
+
+  if (Object.keys(updates).length > 0) {
+    const { error: updateError } = await admin
+      .from("members")
+      .update(updates)
+      .eq("id", user.id);
+    if (updateError !== null) return { error: "Failed to update member record." };
+  }
+
+  // Re-point any little brothers that referenced the stub
+  await admin.from("members").update({ big_id: user.id }).eq("big_id", stubId);
+
+  // Delete stub only if no registrations reference it
+  const { count } = await admin
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("member_id", stubId);
+
+  if ((count ?? 0) === 0) {
+    await admin.from("members").delete().eq("id", stubId);
+  }
+
+  revalidatePath("/family-tree");
+  return { success: true };
 }

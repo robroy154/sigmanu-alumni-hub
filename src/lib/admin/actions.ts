@@ -244,6 +244,72 @@ export async function rejectMember(
   return { success: true };
 }
 
+// ── Merge a stub record into an existing member ───────────────────────────────
+export async function adminMergeStub(
+  realMemberId: string,
+  stubId: string
+): Promise<{ success: true } | { error: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Fetch both rows in parallel
+  const [{ data: real }, { data: stub }] = await Promise.all([
+    admin
+      .from("members")
+      .select("id, pledge_class, pin_number, big_id, nickname, status")
+      .eq("id", realMemberId)
+      .single(),
+    admin
+      .from("members")
+      .select("id, pledge_class, pin_number, big_id, nickname, status")
+      .eq("id", stubId)
+      .single(),
+  ]);
+
+  if (real === null)              return { error: "Member not found." };
+  if (stub === null)              return { error: "Stub not found." };
+  if (stub.status !== "stub")     return { error: "Target record is not a stub." };
+
+  // Only overwrite fields that are currently null on the real row
+  const updates: Record<string, string | null> = {};
+  if (real.pledge_class === null && stub.pledge_class !== null)
+    updates.pledge_class = stub.pledge_class;
+  if (real.pin_number === null && stub.pin_number !== null)
+    updates.pin_number = stub.pin_number;
+  if (real.big_id === null && stub.big_id !== null)
+    updates.big_id = stub.big_id;
+  if (real.nickname === null && stub.nickname !== null)
+    updates.nickname = stub.nickname;
+
+  if (Object.keys(updates).length > 0) {
+    const { error: updateError } = await admin
+      .from("members")
+      .update(updates)
+      .eq("id", realMemberId);
+    if (updateError !== null) return { error: "Failed to update member." };
+  }
+
+  // Re-point any little brothers that referenced the stub
+  await admin.from("members").update({ big_id: realMemberId }).eq("big_id", stubId);
+
+  // Delete stub only if no registrations reference it
+  const { count } = await admin
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("member_id", stubId);
+
+  if ((count ?? 0) === 0) {
+    await admin.from("members").delete().eq("id", stubId);
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${realMemberId}`);
+  revalidatePath("/family-tree");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,
