@@ -440,6 +440,8 @@ function SidePanel({
   const [inviteEmail, setInviteEmail]       = useState("");
   const [inviteLoading, setInviteLoading]   = useState(false);
   const [showTooltip, setShowTooltip]       = useState(false);
+  const inviteBtnRef                        = useRef<HTMLButtonElement>(null);
+  const [tooltipPos, setTooltipPos]         = useState<{ bottom: number; left: number } | null>(null);
 
   // Reset invite form whenever the selected member changes
   useEffect(() => {
@@ -716,14 +718,14 @@ function SidePanel({
             {member.is_stub && viewerStatus !== undefined && (
               <div style={{ marginTop: 4 }}>
                 {!showInviteForm ? (
-                  <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-                    {/* Tooltip */}
-                    {showTooltip && (
+                  <div style={{ display: "inline-block", width: "100%" }}>
+                    {/* Tooltip — position:fixed so it escapes the overflowY:auto scroll container */}
+                    {showTooltip && tooltipPos !== null && (
                       <div
                         style={{
-                          position:     "absolute",
-                          bottom:       "calc(100% + 8px)",
-                          left:         "50%",
+                          position:     "fixed",
+                          bottom:       tooltipPos.bottom,
+                          left:         tooltipPos.left,
                           transform:    "translateX(-50%)",
                           background:   "#0B0B0C",
                           border:       "1px solid rgba(198,167,94,0.3)",
@@ -731,9 +733,9 @@ function SidePanel({
                           padding:      "8px 10px",
                           fontSize:     11,
                           color:        "rgba(255,255,255,0.75)",
-                          maxWidth:     220,
+                          width:        220,
                           lineHeight:   1.5,
-                          zIndex:       50,
+                          zIndex:       9999,
                           whiteSpace:   "normal",
                           pointerEvents: "none",
                         }}
@@ -756,9 +758,19 @@ function SidePanel({
                       </div>
                     )}
                     <button
+                      ref={inviteBtnRef}
                       type="button"
                       onClick={() => setShowInviteForm(true)}
-                      onMouseEnter={() => setShowTooltip(true)}
+                      onMouseEnter={() => {
+                        const rect = inviteBtnRef.current?.getBoundingClientRect();
+                        if (rect !== undefined) {
+                          setTooltipPos({
+                            bottom: window.innerHeight - rect.top + 8,
+                            left:   rect.left + rect.width / 2,
+                          });
+                        }
+                        setShowTooltip(true);
+                      }}
                       onMouseLeave={() => setShowTooltip(false)}
                       style={{
                         width:        "100%",
