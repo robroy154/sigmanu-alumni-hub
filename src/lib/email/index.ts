@@ -249,6 +249,7 @@ export async function notifyAdminsNewMember(member?: {
   lastName:  string;
   email:     string;
 }): Promise<void> {
+  console.log("[email] notifyAdminsNewMember called, member param:", member ?? "none — using session");
   const resend = getResend();
   if (resend === null) return;
 
@@ -294,6 +295,7 @@ export async function notifyAdminsNewMember(member?: {
     .eq("status", "admin");
 
   const adminEmails = (admins ?? []).map((a) => a.email);
+  console.log("[email] admin emails found:", adminEmails);
   if (adminEmails.length === 0) {
     console.warn("[email] notifyAdminsNewMember: no admin accounts found to notify.");
     return;
@@ -348,7 +350,9 @@ export async function sendPendingConfirmation({
   to:        string;
   firstName: string;
 }): Promise<void> {
+  console.log("[email] sendPendingConfirmation called for:", to);
   const resend = getResend();
+  console.log("[email] sendPendingConfirmation resend client:", resend !== null ? "ok" : "null");
   if (resend === null) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
