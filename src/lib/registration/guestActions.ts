@@ -58,8 +58,6 @@ export async function createGuestRegistration(
       registrant_name:      registrantName,
       email:                data.email,
       phone:                data.phone ?? null,
-      dietary_restrictions: data.dietary_restrictions ?? null,
-      tshirt_size:          data.tshirt_size,
       guest_count:          guestCount,
       payment_status:       "unpaid",
       applied_price:        appliedPrice,

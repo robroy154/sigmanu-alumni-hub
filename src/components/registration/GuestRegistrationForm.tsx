@@ -11,7 +11,6 @@ import { createGuestRegistration } from "@/lib/registration/guestActions";
 import { uploadRegistrationFile } from "@/lib/registration/upload-registration-file";
 import {
   GuestRegistrationSchema,
-  TSHIRT_SIZES,
   type GuestRegistrationInput,
 } from "@/lib/registration/schemas";
 import type { EventFieldRow } from "@/types/database";
@@ -158,60 +157,19 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
         )}
       </div>
 
-      {/* Phone + T-shirt */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="phone" className={labelClass}>
-            Phone{" "}
-            <span className="text-white/40 font-normal">(optional)</span>
-          </Label>
-          <Input
-            id="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="(555) 000-0000"
-            className={inputClass}
-            {...register("phone")}
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="tshirt_size" className={labelClass}>
-            T-shirt size
-          </Label>
-          <select
-            id="tshirt_size"
-            className="h-9 w-full rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white focus:outline-none focus:border-sn-gold transition-colors"
-            {...register("tshirt_size")}
-            aria-invalid={errors.tshirt_size !== undefined}
-          >
-            <option value="" className="bg-sn-black">
-              Select size
-            </option>
-            {TSHIRT_SIZES.map((s) => (
-              <option key={s} value={s} className="bg-sn-black">
-                {s}
-              </option>
-            ))}
-          </select>
-          {errors.tshirt_size !== undefined && (
-            <p className={errorClass}>{errors.tshirt_size.message}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Dietary restrictions */}
+      {/* Phone */}
       <div className="space-y-1.5">
-        <Label htmlFor="dietary_restrictions" className={labelClass}>
-          Dietary restrictions{" "}
+        <Label htmlFor="phone" className={labelClass}>
+          Phone{" "}
           <span className="text-white/40 font-normal">(optional)</span>
         </Label>
         <Input
-          id="dietary_restrictions"
-          type="text"
-          placeholder="e.g. vegetarian, gluten-free"
+          id="phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="(555) 000-0000"
           className={inputClass}
-          {...register("dietary_restrictions")}
+          {...register("phone")}
         />
       </div>
 
