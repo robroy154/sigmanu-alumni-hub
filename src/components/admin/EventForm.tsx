@@ -52,7 +52,7 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
   const [title, setTitle]                 = useState(event?.title ?? "");
   const [slug, setSlug]                   = useState(event?.slug ?? "");
   const [slugEditing, setSlugEditing]     = useState(false);
-  const [slugValid, setSlugValid]         = useState<boolean | null>(null);
+  const [slugValid, setSlugValid]         = useState<boolean | null>(isEdit && (event?.slug ?? "") !== "" ? true : null);
   const [slugChecking, setSlugChecking]   = useState(false);
   const [eventType, setEventType]         = useState<"internal" | "external">(
     (event?.event_type as "internal" | "external") ?? "external"
@@ -111,7 +111,8 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (slugEditing) return; // don't override manual edits
+    if (isEdit) return;        // never auto-generate on edit — user must click pencil
+    if (slugEditing) return;   // don't override manual edits on create
     if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       if (title.trim() !== "") {
@@ -124,7 +125,7 @@ export function EventForm({ event, initialFields = [], responseCountByFieldId = 
       if (debounceRef.current !== null) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, slugEditing]);
+  }, [title, slugEditing, isEdit]);
 
   async function validateSlug(value: string) {
     if (value === "") { setSlugValid(null); return; }

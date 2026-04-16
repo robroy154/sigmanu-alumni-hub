@@ -102,15 +102,17 @@ export default async function EventDetailPage({ params }: Props) {
   // ── Date formatting ──────────────────────────────────────────────────────────
   const eventDate      = new Date(event.event_date);
   const formattedDate  = eventDate.toLocaleDateString("en-US", {
-    weekday: "long",
-    year:    "numeric",
-    month:   "long",
-    day:     "numeric",
+    weekday:  "long",
+    year:     "numeric",
+    month:    "long",
+    day:      "numeric",
+    timeZone: "America/New_York",
   });
   const formattedTime  = eventDate.toLocaleTimeString("en-US", {
     hour:         "numeric",
     minute:       "2-digit",
     timeZoneName: "short",
+    timeZone:     "America/New_York",
   });
 
   // Google Calendar link
