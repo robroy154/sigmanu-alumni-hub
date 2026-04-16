@@ -1,3 +1,4 @@
+// event routing: dynamic — event_id read from Stripe session metadata, no hardcoded IDs
 import { type NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";

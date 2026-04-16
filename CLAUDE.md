@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-All 18 phases + Phase 19 hardening complete. Build clean at 34 routes.
+Phase 20 complete — landing page redesign, reject member, event routing hardened, cleanup script added.
 
-Last completed: Phase 19 — Auth hardening, admin delete, announcement notifications, production setup docs.
+Last completed: Phase 20 — Multi-section landing page, rejectMember action + RejectMemberButton, event routing audit, cleanup-test-data.ts script.
 
 Completed phases summary:
 
@@ -113,6 +113,7 @@ Completed phases summary:
 - Phase 17: Guest registration flow — /events/[id]/register/guest (public form + confirmation), GuestRegistrationForm, GuestSignupCTA, guestActions.ts (admin client, email+event duplicate check), sessionStorage prefill on /signup; homepage "Register Now" → /events/[id]; ΣΝ logo clickable on all auth/join layouts
 - Phase 18: Post-registration guest management — ManageRegistration component on confirmation/my-events/home; edit guest names; add guests with Stripe payment (pending_guests pattern); registration_payments table; webhook branching on pending_guests; guest confirmation contact line
 - Phase 19: Hardening — pending confirmation email on signup/join; announcement batch notify (resend.batch.send); checkReferralToken pre-signUp guard; admin hard delete referrals (DeleteReferralButton); admin hard delete members (auth.admin.deleteUser cascade); docs/PRODUCTION_SETUP.md
+- Phase 20: Landing page redesign (hero + upcoming events + platform features sections; NEXT_PUBLIC_HERO_IMAGE_URL optional env var); rejectMember server action + RejectMemberButton (amber, pending-only, next to ApproveButton in admin members list); event routing audit (7 files confirmed dynamic, comments added); scripts/cleanup-test-data.ts (dry run by default, --execute flag to apply)
 
 Key runtime decisions:
 
@@ -166,6 +167,9 @@ Key runtime decisions:
 - manageActions.ts: uses session client for auth checks, admin client for writes; ownership verified via member_id = user.id on registration lookup
 - Signup notifications: sendSignupNotifications() server action in src/lib/auth/signup-notifications.ts wraps sendPendingConfirmation + notifyAdminsNewMember; called fire-and-forget from SignupForm and JoinForm (client components cannot import "use server" email functions directly); passes firstName/lastName/email directly to notifyAdminsNewMember to bypass session lookup — session cookie is not reliably available on the server immediately after client-side signUp()
 - proxy.ts Next-Action guard: server action POSTs carry a Next-Action header; proxy passes them through unconditionally before any redirect logic — without this, server actions invoked from auth route pages (e.g. /signup) get 307'd by the authenticated-user-on-auth-route redirect before the action code runs
+- Landing page (/) three sections: hero (min-h-screen, optional NEXT_PUBLIC_HERO_IMAGE_URL background with bg-black/60 overlay, featured event card, Member Login + Create Account CTAs), upcoming events grid (all published events with event_date >= now), platform features (Directory/Family Tree/Events with Lucide icons); all published events treated as public until event_type column added in a future phase
+- rejectMember action: guards with requireAdmin(); blocks self-rejection; calls adminDb.auth.admin.deleteUser() same as deleteMember — hard deletes auth user and cascades to public.members; RejectMemberButton shown only for pending rows in admin members list alongside ApproveButton
+- NEXT_PUBLIC_HERO_IMAGE_URL: optional env var for landing page hero background image; if unset, solid sn-black background renders instead; no broken layout when absent
 - checkReferralToken: server action called in JoinForm before supabase.auth.signUp() — prevents dangling auth.users rows on expired tokens
 - deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column

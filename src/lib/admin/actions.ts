@@ -218,6 +218,32 @@ export async function deleteMember(
   return { success: true };
 }
 
+// ── Reject (hard delete) a pending member ─────────────────────────────────────
+export async function rejectMember(
+  memberId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (memberId === guard.id) {
+    return { error: "You cannot reject your own account." };
+  }
+
+  const adminDb = createAdminClient();
+
+  // Deleting from auth.users cascades to public.members via FK + trigger.
+  const { error } = await adminDb.auth.admin.deleteUser(memberId);
+
+  if (error !== null) {
+    console.error("[rejectMember] auth.admin.deleteUser failed:", error.message);
+    return { error: "Failed to reject member." };
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath("/admin");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,

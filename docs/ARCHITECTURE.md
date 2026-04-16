@@ -548,6 +548,9 @@ A chronological record of every locked decision.
 | 53 | `ManageRegistration` is a single shared client component used on confirmation, my-events, and home | Single source of truth for edit/add-guest logic; each mount point passes registration+guests as props from its own server fetch |
 | 54 | Home page upcoming event cards extracted into `HomeEventsSection` client component | Cards need toggle state (expand/collapse manage panel) which requires `useState`; extracted to keep the server page itself as a pure async server component |
 | 55 | `manageActions.ts` uses session client for ownership check, then admin client for writes | Session client verifies `member_id = user.id`; admin client bypasses RLS for the subsequent update/insert operations that the authenticated role may not have explicit write policies for |
+| 56 | Landing page (`/`) has three sections: hero, upcoming events, platform features | Hero shows featured event card (next published by date) and optional background image via `NEXT_PUBLIC_HERO_IMAGE_URL`; upcoming events section lists all published events where `event_date >= now`; all published events are treated as publicly visible until an `event_type` column is added in a future phase to distinguish internal vs external events |
+| 57 | `rejectMember` server action uses `auth.admin.deleteUser` identical to `deleteMember` | Rejection is a hard delete — the pending user never completed any paid transactions, so no financial history is lost. If rejected in error they must sign up again. Guards against self-rejection. |
+| 58 | `scripts/cleanup-test-data.ts` is dry-run by default; requires `--execute` flag to delete | Prevents accidental data loss; protected set = admins + members with any paid registration + event with most total registrations |
 
 ---
 

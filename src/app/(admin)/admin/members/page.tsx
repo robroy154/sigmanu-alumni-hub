@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApproveButton } from "@/components/admin/ApproveButton";
+import { RejectMemberButton } from "@/components/admin/RejectMemberButton";
 import { Users, Pencil } from "lucide-react";
 
 export const metadata: Metadata = { title: "Members — Admin" };
@@ -144,7 +145,13 @@ export default async function AdminMembersPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   {m.status === "pending" ? (
-                    <ApproveButton memberId={m.id} />
+                    <div className="flex items-center justify-end gap-2">
+                      <ApproveButton memberId={m.id} />
+                      <RejectMemberButton
+                        memberId={m.id}
+                        memberName={`${m.first_name} ${m.last_name}`}
+                      />
+                    </div>
                   ) : (
                     <Link
                       href={`/admin/members/${m.id}`}

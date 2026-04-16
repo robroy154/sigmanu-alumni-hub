@@ -1,3 +1,4 @@
+// event routing: dynamic, no hardcoded IDs
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";

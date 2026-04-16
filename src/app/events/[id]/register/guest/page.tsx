@@ -1,3 +1,4 @@
+// event routing: dynamic, no hardcoded IDs
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";

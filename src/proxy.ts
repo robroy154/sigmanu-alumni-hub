@@ -1,3 +1,4 @@
+// event routing: no hardcoded event IDs or slugs in proxy redirect logic
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
