@@ -15,6 +15,7 @@ import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
+import { StubClaimStep } from "@/components/auth/StubClaimStep";
 
 type DuplicateState =
   | { type: "none" }
@@ -212,87 +213,21 @@ export function SignupForm() {
 
   // ── Stub claim UI ──────────────────────────────────────────────────────────
   if (stubClaim.type === "results") {
-    const matches   = stubClaim.matches.slice(0, 3);
-    const highConf  = matches.length === 1 && (matches[0]?.similarity ?? 0) > 0.7;
-    const heading   = highConf
-      ? "We found a record that might be yours"
-      : "We found some records that might be yours";
-
-    function claimStub(stubId: string) {
-      selectedStubIdRef.current = stubId;
-      setStubClaim({ type: "none" }); // reset so onSubmit skips the search branch
-      // Trigger form submission with the validated data already in memory.
-      void handleSubmit(proceedWithSignup)();
-    }
-
-    function dismissStubs() {
-      selectedStubIdRef.current = null;
-      setStubClaim({ type: "none" }); // reset so onSubmit skips the search branch
-      void handleSubmit(proceedWithSignup)();
-    }
-
     return (
-      <div className="space-y-5">
-        <div>
-          <p className="text-sn-off-white font-semibold">{heading}</p>
-          <p className="text-white/50 text-sm mt-0.5">
-            Select your record to carry over your chapter information.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          {matches.map((match) => (
-            <div
-              key={match.id}
-              className="bg-sn-surface rounded-sm border border-white/10 px-4 py-3 flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0 space-y-0.5">
-                <p className="text-sn-off-white font-semibold text-sm">
-                  {match.firstName} {match.lastName}
-                </p>
-                {match.nickname !== null && match.nickname !== "" && (
-                  <p className="text-sn-gray-text text-xs">&ldquo;{match.nickname}&rdquo;</p>
-                )}
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-                  {match.pledgeClass !== null && match.pledgeClass !== "" && (
-                    <p className="text-sn-gray-text text-xs uppercase tracking-wide">
-                      {match.pledgeClass}
-                    </p>
-                  )}
-                  {match.pinNumber !== null && match.pinNumber !== "" && (
-                    <p className="text-sn-gold text-xs">Badge #{match.pinNumber}</p>
-                  )}
-                </div>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => claimStub(match.id)}
-                className="shrink-0 bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
-              >
-                This is me
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between pt-1">
-          <button
-            type="button"
-            onClick={() => setStubClaim({ type: "none" })}
-            className="text-white/50 hover:text-white text-sm transition-colors"
-          >
-            ← Back
-          </button>
-          <button
-            type="button"
-            onClick={dismissStubs}
-            className="text-white/60 hover:text-white text-sm transition-colors"
-          >
-            None of these are me →
-          </button>
-        </div>
-      </div>
+      <StubClaimStep
+        matches={stubClaim.matches}
+        onClaim={(stubId) => {
+          selectedStubIdRef.current = stubId;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onDismiss={() => {
+          selectedStubIdRef.current = null;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onBack={() => setStubClaim({ type: "none" })}
+      />
     );
   }
   // ───────────────────────────────────────────────────────────────────────────

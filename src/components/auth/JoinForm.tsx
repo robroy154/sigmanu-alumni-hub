@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,8 @@ import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 import { checkReferralToken, completeReferral } from "@/lib/referrals/actions";
 import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { toastError } from "@/lib/toast";
+import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
+import { StubClaimStep } from "@/components/auth/StubClaimStep";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -40,6 +42,10 @@ const JoinSchema = z
 
 type JoinInput = z.infer<typeof JoinSchema>;
 
+type StubClaimState =
+  | { type: "none" }
+  | { type: "results"; matches: StubMatch[] };
+
 interface JoinFormProps {
   firstName: string;
   lastName:  string;
@@ -52,6 +58,10 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [showResetPrompt, setShowResetPrompt] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [stubClaim, setStubClaim] = useState<StubClaimState>({ type: "none" });
+
+  // Carries the selected stub ID into signUp() without stale closure issues.
+  const selectedStubIdRef = useRef<string | null>(null);
 
   const {
     register,
@@ -64,7 +74,8 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     defaultValues: { first_name: firstName, last_name: lastName },
   });
 
-  async function onSubmit(data: JoinInput) {
+  // ── Core signup — called after stub check resolves ─────────────────────────
+  async function proceedWithSignup(data: JoinInput) {
     const supabase = createClient();
 
     // Validate the token is still usable before calling signUp().
@@ -80,7 +91,14 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
       email,
       password: data.password,
       options: {
-        data: { first_name: data.first_name, last_name: data.last_name },
+        data: {
+          first_name: data.first_name,
+          last_name:  data.last_name,
+          // stub_id is set when user claimed a stub record
+          ...(selectedStubIdRef.current !== null
+            ? { stub_id: selectedStubIdRef.current }
+            : {}),
+        },
       },
     });
 
@@ -122,6 +140,28 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     router.push("/pending-approval");
   }
 
+  // ── Primary submit — searches for stubs first ─────────────────────────────
+  async function onSubmit(data: JoinInput) {
+    // Only search stubs when we haven't already shown results (prevents re-searching
+    // when handleSubmit(proceedWithSignup) is triggered from the claim UI buttons).
+    if (stubClaim.type === "none") {
+      const matches = await findStubMatches({
+        firstName:   data.first_name,
+        lastName:    data.last_name,
+        // JoinForm has pledge_class but no badge number field (by design).
+        pledgeClass: data.pledge_class !== "" ? data.pledge_class : undefined,
+      });
+
+      if (matches.length > 0) {
+        setStubClaim({ type: "results", matches });
+        return; // Pause — show claim UI
+      }
+    }
+
+    // No stubs found (or already dismissed) — proceed with normal signup.
+    await proceedWithSignup(data);
+  }
+
   async function sendResetLink() {
     setResetLoading(true);
     const supabase = createClient();
@@ -130,6 +170,26 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     });
     setResetLoading(false);
     setResetSent(true);
+  }
+
+  // ── Stub claim UI ──────────────────────────────────────────────────────────
+  if (stubClaim.type === "results") {
+    return (
+      <StubClaimStep
+        matches={stubClaim.matches}
+        onClaim={(stubId) => {
+          selectedStubIdRef.current = stubId;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onDismiss={() => {
+          selectedStubIdRef.current = null;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onBack={() => setStubClaim({ type: "none" })}
+      />
+    );
   }
 
   // ── Duplicate email state ──────────────────────────────────────────────────
