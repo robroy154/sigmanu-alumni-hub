@@ -87,7 +87,7 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase 22 complete — pre-seeded alumni stub system: stub status, pg_trgm fuzzy search, signup claim flow, family tree stub nodes, admin CSV import. handle_new_user trigger hotfixed — stub claim errors no longer block signup (EXCEPTION block wraps stub path; normal insert always runs as fallback). Google OAuth post-signup stub claim at /auth/claim-stub (non-blocking, high-confidence match only, gated on pledge_class === null). Admin merge tool on member detail page (adminMergeStub — null-field overwrite, little brother re-pointing, stub deletion guard).
+Phase 22 complete + pre-launch audit fixes applied. Pre-seeded alumni stub system: stub status, pg_trgm fuzzy search, signup claim flow, family tree stub nodes, admin CSV import. handle_new_user trigger hotfixed — stub claim errors no longer block signup. Google OAuth post-signup stub claim at /auth/claim-stub. Admin merge tool on member detail page. Pre-launch audit fixes: C1 stub status in proxy (redirects to /pending-approval, no member access); C2 Stripe webhook idempotency (.eq payment_status=unpaid guard, confirmation email sent only once); C3 registration_closes_at enforced server-side in createRegistration and createGuestRegistration; C4 SignupForm profile update error surfaced via toast; C5 /auth/claim-stub added to PENDING_ALLOWED; C6 export route logs query errors; W3 merge action errors logged for big_id re-point and stub delete; W11 NEXT_PUBLIC_APP_URL guard in all three registration action files (hard error if unset); W14 supabase.ts regenerated and members.status manually patched to "pending"|"member"|"admin"|"stub" union (CHECK constraint not captured by CLI codegen).
 
 Last completed: Phase 22 — Pre-seeded alumni stub system. SQL migration adds 'stub' to members.status check constraint; enables pg_trgm extension with trigram index on member name; adds search_stubs() and find_member_by_name() SQL functions; updates handle_new_user trigger to support stub claiming via stub_id in auth metadata (stub fields copied to new member, stub row deleted if no registrations). Signup form adds optional Badge Number field (pin search hint, not written to DB on fresh signup) and inline stub claim UI with match cards. Family tree includes stub nodes (Unclaimed badge, initials avatar at opacity-50, not clickable). Admin /import page with papaparse client-side CSV preview and two-pass importStubs server action (duplicate check + big brother name resolution via trigram).
 
@@ -127,7 +127,12 @@ Key runtime decisions:
 - pin_number: set once by member (admin client action), unique DB constraint
 - Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side; cropped 1:1 at 512px before upload via react-image-crop
 - proxy.ts PUBLIC_ROUTES: `["/", "/auth/callback", "/auth/forgot-password", "/auth/reset-password", "/api/stripe", "/events", "/join"]`
-- proxy.ts PENDING_ALLOWED: `["/register", "/events"]`
+- proxy.ts PENDING_ALLOWED: `["/register", "/events", "/auth/claim-stub"]`
+- proxy.ts stub status: explicit branch redirects to /pending-approval; unknown status also redirects to /pending-approval (was /home, which granted member access)
+- Stripe webhook idempotency: original payment path adds `.eq("payment_status", "unpaid")` to update filter + checks updatedRows.length before sending confirmation email
+- registration_closes_at enforced server-side in createRegistration and createGuestRegistration (not just client-side UI); check added immediately after registration_open check
+- NEXT_PUBLIC_APP_URL guard: checked at runtime in createRegistration, createGuestRegistration, addGuestsToRegistration — hard error returned if unset (no localhost fallback)
+- supabase.ts members.status: manually patched to "pending"|"member"|"admin"|"stub" after CLI regeneration (CLI only captures pg enum types, not CHECK constraints); AdminMemberEditForm.Member prop accepts all four; form state defaults stub→pending
 - Post-login redirect: `/home` (was `/`)
 - Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)

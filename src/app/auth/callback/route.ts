@@ -61,9 +61,7 @@ export async function GET(request: NextRequest) {
       if (firstName !== "" && lastName !== "") {
         const adminDb = createAdminClient();
         const { data: stubs } = await adminDb.rpc("search_stubs", {
-          search_name:         `${firstName} ${lastName}`,
-          search_pledge_class: null,
-          search_pin:          null,
+          search_name: `${firstName} ${lastName}`,
         });
 
         const topMatch = (

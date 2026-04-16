@@ -24,14 +24,15 @@ export async function GET(_request: NextRequest) {
   }
 
   const admin = createAdminClient();
-  const { data: registrations } = await admin
+  const { data: registrations, error: queryError } = await admin
     .from("registrations")
     .select(
       "registrant_name, email, phone, tshirt_size, dietary_restrictions, guest_count, payment_status, stripe_payment_id, submitted_at, events(title, ticket_price), registration_guests(guest_name)"
     )
     .order("submitted_at", { ascending: false });
 
-  if (registrations === null) {
+  if (queryError !== null || registrations === null) {
+    console.error("[export] registrations query failed:", queryError);
     return NextResponse.json({ error: "Failed to fetch registrations." }, { status: 500 });
   }
 

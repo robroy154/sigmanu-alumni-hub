@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import type { RegistrationInput } from "@/lib/registration/schemas";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export async function createRegistration(
   eventId: string,
@@ -22,12 +22,16 @@ export async function createRegistration(
   // Verify the event exists, is published, and fetch pricing fields.
   const { data: event } = await supabase
     .from("events")
-    .select("id, title, ticket_price, early_bird_price, early_bird_ends_at, status, capacity")
+    .select("id, title, ticket_price, early_bird_price, early_bird_ends_at, registration_closes_at, status, capacity, registration_open")
     .eq("id", eventId)
     .single();
 
-  if (event === null || event.status !== "published") {
+  if (event === null || event.status !== "published" || event.registration_open !== true) {
     return { error: "This event is not currently open for registration." };
+  }
+
+  if (event.registration_closes_at !== null && new Date(event.registration_closes_at) <= new Date()) {
+    return { error: "Registration for this event has closed." };
   }
 
   // Guard against double-registration for the same member + event.
@@ -101,6 +105,11 @@ export async function createRegistration(
     if (responseRows.length > 0) {
       await admin.from("event_field_responses").insert(responseRows);
     }
+  }
+
+  if (APP_URL === undefined || APP_URL === "") {
+    console.error("[createRegistration] NEXT_PUBLIC_APP_URL is not set");
+    return { error: "Server configuration error. Please contact an administrator." };
   }
 
   // Free event — mark paid immediately, skip Stripe.

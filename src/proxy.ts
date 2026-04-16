@@ -16,7 +16,7 @@ const AUTH_ROUTES = [
   "/pending-approval",
   "/complete-profile",
 ];
-const PENDING_ALLOWED = ["/register", "/events"];
+const PENDING_ALLOWED = ["/register", "/events", "/auth/claim-stub"];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
@@ -108,6 +108,12 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // ── Stub ───────────────────────────────────────────────────────────────────
+  // Stub rows have no valid session destination — redirect to pending-approval.
+  if (status === "stub") {
+    return NextResponse.redirect(new URL("/pending-approval", request.url));
+  }
+
   // ── Member ─────────────────────────────────────────────────────────────────
   if (status === "member") {
     if (matchesRoute(pathname, ADMIN_ROUTES)) {
@@ -122,8 +128,8 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Unknown status: fail safe — redirect to home
-  return NextResponse.redirect(new URL("/home", request.url));
+  // Unknown status: fail safe — redirect to pending-approval
+  return NextResponse.redirect(new URL("/pending-approval", request.url));
 }
 
 export const config = {

@@ -24,11 +24,13 @@ export async function findStubMatches(input: {
 
   // Pass null (not undefined) — Supabase rpc serializes undefined as absent which
   // may cause the default DEFAULT NULL to not trigger correctly in some versions.
-  const { data, error } = await admin.rpc("search_stubs", {
-    search_name:         `${input.firstName} ${input.lastName}`,
-    search_pledge_class: input.pledgeClass ?? null,
-    search_pin:          input.pinNumber ?? null,
-  });
+  const rpcArgs: { search_name: string; search_pledge_class?: string; search_pin?: string } = {
+    search_name: `${input.firstName} ${input.lastName}`,
+  };
+  if (input.pledgeClass !== undefined) rpcArgs.search_pledge_class = input.pledgeClass;
+  if (input.pinNumber !== undefined)   rpcArgs.search_pin = input.pinNumber;
+
+  const { data, error } = await admin.rpc("search_stubs", rpcArgs);
 
   if (error !== null || data === null) {
     // Non-fatal: if the search fails, fall back to no matches so signup proceeds normally.
@@ -114,7 +116,13 @@ export async function claimStubForExistingUser(
   }
 
   // Re-point any little brothers that referenced the stub
-  await admin.from("members").update({ big_id: user.id }).eq("big_id", stubId);
+  const { error: repointError } = await admin
+    .from("members")
+    .update({ big_id: user.id })
+    .eq("big_id", stubId);
+  if (repointError !== null) {
+    console.error("[claimStubForExistingUser] big_id re-point failed:", repointError.message);
+  }
 
   // Delete stub only if no registrations reference it
   const { count } = await admin
@@ -123,7 +131,10 @@ export async function claimStubForExistingUser(
     .eq("member_id", stubId);
 
   if ((count ?? 0) === 0) {
-    await admin.from("members").delete().eq("id", stubId);
+    const { error: deleteError } = await admin.from("members").delete().eq("id", stubId);
+    if (deleteError !== null) {
+      console.error("[claimStubForExistingUser] stub delete failed:", deleteError.message);
+    }
   }
 
   revalidatePath("/family-tree");

@@ -73,7 +73,7 @@ export async function adminUpdateMember(
     home_address?: string | null;
     linkedin_url?: string | null;
     pin_number?: string | null;
-    status?: string;
+    status?: "pending" | "member" | "admin";
     big_id?: string | null;
   }
 ): Promise<{ error: string } | { success: true }> {
@@ -298,7 +298,13 @@ export async function adminMergeStub(
   }
 
   // Re-point any little brothers that referenced the stub
-  await admin.from("members").update({ big_id: realMemberId }).eq("big_id", stubId);
+  const { error: repointError } = await admin
+    .from("members")
+    .update({ big_id: realMemberId })
+    .eq("big_id", stubId);
+  if (repointError !== null) {
+    console.error("[adminMergeStub] big_id re-point failed:", repointError.message);
+  }
 
   // Delete stub only if no registrations reference it
   const { count } = await admin
@@ -307,7 +313,10 @@ export async function adminMergeStub(
     .eq("member_id", stubId);
 
   if ((count ?? 0) === 0) {
-    await admin.from("members").delete().eq("id", stubId);
+    const { error: deleteError } = await admin.from("members").delete().eq("id", stubId);
+    if (deleteError !== null) {
+      console.error("[adminMergeStub] stub delete failed:", deleteError.message);
+    }
   }
 
   revalidatePath("/admin/members");

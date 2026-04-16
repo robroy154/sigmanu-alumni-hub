@@ -27,7 +27,7 @@ interface Member {
   state: string | null;
   home_address: string | null;
   linkedin_url: string | null;
-  status: string;
+  status: "pending" | "member" | "admin" | "stub";
   big_id: string | null;
 }
 
@@ -64,7 +64,8 @@ export function AdminMemberEditForm({
     state:        member.state ?? "",
     home_address: member.home_address ?? "",
     linkedin_url: member.linkedin_url ?? "",
-    status:       member.status,
+    // Stubs default to "pending" in the form — admin sets final status when editing.
+    status:       (member.status === "stub" ? "pending" : member.status) as "pending" | "member" | "admin",
     big_id:       member.big_id ?? "",
   });
 

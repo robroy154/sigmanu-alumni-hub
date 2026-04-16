@@ -93,7 +93,7 @@ export async function importStubs(rows: ImportRow[]): Promise<ImportResult> {
         nickname:     (row.nickname ?? "").trim() || null,
         pledge_class: pledgeClass,
         pin_number:   (row.pin_number ?? "").trim() || null,
-        status:       "stub" as string,
+        status:       "stub",
       })
       .select("id")
       .single();

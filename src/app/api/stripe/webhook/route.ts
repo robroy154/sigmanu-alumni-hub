@@ -112,19 +112,25 @@ export async function POST(request: NextRequest) {
       const appliedPrice  = reg.applied_price !== null ? Number(reg.applied_price) : (ev !== null ? Number(ev.ticket_price) : 0);
       const amountPaid    = appliedPrice * (1 + reg.guest_count);
 
-      const { error } = await admin
+      // Idempotency guard: only update rows that are still unpaid.
+      // If Stripe retries a webhook and the row is already paid, count === 0
+      // and we skip the email to avoid sending a duplicate confirmation.
+      const { data: updatedRows, error } = await admin
         .from("registrations")
         .update({
           payment_status:    "paid",
           stripe_payment_id: paymentIntentId,
           amount_paid:       amountPaid,
         })
-        .eq("id", registrationId);
+        .eq("id", registrationId)
+        .eq("payment_status", "unpaid")
+        .select("id");
 
       if (error !== null) {
         console.error("Failed to update registration after payment:", error.message);
         // Return 200 anyway — returning 4xx/5xx causes Stripe to retry.
-      } else {
+      } else if ((updatedRows?.length ?? 0) > 0) {
+        // Row was just transitioned to paid — send confirmation email.
         if (ev !== null) {
           const eventDate = new Date(ev.event_date).toLocaleDateString("en-US", {
             weekday: "long", month: "long", day: "numeric", year: "numeric",
@@ -143,6 +149,7 @@ export async function POST(request: NextRequest) {
           );
         }
       }
+      // If updatedRows.length === 0 the row was already paid — skip email silently.
     }
   }
 

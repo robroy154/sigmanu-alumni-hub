@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export async function updateGuestNames(
   registrationId: string,
@@ -97,6 +97,11 @@ export async function addGuestsToRegistration(
 
   if (event === null || event.registration_open !== true) {
     return { error: "Registration is closed. Guests cannot be added." };
+  }
+
+  if (APP_URL === undefined || APP_URL === "") {
+    console.error("[addGuestsToRegistration] NEXT_PUBLIC_APP_URL is not set");
+    return { error: "Server configuration error. Please contact an administrator." };
   }
 
   const admin = createAdminClient();

@@ -119,7 +119,11 @@ export function SignupForm() {
       if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
       if (data.birthday       !== undefined && data.birthday       !== "") update.birthday       = data.birthday;
       if (Object.keys(update).length > 0) {
-        await supabase.from("members").update(update).eq("id", signUpData.user.id);
+        const { error: updateError } = await supabase.from("members").update(update).eq("id", signUpData.user.id);
+        if (updateError !== null) {
+          console.error("[SignupForm] profile update failed:", updateError.message);
+          toastError("Account created but some profile data couldn't be saved. You can update it from your profile page.");
+        }
       }
     }
 
