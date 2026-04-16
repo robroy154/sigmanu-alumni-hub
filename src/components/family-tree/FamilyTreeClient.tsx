@@ -32,6 +32,7 @@ export interface FamilyTreeMember {
   pledge_class: string | null;
   photo_url:    string | null;
   big_id:       string | null;
+  is_stub:      boolean;
 }
 
 // Data passed into each React Flow node — extends member with display flags
@@ -60,12 +61,15 @@ function MemberNode({ data: m }: MemberNodeProps) {
     <div
       style={{ width: NODE_W }}
       className={[
-        "relative rounded-sm p-2.5 flex items-center gap-2.5 cursor-pointer transition-all select-none",
+        "relative rounded-sm p-2.5 flex items-center gap-2.5 transition-all select-none",
+        m.is_stub ? "cursor-default" : "cursor-pointer",
         m.isSelected
           ? "bg-sn-surface border-l-2 border-l-sn-gold border-t border-t-transparent border-r border-r-transparent border-b border-b-transparent"
           : m.isDimmed
             ? "bg-sn-surface/40 border border-sn-gray-dark/30"
-            : "bg-sn-surface border border-sn-gray-dark hover:border-sn-gold/40",
+            : m.is_stub
+              ? "bg-sn-surface/60 border border-sn-gray-dark/50"
+              : "bg-sn-surface border border-sn-gray-dark hover:border-sn-gold/40",
       ].join(" ")}
     >
       <Handle
@@ -74,8 +78,24 @@ function MemberNode({ data: m }: MemberNodeProps) {
         style={{ background: "transparent", border: "none", width: 0, height: 0 }}
       />
 
-      {/* Avatar — only shown when photo exists */}
-      {m.photo_url !== null && (
+      {/* "Unclaimed" badge for stub nodes */}
+      {m.is_stub && (
+        <span className="absolute top-1 right-1 bg-white/10 text-white/40 text-[10px] px-1.5 py-0.5 rounded-full leading-none">
+          Unclaimed
+        </span>
+      )}
+
+      {/* Avatar — initials at half-opacity for stubs; photo for claimed members */}
+      {m.is_stub ? (
+        <div className={[
+          "w-5 h-5 rounded-full bg-white/10 flex items-center justify-center shrink-0",
+          m.isDimmed ? "opacity-20" : "opacity-50",
+        ].join(" ")}>
+          <span className="text-[7px] text-white/60 font-semibold leading-none">
+            {m.first_name[0]}{m.last_name[0]}
+          </span>
+        </div>
+      ) : m.photo_url !== null ? (
         <div className="w-5 h-5 rounded-full overflow-hidden shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -84,7 +104,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
             className={["w-full h-full object-cover", m.isDimmed ? "opacity-30" : ""].join(" ")}
           />
         </div>
-      )}
+      ) : null}
 
       {/* Info */}
       <div className="min-w-0 flex-1">
@@ -310,8 +330,12 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
 
   // Click a node → select it (or deselect if already selected), then fitView to
   // one level above + the node itself + one level below. maxZoom caps the zoom-in.
+  // Stub nodes are not clickable — clicking does nothing.
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
+      const nodeData = node.data as unknown as MemberNodeData;
+      if (nodeData.is_stub) return;
+
       const isDeselecting = selectedId === node.id;
       setSelected(isDeselecting ? null : node.id);
 

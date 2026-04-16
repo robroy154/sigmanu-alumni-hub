@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase 21 complete — event module overhaul: slug URLs, banner images, rich text, custom fields, early bird pricing, capacity modes, waitlist, iCal, amount_paid locking.
+Phase 22 complete — pre-seeded alumni stub system: stub status, pg_trgm fuzzy search, signup claim flow, family tree stub nodes, admin CSV import.
 
-Last completed: Phase 21 — Full event module overhaul. SQL migration adds slug/banner/event_type/early_bird/registration_closes_at/capacity_mode/rich_description to events; amount_paid/applied_price to registrations; event_fields, event_field_responses, waitlist tables; event-banners (public) and registration-files (private) storage buckets. New admin components: RichTextEditor, RichTextContent, EventBannerUpload, EventFieldsBuilder, multi-section EventForm. Slug-based routing with UUID fallback. Event detail page overhauled with banner, rich text, early bird display, WaitlistForm, ICalButton. Custom fields rendered in RegistrationForm and GuestRegistrationForm. Waitlist flow via joinWaitlist action. amount_paid locked at Stripe webhook time using applied_price. Guest count display: "X attendees (you + N guests)".
+Last completed: Phase 22 — Pre-seeded alumni stub system. SQL migration adds 'stub' to members.status check constraint; enables pg_trgm extension with trigram index on member name; adds search_stubs() and find_member_by_name() SQL functions; updates handle_new_user trigger to support stub claiming via stub_id in auth metadata (stub fields copied to new member, stub row deleted if no registrations). Signup form adds optional Badge Number field (pin search hint, not written to DB on fresh signup) and inline stub claim UI with match cards. Family tree includes stub nodes (Unclaimed badge, initials avatar at opacity-50, not clickable). Admin /import page with papaparse client-side CSV preview and two-pass importStubs server action (duplicate check + big brother name resolution via trigram).
 
 Completed phases summary:
 
@@ -115,6 +115,7 @@ Completed phases summary:
 - Phase 19: Hardening — pending confirmation email on signup/join; announcement batch notify (resend.batch.send); checkReferralToken pre-signUp guard; admin hard delete referrals (DeleteReferralButton); admin hard delete members (auth.admin.deleteUser cascade); docs/PRODUCTION_SETUP.md
 - Phase 20: Landing page redesign (hero + upcoming events + platform features sections; NEXT_PUBLIC_HERO_IMAGE_URL optional env var); rejectMember server action + RejectMemberButton (amber, pending-only, next to ApproveButton in admin members list); event routing audit (7 files confirmed dynamic, comments added); scripts/cleanup-test-data.ts (dry run by default, --execute flag to apply)
 - Phase 21: Event module overhaul — slug URLs (UUID-or-slug routing via eventLookupFilter); banner_image_url with public Supabase Storage bucket; rich_description via Tiptap RichTextEditor; event_type (internal/external); early_bird_price + early_bird_ends_at (resolved server-side in actions, stored as applied_price); registration_closes_at deadline; capacity_mode (unlimited/capped/waitlist) with WaitlistForm; custom event_fields with drag-and-drop EventFieldsBuilder; event_field_responses; registration-files private bucket for file_upload fields; amount_paid locked at Stripe webhook time; guest count display "X attendees (you + N guests)"; ICalButton + Google Calendar link on event detail page
+- Phase 22: Pre-seeded alumni stub system — 'stub' added to members.status; pg_trgm extension + trigram index on member name; search_stubs() and find_member_by_name() SQL functions; handle_new_user trigger updated for stub claiming; SignupForm stub claim flow (findStubMatches server action, inline match cards, stub_id in signUp metadata); family tree stub nodes (Unclaimed badge, initials avatar, not clickable); admin /import page with papaparse CSV preview and two-pass importStubs action
 
 Key runtime decisions:
 
@@ -189,6 +190,12 @@ Key runtime decisions:
 - Guest count display: "X attendees (you + N guests)" format used in MyEventsClient, admin registrations page; 1 attendee shows no parenthetical
 - flyer_url column added to events; uploaded to event-banners bucket at [eventId]-flyer/flyer.[ext]; rendered below event description as a contained image with "View Full Size" link; EventFlyerUpload component in admin EventForm Details section
 - Tiptap image extension enabled for inline images in rich text description; base64 disabled (externally hosted URLs only); Insert Image toolbar button prompts for URL via window.prompt; img tags allowed through RichTextContent sanitizer (src/alt/width/height attrs; javascript: src blocked)
+- Stub member status: members.status now has 'stub' as a valid value (CHECK constraint updated in migration 20260420000000); MemberStatus type in database.ts includes "stub"
+- pg_trgm: enabled in Phase 22 migration; trigram index on (first_name || ' ' || last_name); search_stubs() function searches stubs with similarity > 0.25; find_member_by_name() finds non-stub members with similarity > 0.6 for big brother resolution
+- handle_new_user trigger updated: reads stub_id from raw_user_meta_data; if found, new member inherits stub's pledge_class/pin_number/big_id/nickname and gets 'pending' status; stub row deleted only if no registrations reference it; normal path unchanged
+- Stub claim in signup: SignupForm calls findStubMatches() (admin client server action) before signUp(); if matches found, shows inline claim UI (up to 3 cards with full pin_number); user selects "This is me" or "None of these are me"; stub_id passed via signUp options.data; pin_number never masked anywhere
+- Family tree stub nodes: FamilyTreeMember.is_stub boolean added; stubs included in query (.in status includes 'stub'); nodes show 'Unclaimed' badge (top-right, subtle gray pill) and initials avatar at opacity-50; clicking stub nodes is a no-op; count display shows "N members · M unclaimed"
+- Admin CSV import: papaparse parses CSV client-side; preview table shows up to 10 rows before import; importStubs server action does duplicate check (first+last+pledge_class) then two-pass insert+big_brother_name resolution; big brother resolution: exact ilike match first, then find_member_by_name() rpc fallback; unresolved big brothers logged as warnings (not hard errors)
 
 ---
 

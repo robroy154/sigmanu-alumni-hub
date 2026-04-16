@@ -40,7 +40,7 @@ export type WaitlistUpdate              = Database["public"]["Tables"]["waitlist
 
 // Enum unions — maintained manually because Postgres check constraints do not
 // produce Supabase pg_enum types (which would appear in Database["public"]["Enums"]).
-export type MemberStatus  = "pending" | "member" | "admin";
+export type MemberStatus  = "pending" | "member" | "admin" | "stub";
 export type PaymentStatus = "unpaid" | "paid" | "refunded";
 export type TShirtSize    = "S" | "M" | "L" | "XL" | "XXL";
 export type EventStatus   = "draft" | "published" | "archived";

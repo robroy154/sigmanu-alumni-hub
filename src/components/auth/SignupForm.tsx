@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,11 +14,16 @@ import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
 
 type DuplicateState =
   | { type: "none" }
   | { type: "prompt"; email: string }
   | { type: "reset_sent"; email: string };
+
+type StubClaimState =
+  | { type: "none" }
+  | { type: "results"; matches: StubMatch[] };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -27,6 +32,11 @@ export function SignupForm() {
   const [duplicate, setDuplicate]         = useState<DuplicateState>({ type: "none" });
   const [resetLoading, setResetLoading]   = useState(false);
   const [hasPrefill, setHasPrefill]       = useState(false);
+  const [pinEntry, setPinEntry]           = useState("");
+  const [stubClaim, setStubClaim]         = useState<StubClaimState>({ type: "none" });
+
+  // Ref to carry the selected stub ID into the signUp call without stale closure issues.
+  const selectedStubIdRef = useRef<string | null>(null);
 
   const {
     register,
@@ -61,7 +71,8 @@ export function SignupForm() {
     }
   }, [setValue]);
 
-  async function onSubmit(data: SignupInput) {
+  // ── Core signup — called after stub check resolves ─────────────────────────
+  async function proceedWithSignup(data: SignupInput) {
     const supabase = createClient();
 
     const { data: signUpData, error } = await supabase.auth.signUp({
@@ -70,7 +81,11 @@ export function SignupForm() {
       options: {
         data: {
           first_name: data.first_name,
-          last_name: data.last_name,
+          last_name:  data.last_name,
+          // stub_id is set when user claimed a stub record
+          ...(selectedStubIdRef.current !== null
+            ? { stub_id: selectedStubIdRef.current }
+            : {}),
         },
       },
     });
@@ -90,27 +105,47 @@ export function SignupForm() {
       return;
     }
 
-    // The handle_new_user trigger only copies first_name and last_name.
-    // Write optional fields directly now that we have a session.
+    // The handle_new_user trigger copies first_name/last_name (and stub fields if claimed).
+    // Write remaining optional fields now that we have a session.
     if (signUpData.user !== null) {
       const update: Record<string, string> = {};
-      if (data.pledge_class !== undefined && data.pledge_class !== "") update.pledge_class   = data.pledge_class;
-      if (data.phone         !== undefined && data.phone         !== "") update.phone         = data.phone;
+      if (data.pledge_class   !== undefined && data.pledge_class   !== "") update.pledge_class   = data.pledge_class;
+      if (data.phone          !== undefined && data.phone          !== "") update.phone          = data.phone;
       if (data.street_address !== undefined && data.street_address !== "") update.street_address = data.street_address;
-      if (data.city          !== undefined && data.city          !== "") update.city          = data.city;
-      if (data.state         !== undefined && data.state         !== "") update.state         = data.state;
-      if (data.zip           !== undefined && data.zip           !== "") update.zip           = data.zip;
-      if (data.country       !== undefined && data.country       !== "") update.country       = data.country;
-      if (data.birthday      !== undefined && data.birthday      !== "") update.birthday      = data.birthday;
+      if (data.city           !== undefined && data.city           !== "") update.city           = data.city;
+      if (data.state          !== undefined && data.state          !== "") update.state          = data.state;
+      if (data.zip            !== undefined && data.zip            !== "") update.zip            = data.zip;
+      if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
+      if (data.birthday       !== undefined && data.birthday       !== "") update.birthday       = data.birthday;
       if (Object.keys(update).length > 0) {
         await supabase.from("members").update(update).eq("id", signUpData.user.id);
       }
     }
 
-    // Notify admins + send pending confirmation — fire-and-forget, never block redirect.
     void sendSignupNotifications({ to: data.email, firstName: data.first_name, lastName: data.last_name });
-
     router.push("/pending-approval");
+  }
+
+  // ── Primary submit — searches for stubs first ─────────────────────────────
+  async function onSubmit(data: SignupInput) {
+    // Only search stubs if we haven't already shown results (prevents infinite loop
+    // when handleSubmit(onSubmit) is called from the "None of these" button path).
+    if (stubClaim.type === "none") {
+      const matches = await findStubMatches({
+        firstName:   data.first_name,
+        lastName:    data.last_name,
+        pledgeClass: data.pledge_class !== "" ? data.pledge_class : undefined,
+        pinNumber:   pinEntry !== "" ? pinEntry : undefined,
+      });
+
+      if (matches.length > 0) {
+        setStubClaim({ type: "results", matches });
+        return; // Pause — show claim UI
+      }
+    }
+
+    // No stubs found (or already dismissed) — proceed with normal signup.
+    await proceedWithSignup(data);
   }
 
   async function sendResetLink(email: string) {
@@ -170,6 +205,93 @@ export function SignupForm() {
         >
           Back to sign in
         </Link>
+      </div>
+    );
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // ── Stub claim UI ──────────────────────────────────────────────────────────
+  if (stubClaim.type === "results") {
+    const matches   = stubClaim.matches.slice(0, 3);
+    const highConf  = matches.length === 1 && (matches[0]?.similarity ?? 0) > 0.7;
+    const heading   = highConf
+      ? "We found a record that might be yours"
+      : "We found some records that might be yours";
+
+    function claimStub(stubId: string) {
+      selectedStubIdRef.current = stubId;
+      setStubClaim({ type: "none" }); // reset so onSubmit skips the search branch
+      // Trigger form submission with the validated data already in memory.
+      void handleSubmit(proceedWithSignup)();
+    }
+
+    function dismissStubs() {
+      selectedStubIdRef.current = null;
+      setStubClaim({ type: "none" }); // reset so onSubmit skips the search branch
+      void handleSubmit(proceedWithSignup)();
+    }
+
+    return (
+      <div className="space-y-5">
+        <div>
+          <p className="text-sn-off-white font-semibold">{heading}</p>
+          <p className="text-white/50 text-sm mt-0.5">
+            Select your record to carry over your chapter information.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {matches.map((match) => (
+            <div
+              key={match.id}
+              className="bg-sn-surface rounded-sm border border-white/10 px-4 py-3 flex items-center justify-between gap-4"
+            >
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-sn-off-white font-semibold text-sm">
+                  {match.firstName} {match.lastName}
+                </p>
+                {match.nickname !== null && match.nickname !== "" && (
+                  <p className="text-sn-gray-text text-xs">&ldquo;{match.nickname}&rdquo;</p>
+                )}
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                  {match.pledgeClass !== null && match.pledgeClass !== "" && (
+                    <p className="text-sn-gray-text text-xs uppercase tracking-wide">
+                      {match.pledgeClass}
+                    </p>
+                  )}
+                  {match.pinNumber !== null && match.pinNumber !== "" && (
+                    <p className="text-sn-gold text-xs">Badge #{match.pinNumber}</p>
+                  )}
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => claimStub(match.id)}
+                className="shrink-0 bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
+              >
+                This is me
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => setStubClaim({ type: "none" })}
+            className="text-white/50 hover:text-white text-sm transition-colors"
+          >
+            ← Back
+          </button>
+          <button
+            type="button"
+            onClick={dismissStubs}
+            className="text-white/60 hover:text-white text-sm transition-colors"
+          >
+            None of these are me →
+          </button>
+        </div>
       </div>
     );
   }
@@ -275,6 +397,25 @@ export function SignupForm() {
             {...register("phone")}
           />
         </div>
+      </div>
+
+      {/* ── Badge Number (search hint only, not written to DB on fresh signup) ── */}
+      <div className="space-y-1.5">
+        <Label htmlFor="pin_entry" className="text-white/80 text-sm">
+          Badge Number{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="pin_entry"
+          type="text"
+          placeholder="e.g. 42"
+          value={pinEntry}
+          onChange={(e) => setPinEntry(e.target.value)}
+          className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+        />
+        <p className="text-white/40 text-xs">
+          If known, helps us find your chapter record.
+        </p>
       </div>
 
       {/* ── Birthday ──────────────────────────────────────────────── */}

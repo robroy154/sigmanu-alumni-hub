@@ -563,6 +563,26 @@ export type Database = {
     }
     Functions: {
       current_member_status: { Args: never; Returns: string }
+      find_member_by_name: {
+        Args: { search_name: string }
+        Returns: Array<{ id: string; similarity: number }>
+      }
+      search_stubs: {
+        Args: {
+          search_name: string
+          search_pledge_class?: string | null
+          search_pin?: string | null
+        }
+        Returns: Array<{
+          id:           string
+          first_name:   string
+          last_name:    string
+          nickname:     string | null
+          pledge_class: string | null
+          pin_number:   string | null
+          similarity:   number
+        }>
+      }
     }
     Enums: {
       [_ in never]: never
