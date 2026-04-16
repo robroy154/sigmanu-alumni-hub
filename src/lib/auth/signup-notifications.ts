@@ -11,14 +11,8 @@ export async function sendSignupNotifications({
   firstName: string;
   lastName:  string;
 }): Promise<void> {
-  console.log("[signup-notifications] fired for:", to);
-  try {
-    const results = await Promise.allSettled([
-      sendPendingConfirmation({ to, firstName }),
-      notifyAdminsNewMember({ firstName, lastName, email: to }),
-    ]);
-    console.log("[signup-notifications] results:", JSON.stringify(results));
-  } catch (err) {
-    console.error("[signup-notifications] threw:", err);
-  }
+  await Promise.allSettled([
+    sendPendingConfirmation({ to, firstName }),
+    notifyAdminsNewMember({ firstName, lastName, email: to }),
+  ]);
 }
