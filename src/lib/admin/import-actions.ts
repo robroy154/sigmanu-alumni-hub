@@ -118,13 +118,16 @@ export async function importStubs(rows: ImportRow[]): Promise<ImportResult> {
 
   // ── Pass 2: Resolve big brothers ───────────────────────────────────────────
   for (const pending of pendingBigResolution) {
-    // Try exact case-insensitive match first (full name ilike)
+    // Search ALL members including stubs — big brothers may themselves be stubs
+    // imported in the same CSV batch, so filtering by status would miss them.
+    const nameParts   = pending.bigBrotherName.split(" ");
+    const bbFirstName = nameParts[0] ?? "";
+    const bbLastName  = nameParts.slice(1).join(" ") || "%";
     const { data: exactMatches } = await admin
       .from("members")
       .select("id, first_name, last_name")
-      .neq("status", "stub")
-      .ilike("first_name", pending.bigBrotherName.split(" ")[0] ?? "")
-      .ilike("last_name",  pending.bigBrotherName.split(" ").slice(1).join(" ") || "%")
+      .ilike("first_name", bbFirstName)
+      .ilike("last_name",  bbLastName)
       .limit(1);
 
     let resolvedId: string | null = null;
@@ -155,4 +158,35 @@ export async function importStubs(rows: ImportRow[]): Promise<ImportResult> {
   }
 
   return { inserted, skipped, errors };
+}
+
+// ── deleteAllStubs ────────────────────────────────────────────────────────────
+// Deletes every row where status = 'stub'. Never touches pending/member/admin.
+// Returns the count of deleted rows.
+export async function deleteAllStubs(): Promise<{ deleted: number; error?: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return { deleted: 0, error: guard.error };
+
+  const admin = createAdminClient();
+
+  // Count first so we can return a meaningful number even if delete returns no data.
+  const { count, error: countError } = await admin
+    .from("members")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "stub");
+
+  if (countError !== null) {
+    return { deleted: 0, error: countError.message };
+  }
+
+  const { error: deleteError } = await admin
+    .from("members")
+    .delete()
+    .eq("status", "stub");
+
+  if (deleteError !== null) {
+    return { deleted: 0, error: deleteError.message };
+  }
+
+  return { deleted: count ?? 0 };
 }

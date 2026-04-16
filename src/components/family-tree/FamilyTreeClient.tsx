@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ReactFlow,
@@ -263,6 +263,19 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
   const [nodes, , onNodesChange] = useNodesState(layoutNodes);
   const [edges, , onEdgesChange] = useEdgesState(layoutEdges);
 
+  // fitView timing fix: the fitView prop fires before React Flow finishes
+  // mounting all nodes (especially large trees with 200+ nodes). Instead, defer
+  // until after the first paint via setTimeout so all node positions are registered.
+  const hasFitViewRef = useRef(false);
+  useEffect(() => {
+    if (hasFitViewRef.current || nodes.length === 0) return;
+    hasFitViewRef.current = true;
+    const timer = setTimeout(() => {
+      void rf.fitView({ padding: 0.15, maxZoom: 1.2 });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [nodes.length, rf]);
+
   // Connected ID set — recomputed only when selection changes
   const connectedIds = useMemo(
     () => (selectedId !== null ? getConnectedIds(selectedId, members) : null),
@@ -403,8 +416,6 @@ function FamilyTreeInner({ members }: { members: FamilyTreeMember[] }) {
         onNodeClick={handleNodeClick}
         onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1.2 }}
         minZoom={0.05}
         maxZoom={2}
         nodesDraggable={false}

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Papa from "papaparse";
 import { Button } from "@/components/ui/button";
-import { importStubs, type ImportRow } from "@/lib/admin/import-actions";
+import { importStubs, deleteAllStubs, type ImportRow } from "@/lib/admin/import-actions";
 
 type ImportState =
   | { phase: "idle" }
@@ -39,6 +39,13 @@ function normalizeRow(raw: Record<string, string>): ImportRow | null {
 export default function AdminImportPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<ImportState>({ phase: "idle" });
+  const [deleteState, setDeleteState] = useState<
+    | { phase: "idle" }
+    | { phase: "confirming" }
+    | { phase: "deleting" }
+    | { phase: "done"; deleted: number }
+    | { phase: "error"; message: string }
+  >({ phase: "idle" });
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -70,6 +77,18 @@ export default function AdminImportPage() {
   function reset() {
     setState({ phase: "idle" });
     if (fileInputRef.current !== null) fileInputRef.current.value = "";
+  }
+
+  async function handleDeleteAll() {
+    setDeleteState({ phase: "deleting" });
+    const result = await deleteAllStubs();
+    if (result.error !== undefined) {
+      setDeleteState({ phase: "error", message: result.error });
+    } else {
+      setDeleteState({ phase: "done", deleted: result.deleted });
+      // Also reset the import form in case there's a stale preview
+      reset();
+    }
   }
 
   return (
@@ -258,6 +277,81 @@ export default function AdminImportPage() {
           </Button>
         </div>
       )}
+      {/* ── Danger zone: delete all stubs ────────────────────────────────── */}
+      <div className="border border-red-900/40 rounded-sm p-5 space-y-3">
+        <h2 className="text-red-400/80 text-xs font-semibold uppercase tracking-wider">
+          Danger Zone
+        </h2>
+        <p className="text-white/50 text-sm">
+          Delete every stub record. Use this to wipe a bad import and start fresh.
+          Members who have already claimed a stub are unaffected.
+        </p>
+
+        {deleteState.phase === "idle" && (
+          <Button
+            variant="destructive"
+            onClick={() => setDeleteState({ phase: "confirming" })}
+          >
+            Delete all stubs
+          </Button>
+        )}
+
+        {deleteState.phase === "confirming" && (
+          <div className="flex items-center gap-3">
+            <p className="text-red-300 text-sm font-medium">
+              This cannot be undone. Delete all stub records?
+            </p>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDeleteAll()}
+            >
+              Yes, delete all
+            </Button>
+            <button
+              type="button"
+              onClick={() => setDeleteState({ phase: "idle" })}
+              className="text-white/40 hover:text-white text-sm transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {deleteState.phase === "deleting" && (
+          <div className="flex items-center gap-3 text-white/60 text-sm">
+            <div className="w-4 h-4 border-2 border-red-500/40 border-t-red-500 rounded-full animate-spin" />
+            Deleting stubs…
+          </div>
+        )}
+
+        {deleteState.phase === "done" && (
+          <div className="flex items-center gap-3">
+            <p className="text-green-400 text-sm">
+              Deleted {deleteState.deleted} stub{deleteState.deleted !== 1 ? "s" : ""}.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDeleteState({ phase: "idle" })}
+              className="text-white/40 hover:text-white text-xs transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {deleteState.phase === "error" && (
+          <div className="flex items-center gap-3">
+            <p className="text-red-400 text-sm">Error: {deleteState.message}</p>
+            <button
+              type="button"
+              onClick={() => setDeleteState({ phase: "idle" })}
+              className="text-white/40 hover:text-white text-xs transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
