@@ -59,7 +59,7 @@ export default async function EventDetailPage({ params }: Props) {
 
   // Pre-fill for waitlist form (authenticated users)
   let prefillName  = "";
-  let prefillEmail = user?.email ?? "";
+  const prefillEmail = user?.email ?? "";
   if (isLoggedIn && user !== null) {
     const { data: member } = await supabase
       .from("members")

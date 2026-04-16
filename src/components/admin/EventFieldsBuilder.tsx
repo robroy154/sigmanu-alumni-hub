@@ -269,7 +269,7 @@ export function EventFieldsBuilder({ fields, onChange, responseCountByFieldId = 
 
       {fields.length === 0 && (
         <p className="text-white/30 text-xs">
-          No custom fields. Click "Add field" to collect additional information during registration.
+          No custom fields. Click &quot;Add field&quot; to collect additional information during registration.
         </p>
       )}
     </div>

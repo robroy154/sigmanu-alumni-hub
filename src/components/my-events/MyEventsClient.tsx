@@ -127,10 +127,10 @@ function EventRow({
   guests:       GuestRow[];
   past?:        boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const event = registration.events;
   if (event === null) return null;
-
-  const [expanded, setExpanded] = useState(false);
 
   const myGuests    = guests.filter((g) => g.registration_id === registration.id);
   const eventDate   = new Date(event.event_date);
