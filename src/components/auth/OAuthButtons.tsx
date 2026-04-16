@@ -98,22 +98,28 @@ export function OAuthButtons() {
   return (
     <div className="space-y-2">
       {active.map((provider) => (
-        <button
-          key={provider.id}
-          type="button"
-          onClick={() => handleOAuth(provider)}
-          disabled={loading !== null}
-          className="w-full flex items-center justify-center gap-2.5 h-10 rounded-sm border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading === provider.id ? (
-            <span className="text-white/60">Redirecting…</span>
-          ) : (
-            <>
-              {provider.icon}
-              {provider.label}
-            </>
+        <div key={provider.id}>
+          <button
+            type="button"
+            onClick={() => handleOAuth(provider)}
+            disabled={loading !== null}
+            className="w-full flex items-center justify-center gap-2.5 h-10 rounded-sm border border-white/20 bg-white/5 text-white text-sm font-medium hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading === provider.id ? (
+              <span className="text-white/60">Redirecting…</span>
+            ) : (
+              <>
+                {provider.icon}
+                {provider.label}
+              </>
+            )}
+          </button>
+          {provider.id === "google" && (
+            <p className="text-xs text-white/40 text-center mt-1">
+              Google sign-in will show a csusigmanu.com authorization screen — this is expected and secure.
+            </p>
           )}
-        </button>
+        </div>
       ))}
     </div>
   );

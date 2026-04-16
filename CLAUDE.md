@@ -137,7 +137,7 @@ Key runtime decisions:
 - Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)
 - Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
-- Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true
+- Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true; Google button shows reassurance note below it: "Google sign-in will show a csusigmanu.com authorization screen — this is expected and secure." (text-xs text-white/40, Google-only, rendered inside OAuthButtons.tsx map)
 - Events use status enum (draft/published/archived) for visibility; registration_open boolean controls whether CTA buttons appear on /events/[id]
 - Canonical event routes: /events/[id] (public detail), /events/[id]/register (auth-required alumni form), /events/[id]/register/guest (public guest form)
 - Alumni register at /events/[id]/register lives in src/app/events/[id]/register/(alumni)/ route group — (alumni) layout auth-gates it without blocking the guest/ sibling
