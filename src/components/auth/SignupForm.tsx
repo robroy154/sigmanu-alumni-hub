@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
-import { notifyAdminsNewMember, sendPendingConfirmation } from "@/lib/email";
+import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 
 type DuplicateState =
@@ -107,11 +107,8 @@ export function SignupForm() {
       }
     }
 
-    // Notify admins of the new signup — fire-and-forget, never block redirect.
-    void notifyAdminsNewMember();
-
-    // Confirm to the member their account is pending review — fire-and-forget.
-    void sendPendingConfirmation({ to: data.email, firstName: data.first_name });
+    // Notify admins + send pending confirmation — fire-and-forget, never block redirect.
+    void sendSignupNotifications({ to: data.email, firstName: data.first_name });
 
     router.push("/pending-approval");
   }

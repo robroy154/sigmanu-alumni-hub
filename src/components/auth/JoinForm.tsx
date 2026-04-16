@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 import { checkReferralToken, completeReferral } from "@/lib/referrals/actions";
-import { sendPendingConfirmation } from "@/lib/email";
+import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { toastError } from "@/lib/toast";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -117,7 +117,7 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     }
 
     // Confirm to the member their account is pending review — fire-and-forget.
-    void sendPendingConfirmation({ to: email, firstName: data.first_name });
+    void sendSignupNotifications({ to: email, firstName: data.first_name });
 
     router.push("/pending-approval");
   }

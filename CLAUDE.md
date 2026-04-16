@@ -164,7 +164,7 @@ Key runtime decisions:
 - HomeEventsSection: client component at src/components/home/HomeEventsSection.tsx — extracted from home page to enable toggle state; shows "✓ Registered" badge and "Manage registration" toggle for registered events
 - registration_payments table: service-role-only inserts; RLS allows members to read own, admins read all
 - manageActions.ts: uses session client for auth checks, admin client for writes; ownership verified via member_id = user.id on registration lookup
-- Pending confirmation email: sendPendingConfirmation() called fire-and-forget in SignupForm and JoinForm before router.push("/pending-approval")
+- Signup notifications: sendSignupNotifications() server action in src/lib/auth/signup-notifications.ts wraps sendPendingConfirmation + notifyAdminsNewMember; called fire-and-forget from SignupForm and JoinForm (client components cannot import "use server" email functions directly)
 - checkReferralToken: server action called in JoinForm before supabase.auth.signUp() — prevents dangling auth.users rows on expired tokens
 - deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column
