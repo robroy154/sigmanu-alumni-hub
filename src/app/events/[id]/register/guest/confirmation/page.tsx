@@ -74,10 +74,11 @@ export default async function GuestConfirmationPage({ params, searchParams }: Pr
   const formattedDate =
     eventDate !== null
       ? eventDate.toLocaleDateString("en-US", {
-          weekday: "long",
-          year:    "numeric",
-          month:   "long",
-          day:     "numeric",
+          weekday:  "long",
+          year:     "numeric",
+          month:    "long",
+          day:      "numeric",
+          timeZone: "America/New_York",
         })
       : "";
   const formattedTime =
@@ -86,6 +87,7 @@ export default async function GuestConfirmationPage({ params, searchParams }: Pr
           hour:         "numeric",
           minute:       "2-digit",
           timeZoneName: "short",
+          timeZone:     "America/New_York",
         })
       : "";
 

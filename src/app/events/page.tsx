@@ -140,13 +140,13 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
             : "bg-sn-gold/10 border-sn-gold/20"
         }`}>
           <p className={`text-xs font-medium uppercase ${past ? "text-sn-gray-medium" : "text-sn-gold"}`}>
-            {eventDate.toLocaleDateString("en-US", { month: "short" })}
+            {eventDate.toLocaleDateString("en-US", { month: "short", timeZone: "America/New_York" })}
           </p>
           <p className={`font-bold text-xl leading-tight ${past ? "text-sn-gray-medium" : "text-sn-off-white"}`}>
-            {eventDate.getDate()}
+            {eventDate.toLocaleDateString("en-US", { day: "numeric", timeZone: "America/New_York" })}
           </p>
           <p className={`text-xs ${past ? "text-sn-gray-medium/60" : "text-sn-gray-text"}`}>
-            {eventDate.getFullYear()}
+            {eventDate.toLocaleDateString("en-US", { year: "numeric", timeZone: "America/New_York" })}
           </p>
         </div>
 
@@ -159,9 +159,10 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <p className="text-sn-gray-text text-xs">
               {eventDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                hour:    "numeric",
-                minute:  "2-digit",
+                weekday:  "long",
+                hour:     "numeric",
+                minute:   "2-digit",
+                timeZone: "America/New_York",
               })}
             </p>
             {event.location !== null && (
