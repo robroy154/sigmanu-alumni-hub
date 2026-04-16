@@ -284,6 +284,12 @@ export async function adminMergeStub(
     updates.nickname = stub.nickname;
 
   if (Object.keys(updates).length > 0) {
+    // If we're copying pin_number, null it on the stub first to avoid the unique
+    // constraint being violated while both rows briefly hold the same value.
+    if (updates.pin_number !== undefined) {
+      await admin.from("members").update({ pin_number: null }).eq("id", stubId);
+    }
+
     const { error: updateError } = await admin
       .from("members")
       .update(updates)
