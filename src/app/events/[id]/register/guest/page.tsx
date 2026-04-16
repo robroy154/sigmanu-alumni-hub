@@ -1,9 +1,10 @@
-// event routing: dynamic, no hardcoded IDs
+// event routing: dynamic, accepts UUID or slug
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { GuestRegistrationForm } from "@/components/registration/GuestRegistrationForm";
+import { eventLookupFilter } from "@/lib/events/slug";
 
 export const metadata: Metadata = { title: "Guest Registration" };
 
@@ -15,16 +16,23 @@ export default async function GuestRegisterPage({ params }: Props) {
   const { id } = await params;
   const admin = createAdminClient();
 
-  const { data: event } = await admin
-    .from("events")
-    .select("id, title, description, event_date, location, ticket_price, registration_open")
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
+  const filter = eventLookupFilter(id);
+  const { data: event } = await (
+    filter.column === "id"
+      ? admin.from("events").select("id, title, description, event_date, location, ticket_price, registration_open").eq("id", filter.value).eq("status", "published")
+      : admin.from("events").select("id, title, description, event_date, location, ticket_price, registration_open").eq("slug", filter.value).eq("status", "published")
+  ).maybeSingle();
 
   if (event === null || event.registration_open !== true) {
     redirect("/events");
   }
+
+  // Fetch custom fields for this event.
+  const { data: eventFields } = await admin
+    .from("event_fields")
+    .select("id, event_id, field_label, field_type, field_options, required, display_order, created_at")
+    .eq("event_id", event.id)
+    .order("display_order");
 
   const eventDate = new Date(event.event_date);
   const formattedDate = eventDate.toLocaleDateString("en-US", {
@@ -91,6 +99,7 @@ export default async function GuestRegisterPage({ params }: Props) {
           <GuestRegistrationForm
             eventId={event.id}
             ticketPrice={event.ticket_price}
+            eventFields={eventFields ?? []}
           />
         </div>
       </main>

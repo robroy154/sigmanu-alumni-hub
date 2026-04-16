@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { CalendarOff, MapPin, Ticket } from "lucide-react";
 import { ManageRegistration } from "@/components/registration/ManageRegistration";
+import { eventHref } from "@/lib/events/slug";
 
 interface HomeEvent {
   id:                string;
+  slug:              string | null;
   title:             string;
   event_date:        string;
   location:          string | null;
@@ -69,7 +71,7 @@ export function HomeEventsSection({
         return (
           <div key={event.id}>
             <Link
-              href={`/events/${event.id}`}
+              href={eventHref(event)}
               className="block bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
             >
               <div className="flex items-start gap-4">

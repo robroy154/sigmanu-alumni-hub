@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { MapPin, Ticket, CalendarOff } from "lucide-react";
+import { eventHref } from "@/lib/events/slug";
 
 export const metadata: Metadata = { title: "Events — Sigma Nu Mu Xi Alumni" };
 
@@ -12,7 +13,7 @@ export default async function EventsPage() {
 
   const { data: allEvents } = await admin
     .from("events")
-    .select("id, title, event_date, location, ticket_price, description")
+    .select("id, title, slug, event_date, location, ticket_price, description")
     .eq("status", "published")
     .order("event_date", { ascending: true });
 
@@ -115,6 +116,7 @@ export default async function EventsPage() {
 interface EventCardProps {
   event: {
     id:           string;
+    slug:         string | null;
     title:        string;
     event_date:   string;
     location:     string | null;
@@ -184,7 +186,7 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
         {/* CTA */}
         {!past && (
           <div className="shrink-0">
-            <Link href={`/events/${event.id}`}>
+            <Link href={eventHref(event)}>
               <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold whitespace-nowrap">
                 {isLoggedIn ? "Register" : "Learn more"}
               </Button>

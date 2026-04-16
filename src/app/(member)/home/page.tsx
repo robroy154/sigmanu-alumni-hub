@@ -26,7 +26,7 @@ export default async function HomePage() {
 
     supabase
       .from("events")
-      .select("id, title, event_date, location, ticket_price, registration_open")
+      .select("id, slug, title, event_date, location, ticket_price, registration_open")
       .eq("status", "published")
       .gte("event_date", new Date().toISOString())
       .order("event_date", { ascending: true })

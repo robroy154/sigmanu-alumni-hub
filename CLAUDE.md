@@ -87,9 +87,9 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 
 > **Update this section at the start of each session to reflect where you are.**
 
-Phase 20 complete — landing page redesign, reject member, event routing hardened, cleanup script added.
+Phase 21 complete — event module overhaul: slug URLs, banner images, rich text, custom fields, early bird pricing, capacity modes, waitlist, iCal, amount_paid locking.
 
-Last completed: Phase 20 — Multi-section landing page, rejectMember action + RejectMemberButton, event routing audit, cleanup-test-data.ts script.
+Last completed: Phase 21 — Full event module overhaul. SQL migration adds slug/banner/event_type/early_bird/registration_closes_at/capacity_mode/rich_description to events; amount_paid/applied_price to registrations; event_fields, event_field_responses, waitlist tables; event-banners (public) and registration-files (private) storage buckets. New admin components: RichTextEditor, RichTextContent, EventBannerUpload, EventFieldsBuilder, multi-section EventForm. Slug-based routing with UUID fallback. Event detail page overhauled with banner, rich text, early bird display, WaitlistForm, ICalButton. Custom fields rendered in RegistrationForm and GuestRegistrationForm. Waitlist flow via joinWaitlist action. amount_paid locked at Stripe webhook time using applied_price. Guest count display: "X attendees (you + N guests)".
 
 Completed phases summary:
 
@@ -114,6 +114,7 @@ Completed phases summary:
 - Phase 18: Post-registration guest management — ManageRegistration component on confirmation/my-events/home; edit guest names; add guests with Stripe payment (pending_guests pattern); registration_payments table; webhook branching on pending_guests; guest confirmation contact line
 - Phase 19: Hardening — pending confirmation email on signup/join; announcement batch notify (resend.batch.send); checkReferralToken pre-signUp guard; admin hard delete referrals (DeleteReferralButton); admin hard delete members (auth.admin.deleteUser cascade); docs/PRODUCTION_SETUP.md
 - Phase 20: Landing page redesign (hero + upcoming events + platform features sections; NEXT_PUBLIC_HERO_IMAGE_URL optional env var); rejectMember server action + RejectMemberButton (amber, pending-only, next to ApproveButton in admin members list); event routing audit (7 files confirmed dynamic, comments added); scripts/cleanup-test-data.ts (dry run by default, --execute flag to apply)
+- Phase 21: Event module overhaul — slug URLs (UUID-or-slug routing via eventLookupFilter); banner_image_url with public Supabase Storage bucket; rich_description via Tiptap RichTextEditor; event_type (internal/external); early_bird_price + early_bird_ends_at (resolved server-side in actions, stored as applied_price); registration_closes_at deadline; capacity_mode (unlimited/capped/waitlist) with WaitlistForm; custom event_fields with drag-and-drop EventFieldsBuilder; event_field_responses; registration-files private bucket for file_upload fields; amount_paid locked at Stripe webhook time; guest count display "X attendees (you + N guests)"; ICalButton + Google Calendar link on event detail page
 
 Key runtime decisions:
 
@@ -176,6 +177,16 @@ Key runtime decisions:
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column
 - Announcement notifications: notify_members boolean on announcements; createAnnouncement fires resend.batch.send() to all member+admin emails, chunked at 100
 - Production setup reference: docs/PRODUCTION_SETUP.md — env vars, Supabase SMTP, Stripe webhook, Resend domain, Google OAuth, pg_cron, Vercel, pre-launch checklist
+- Slug routing: eventLookupFilter() in src/lib/events/slug.ts; UUID regex check → query by "id", otherwise query by "slug"; all [id] route files use explicit branching (not union column) for Supabase type safety: `filter.column === "id" ? .eq("id", ...) : .eq("slug", ...)`; eventHref() returns `/events/[slug ?? id]`
+- Event slugs: auto-generated from title on create (titleToSlug helper), editable in EventForm with uniqueness check via checkSlugAvailable server action; existing events backfilled by migration
+- Early bird pricing: applied_price resolved server-side in createRegistration and createGuestRegistration at checkout time; stored on registration row; Stripe unit_amount uses applied_price not ticket_price; webhook reads applied_price (falls back to ticket_price) to compute amount_paid
+- amount_paid: locked at webhook time (checkout.session.completed); computed as applied_price × (1 + guest_count); admin registrations page uses amount_paid when present, falls back to calculated estimate marked with an asterisk
+- Custom event fields: event_fields table (field_label, field_type, field_options jsonb, required, display_order); responses in event_field_responses; EventFieldsBuilder uses @dnd-kit/sortable for reorder; saveEventFields deletes+reinserts all fields for event; file_upload fields upload to registration-files/pending/[tempId]/[fieldId]/[filename] via uploadRegistrationFile server action (base64 → Buffer); responses passed from RegistrationForm/GuestRegistrationForm to createRegistration/createGuestRegistration
+- Waitlist: waitlist table with member_id (nullable) + guest_email for unauthenticated; WaitlistForm shown when capacity_mode=waitlist && isFull on event detail page; joinWaitlist deduplicates by member_id or guest_email per event
+- Rich text: Tiptap editor in admin EventForm (RichTextEditor); read-only display via RichTextContent with inline HTML sanitizer (tag + attribute allowlist, javascript: href blocked); CSS class rich-text-content in globals.css; stored as HTML in rich_description column
+- Banner images: uploaded to event-banners (public Supabase Storage bucket) via uploadEventBanner server action (base64); EventBannerUpload component in admin; displayed as background-image div with bg-black/50 overlay on event detail page
+- iCal export: ICalButton client component generates .ics string (manual VCALENDAR/VEVENT construction), triggers Blob download via URL.createObjectURL; event end time = start + 3 hours
+- Guest count display: "X attendees (you + N guests)" format used in MyEventsClient, admin registrations page; 1 attendee shows no parenthetical
 
 ---
 

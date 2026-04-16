@@ -184,12 +184,10 @@ function EventRow({
             )}
             <div className="flex items-center gap-3 mt-1.5">
               <PaymentBadge status={registration.payment_status} />
-              {registration.guest_count > 0 && (
-                <span className="text-sn-gray-medium text-xs">
-                  +{registration.guest_count} guest
-                  {registration.guest_count !== 1 ? "s" : ""}
-                </span>
-              )}
+              <span className="text-sn-gray-medium text-xs">
+                {1 + registration.guest_count} attendee{1 + registration.guest_count !== 1 ? "s" : ""}
+                {registration.guest_count > 0 && ` (you + ${registration.guest_count} guest${registration.guest_count !== 1 ? "s" : ""})`}
+              </span>
               {total > 0 && (
                 <span className="flex items-center gap-1 text-sn-gray-medium text-xs">
                   <Ticket className="w-3 h-3" />

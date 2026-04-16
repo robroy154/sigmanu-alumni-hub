@@ -141,47 +141,196 @@ export type Database = {
           },
         ]
       }
-      events: {
+      event_field_responses: {
         Row: {
-          capacity: number | null
-          created_at: string
-          description: string | null
-          event_date: string
-          id: string
-          location: string | null
-          registration_open: boolean
-          status: "draft" | "published" | "archived"
-          ticket_price: number
-          title: string
-          updated_at: string
+          created_at:      string
+          field_id:        string
+          id:              string
+          registration_id: string
+          response_value:  string | null
         }
         Insert: {
-          capacity?: number | null
-          created_at?: string
-          description?: string | null
-          event_date: string
-          id?: string
-          location?: string | null
-          registration_open?: boolean
-          status?: "draft" | "published" | "archived"
-          ticket_price?: number
-          title: string
-          updated_at?: string
+          created_at?:      string
+          field_id:         string
+          id?:              string
+          registration_id:  string
+          response_value?:  string | null
         }
         Update: {
-          capacity?: number | null
-          created_at?: string
-          description?: string | null
-          event_date?: string
-          id?: string
-          location?: string | null
-          registration_open?: boolean
-          status?: "draft" | "published" | "archived"
-          ticket_price?: number
-          title?: string
-          updated_at?: string
+          created_at?:      string
+          field_id?:        string
+          id?:              string
+          registration_id?: string
+          response_value?:  string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_responses_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "event_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_responses_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_fields: {
+        Row: {
+          created_at:    string
+          display_order: number
+          event_id:      string
+          field_label:   string
+          field_options: Json | null
+          field_type:    string
+          id:            string
+          required:      boolean
+        }
+        Insert: {
+          created_at?:    string
+          display_order?: number
+          event_id:       string
+          field_label:    string
+          field_options?: Json | null
+          field_type:     string
+          id?:            string
+          required?:      boolean
+        }
+        Update: {
+          created_at?:    string
+          display_order?: number
+          event_id?:      string
+          field_label?:   string
+          field_options?: Json | null
+          field_type?:    string
+          id?:            string
+          required?:      boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_fields_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          banner_image_url:       string | null
+          capacity:               number | null
+          capacity_mode:          string
+          created_at:             string
+          description:            string | null
+          early_bird_ends_at:     string | null
+          early_bird_price:       number | null
+          event_date:             string
+          event_type:             string
+          id:                     string
+          location:               string | null
+          registration_closes_at: string | null
+          registration_open:      boolean
+          rich_description:       string | null
+          slug:                   string | null
+          status:                 "draft" | "published" | "archived"
+          ticket_price:           number
+          title:                  string
+          updated_at:             string
+        }
+        Insert: {
+          banner_image_url?:       string | null
+          capacity?:               number | null
+          capacity_mode?:          string
+          created_at?:             string
+          description?:            string | null
+          early_bird_ends_at?:     string | null
+          early_bird_price?:       number | null
+          event_date:              string
+          event_type?:             string
+          id?:                     string
+          location?:               string | null
+          registration_closes_at?: string | null
+          registration_open?:      boolean
+          rich_description?:       string | null
+          slug?:                   string | null
+          status?:                 "draft" | "published" | "archived"
+          ticket_price?:           number
+          title:                   string
+          updated_at?:             string
+        }
+        Update: {
+          banner_image_url?:       string | null
+          capacity?:               number | null
+          capacity_mode?:          string
+          created_at?:             string
+          description?:            string | null
+          early_bird_ends_at?:     string | null
+          early_bird_price?:       number | null
+          event_date?:             string
+          event_type?:             string
+          id?:                     string
+          location?:               string | null
+          registration_closes_at?: string | null
+          registration_open?:      boolean
+          rich_description?:       string | null
+          slug?:                   string | null
+          status?:                 "draft" | "published" | "archived"
+          ticket_price?:           number
+          title?:                  string
+          updated_at?:             string
         }
         Relationships: []
+      }
+      waitlist: {
+        Row: {
+          created_at:  string
+          event_id:    string
+          guest_email: string | null
+          guest_name:  string | null
+          id:          string
+          member_id:   string | null
+          notified_at: string | null
+        }
+        Insert: {
+          created_at?:  string
+          event_id:     string
+          guest_email?: string | null
+          guest_name?:  string | null
+          id?:          string
+          member_id?:   string | null
+          notified_at?: string | null
+        }
+        Update: {
+          created_at?:  string
+          event_id?:    string
+          guest_email?: string | null
+          guest_name?:  string | null
+          id?:          string
+          member_id?:   string | null
+          notified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       members: {
         Row: {
@@ -338,49 +487,55 @@ export type Database = {
       }
       registrations: {
         Row: {
+          amount_paid:          number | null
+          applied_price:        number | null
           dietary_restrictions: string | null
-          email: string
-          event_id: string
-          guest_count: number
-          id: string
-          member_id: string | null
-          payment_status: string
-          pending_guests: Json | null
-          phone: string | null
-          registrant_name: string
-          stripe_payment_id: string | null
-          submitted_at: string
-          tshirt_size: string | null
+          email:                string
+          event_id:             string
+          guest_count:          number
+          id:                   string
+          member_id:            string | null
+          payment_status:       string
+          pending_guests:       Json | null
+          phone:                string | null
+          registrant_name:      string
+          stripe_payment_id:    string | null
+          submitted_at:         string
+          tshirt_size:          string | null
         }
         Insert: {
+          amount_paid?:          number | null
+          applied_price?:        number | null
           dietary_restrictions?: string | null
-          email: string
-          event_id: string
-          guest_count?: number
-          id?: string
-          member_id?: string | null
-          payment_status?: string
-          pending_guests?: Json | null
-          phone?: string | null
-          registrant_name: string
-          stripe_payment_id?: string | null
-          submitted_at?: string
-          tshirt_size?: string | null
+          email:                 string
+          event_id:              string
+          guest_count?:          number
+          id?:                   string
+          member_id?:            string | null
+          payment_status?:       string
+          pending_guests?:       Json | null
+          phone?:                string | null
+          registrant_name:       string
+          stripe_payment_id?:    string | null
+          submitted_at?:         string
+          tshirt_size?:          string | null
         }
         Update: {
+          amount_paid?:          number | null
+          applied_price?:        number | null
           dietary_restrictions?: string | null
-          email?: string
-          event_id?: string
-          guest_count?: number
-          id?: string
-          member_id?: string | null
-          payment_status?: string
-          pending_guests?: Json | null
-          phone?: string | null
-          registrant_name?: string
-          stripe_payment_id?: string | null
-          submitted_at?: string
-          tshirt_size?: string | null
+          email?:                string
+          event_id?:             string
+          guest_count?:          number
+          id?:                   string
+          member_id?:            string | null
+          payment_status?:       string
+          pending_guests?:       Json | null
+          phone?:                string | null
+          registrant_name?:      string
+          stripe_payment_id?:    string | null
+          submitted_at?:         string
+          tshirt_size?:          string | null
         }
         Relationships: [
           {

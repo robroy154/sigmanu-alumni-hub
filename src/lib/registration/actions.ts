@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import type { RegistrationInput } from "@/lib/registration/schemas";
 
@@ -8,22 +9,20 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function createRegistration(
   eventId: string,
-  data: RegistrationInput
+  data: RegistrationInput,
+  fieldResponses?: Record<string, string>
 ): Promise<{ checkoutUrl: string } | { confirmationUrl: string } | { error: string }> {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (user === null) {
     return { error: "You must be signed in to register." };
   }
 
-  // Verify the event exists and is published.
+  // Verify the event exists, is published, and fetch pricing fields.
   const { data: event } = await supabase
     .from("events")
-    .select("id, title, ticket_price, status, capacity")
+    .select("id, title, ticket_price, early_bird_price, early_bird_ends_at, status, capacity")
     .eq("id", eventId)
     .single();
 
@@ -43,11 +42,21 @@ export async function createRegistration(
     return { error: "You are already registered for this event." };
   }
 
-  const guestCount = data.guest_names.length;
+  // ── Resolve applied price (server-side, at checkout creation time) ─────────
+  const now = new Date();
+  const appliedPrice =
+    event.early_bird_price !== null &&
+    event.early_bird_ends_at !== null &&
+    new Date(event.early_bird_ends_at) > now
+      ? Number(event.early_bird_price)
+      : event.ticket_price;
+
+  const guestCount     = data.guest_names.length;
   const totalAttendees = 1 + guestCount;
 
   // Insert the registration row.
-  const { data: registration, error: regError } = await supabase
+  const admin = createAdminClient();
+  const { data: registration, error: regError } = await admin
     .from("registrations")
     .insert({
       event_id:             eventId,
@@ -59,6 +68,7 @@ export async function createRegistration(
       tshirt_size:          data.tshirt_size,
       guest_count:          guestCount,
       payment_status:       "unpaid",
+      applied_price:        appliedPrice,
     })
     .select("id")
     .single();
@@ -73,22 +83,33 @@ export async function createRegistration(
       registration_id: registration.id,
       guest_name:      name,
     }));
-
-    const { error: guestError } = await supabase
+    const { error: guestError } = await admin
       .from("registration_guests")
       .insert(guestRows);
-
     if (guestError !== null) {
-      // Non-fatal: the registration is created; guests missing is recoverable.
       console.error("Failed to insert guest rows:", guestError.message);
     }
   }
 
+  // Insert custom field responses.
+  if (fieldResponses !== undefined) {
+    const responseRows = Object.entries(fieldResponses)
+      .filter(([, value]) => value !== "")
+      .map(([fieldId, value]) => ({
+        registration_id: registration.id,
+        field_id:        fieldId,
+        response_value:  value,
+      }));
+    if (responseRows.length > 0) {
+      await admin.from("event_field_responses").insert(responseRows);
+    }
+  }
+
   // Free event — mark paid immediately, skip Stripe.
-  if (event.ticket_price === 0) {
-    await supabase
+  if (appliedPrice === 0) {
+    await admin
       .from("registrations")
-      .update({ payment_status: "paid" })
+      .update({ payment_status: "paid", amount_paid: 0 })
       .eq("id", registration.id);
 
     return {
@@ -96,20 +117,20 @@ export async function createRegistration(
     };
   }
 
-  // Paid event — create Stripe Checkout session.
+  // Paid event — create Stripe Checkout session using resolved applied_price.
   const session = await stripe.checkout.sessions.create({
-    mode:        "payment",
-    line_items:  [
+    mode:       "payment",
+    line_items: [
       {
         price_data: {
           currency:     "usd",
           product_data: { name: `${event.title} — Ticket` },
-          unit_amount:  Math.round(event.ticket_price * 100), // cents
+          unit_amount:  Math.round(appliedPrice * 100),
         },
         quantity: totalAttendees,
       },
     ],
-    metadata: { registration_id: registration.id },
+    metadata:    { registration_id: registration.id },
     success_url: `${APP_URL}/register/confirmation?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${APP_URL}/events/${eventId}/register?cancelled=1`,
   });

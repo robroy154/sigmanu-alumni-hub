@@ -1,9 +1,10 @@
-// event routing: dynamic, no hardcoded IDs
+// event routing: dynamic, accepts UUID or slug
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RegistrationForm } from "@/components/registration/RegistrationForm";
+import { eventLookupFilter } from "@/lib/events/slug";
 
 export const metadata: Metadata = { title: "Register for Event" };
 
@@ -16,16 +17,23 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
   const { id } = await params;
   const { cancelled } = await searchParams;
 
-  // Load the event. Use admin client so pending users can see event details.
-  const admin = createAdminClient();
-  const { data: event } = await admin
-    .from("events")
-    .select("id, title, description, event_date, location, ticket_price")
-    .eq("id", id)
-    .eq("status", "published")
-    .maybeSingle();
+  // Load the event. Accepts UUID or slug. Use admin client so pending users can see event details.
+  const admin  = createAdminClient();
+  const filter = eventLookupFilter(id);
+  const { data: event } = await (
+    filter.column === "id"
+      ? admin.from("events").select("id, title, description, event_date, location, ticket_price").eq("id", filter.value).eq("status", "published")
+      : admin.from("events").select("id, title, description, event_date, location, ticket_price").eq("slug", filter.value).eq("status", "published")
+  ).maybeSingle();
 
   if (event === null) notFound();
+
+  // Fetch custom fields for this event.
+  const { data: eventFields } = await admin
+    .from("event_fields")
+    .select("id, event_id, field_label, field_type, field_options, required, display_order, created_at")
+    .eq("event_id", event.id)
+    .order("display_order");
 
   // Pre-fill from member profile.
   const supabase = await createClient();
@@ -95,6 +103,7 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
           ticketPrice={event.ticket_price}
           defaultName={defaultName}
           defaultEmail={defaultEmail}
+          eventFields={eventFields ?? []}
         />
       </div>
     </div>

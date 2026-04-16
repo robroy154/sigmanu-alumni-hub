@@ -12,7 +12,7 @@ interface Props {
 
 export default async function AdminEditEventPage({ params }: Props) {
   const { id } = await params;
-  const admin = createAdminClient();
+  const admin   = createAdminClient();
 
   const { data: event } = await admin
     .from("events")
@@ -21,6 +21,28 @@ export default async function AdminEditEventPage({ params }: Props) {
     .single();
 
   if (event === null) notFound();
+
+  // Load custom fields and their response counts
+  const { data: fields } = await admin
+    .from("event_fields")
+    .select("id, event_id, field_label, field_type, field_options, required, display_order, created_at")
+    .eq("event_id", id)
+    .order("display_order");
+
+  const fieldIds = (fields ?? []).map((f) => f.id);
+  const responseCountByFieldId: Record<string, number> = {};
+
+  if (fieldIds.length > 0) {
+    const { data: responses } = await admin
+      .from("event_field_responses")
+      .select("field_id")
+      .in("field_id", fieldIds);
+
+    for (const r of responses ?? []) {
+      responseCountByFieldId[r.field_id] =
+        (responseCountByFieldId[r.field_id] ?? 0) + 1;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -35,7 +57,11 @@ export default async function AdminEditEventPage({ params }: Props) {
       </div>
 
       <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6">
-        <EventForm event={event} />
+        <EventForm
+          event={event}
+          initialFields={fields ?? []}
+          responseCountByFieldId={responseCountByFieldId}
+        />
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   let dbQuery = admin
     .from("registrations")
     .select(
-      "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, events(title, ticket_price), registration_guests(guest_name)"
+      "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, amount_paid, applied_price, events(title, ticket_price), registration_guests(guest_name)"
     )
     .order("submitted_at", { ascending: false });
 
@@ -31,6 +31,9 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   // Totals
   const paidRows = rows.filter((r) => r.payment_status === "paid");
   const totalRevenue = paidRows.reduce((sum, r) => {
+    if (r.amount_paid !== null && r.amount_paid !== undefined) {
+      return sum + Number(r.amount_paid);
+    }
     const price = Array.isArray(r.events)
       ? (r.events[0]?.ticket_price ?? 0)
       : ((r.events as { ticket_price: number } | null)?.ticket_price ?? 0);
@@ -119,7 +122,12 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
               const eventTitle = Array.isArray(r.events)
                 ? (r.events[0]?.title ?? "—")
                 : ((r.events as { title: string } | null)?.title ?? "—");
-              const amount = (1 + (r.guest_count ?? 0)) * price;
+              const appliedPrice = r.applied_price !== null && r.applied_price !== undefined ? Number(r.applied_price) : price;
+              const amount = r.amount_paid !== null && r.amount_paid !== undefined
+                ? Number(r.amount_paid)
+                : (1 + (r.guest_count ?? 0)) * appliedPrice;
+              const amountIsEstimate = (r.amount_paid === null || r.amount_paid === undefined) && price > 0;
+              const totalAttendees = 1 + (r.guest_count ?? 0);
               const guests = Array.isArray(r.registration_guests) ? r.registration_guests : [];
 
               return (
@@ -137,9 +145,18 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                   </td>
                   <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">{r.email}</td>
                   <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">{eventTitle}</td>
-                  <td className="px-4 py-3 text-sn-gray-text">{r.guest_count ?? 0}</td>
+                  <td className="px-4 py-3 text-sn-gray-text">
+                    {totalAttendees} attendee{totalAttendees !== 1 ? "s" : ""}
+                    {(r.guest_count ?? 0) > 0 && (
+                      <span className="text-sn-gray-medium text-xs block">
+                        you + {r.guest_count} guest{(r.guest_count ?? 0) !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sn-off-white">
-                    {price > 0 ? `$${amount.toFixed(2)}` : "Free"}
+                    {price > 0
+                      ? `$${amount.toFixed(2)}${amountIsEstimate ? "*" : ""}`
+                      : "Free"}
                   </td>
                   <td className="px-4 py-3">
                     <PaymentBadge status={r.payment_status} />

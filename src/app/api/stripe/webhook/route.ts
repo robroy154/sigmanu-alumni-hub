@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     // the original registration payment.
     const { data: reg } = await admin
       .from("registrations")
-      .select("id, pending_guests, email, registrant_name, guest_count, event_id, events(title, event_date, location, ticket_price)")
+      .select("id, pending_guests, email, registrant_name, guest_count, event_id, applied_price, events(title, event_date, location, ticket_price)")
       .eq("id", registrationId)
       .single();
 
@@ -108,11 +108,16 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Original registration payment: mark paid and send confirmation email.
+      const ev            = reg.events !== null ? (Array.isArray(reg.events) ? reg.events[0] : reg.events) : null;
+      const appliedPrice  = reg.applied_price !== null ? Number(reg.applied_price) : (ev !== null ? Number(ev.ticket_price) : 0);
+      const amountPaid    = appliedPrice * (1 + reg.guest_count);
+
       const { error } = await admin
         .from("registrations")
         .update({
           payment_status:    "paid",
           stripe_payment_id: paymentIntentId,
+          amount_paid:       amountPaid,
         })
         .eq("id", registrationId);
 
@@ -120,9 +125,7 @@ export async function POST(request: NextRequest) {
         console.error("Failed to update registration after payment:", error.message);
         // Return 200 anyway — returning 4xx/5xx causes Stripe to retry.
       } else {
-        if (reg.events !== null) {
-          const ev        = Array.isArray(reg.events) ? reg.events[0] : reg.events;
-          const totalPaid = Number(ev.ticket_price) * (1 + reg.guest_count);
+        if (ev !== null) {
           const eventDate = new Date(ev.event_date).toLocaleDateString("en-US", {
             weekday: "long", month: "long", day: "numeric", year: "numeric",
           });
@@ -135,7 +138,7 @@ export async function POST(request: NextRequest) {
               eventDate,
               eventLocation: ev.location,
               guestCount:    reg.guest_count,
-              totalPaid,
+              totalPaid:     amountPaid,
             })
           );
         }

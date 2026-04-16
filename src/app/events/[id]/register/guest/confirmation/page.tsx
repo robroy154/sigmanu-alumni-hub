@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { GuestSignupCTA } from "@/components/registration/GuestSignupCTA";
+import { eventHref } from "@/lib/events/slug";
 
 export const metadata: Metadata = { title: "Registration Confirmed" };
 
@@ -57,7 +58,7 @@ export default async function GuestConfirmationPage({ params, searchParams }: Pr
 
   const { data: event } = await admin
     .from("events")
-    .select("title, event_date, location, ticket_price")
+    .select("id, slug, title, event_date, location, ticket_price")
     .eq("id", registration.event_id)
     .single();
 
@@ -200,7 +201,7 @@ export default async function GuestConfirmationPage({ params, searchParams }: Pr
             Back to home
           </Link>
           <Link
-            href={`/events/${eventId}`}
+            href={event !== null ? eventHref(event) : `/events/${eventId}`}
             className="flex-1 inline-flex h-9 items-center justify-center rounded-sm border border-white/20 text-sm text-white/70 hover:text-white hover:bg-white/10 transition-colors"
           >
             Back to event

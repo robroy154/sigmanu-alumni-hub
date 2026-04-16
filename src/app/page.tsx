@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { Users, GitBranch, Calendar } from "lucide-react";
+import { eventHref } from "@/lib/events/slug";
 
 // event routing: dynamic, no hardcoded IDs
 
@@ -19,7 +20,7 @@ export default async function LandingPage() {
   // Featured event: next upcoming published event by date.
   const { data: featuredEvent } = await admin
     .from("events")
-    .select("id, title, event_date, location, ticket_price")
+    .select("id, slug, title, event_date, location, ticket_price")
     .eq("status", "published")
     .order("event_date", { ascending: true })
     .limit(1)
@@ -28,7 +29,7 @@ export default async function LandingPage() {
   // Upcoming events section: all published events from now forward.
   const { data: upcomingEvents } = await admin
     .from("events")
-    .select("id, title, event_date, location, ticket_price")
+    .select("id, slug, title, event_date, location, ticket_price")
     .eq("status", "published")
     .gte("event_date", new Date().toISOString())
     .order("event_date", { ascending: true });
@@ -145,7 +146,7 @@ export default async function LandingPage() {
                 )}
               </div>
               <div className="mt-4">
-                <Link href={`/events/${featuredEvent.id}`}>
+                <Link href={eventHref(featuredEvent)}>
                   <Button
                     size="sm"
                     className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
@@ -231,7 +232,7 @@ export default async function LandingPage() {
                       <p className="text-green-400 text-sm font-medium">Free</p>
                     )}
                   </div>
-                  <Link href={`/events/${ev.id}`}>
+                  <Link href={eventHref(ev)}>
                     <Button
                       variant="outline"
                       size="sm"

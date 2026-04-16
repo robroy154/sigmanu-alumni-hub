@@ -6,21 +6,28 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useRef } from "react";
 import { createGuestRegistration } from "@/lib/registration/guestActions";
+import { uploadRegistrationFile } from "@/lib/registration/upload-registration-file";
 import {
   GuestRegistrationSchema,
   TSHIRT_SIZES,
   type GuestRegistrationInput,
 } from "@/lib/registration/schemas";
+import type { EventFieldRow } from "@/types/database";
 
 interface GuestRegistrationFormProps {
-  eventId:     string;
-  ticketPrice: number;
+  eventId:      string;
+  ticketPrice:  number;
+  eventFields?: EventFieldRow[];
 }
 
-export function GuestRegistrationForm({ eventId, ticketPrice }: GuestRegistrationFormProps) {
-  const [serverError, setServerError] = useState<string | null>(null);
-  const [isAlumnus, setIsAlumnus]     = useState(false);
+export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }: GuestRegistrationFormProps) {
+  const [serverError, setServerError]       = useState<string | null>(null);
+  const [isAlumnus, setIsAlumnus]           = useState(false);
+  const [fieldResponses, setFieldResponses] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors]       = useState<Record<string, string>>({});
+  const tempId                              = useRef(crypto.randomUUID());
 
   const {
     register,
@@ -43,9 +50,36 @@ export function GuestRegistrationForm({ eventId, ticketPrice }: GuestRegistratio
   const totalAttendees = 1 + guestCount;
   const totalPrice    = totalAttendees * ticketPrice;
 
+  async function validateCustomFields(): Promise<boolean> {
+    const errs: Record<string, string> = {};
+    for (const field of eventFields) {
+      if (field.required && (fieldResponses[field.id] ?? "") === "") {
+        errs[field.id] = `${field.field_label} is required.`;
+      }
+    }
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  }
+
+  async function handleFileUpload(fieldId: string, file: File): Promise<void> {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      const result = await uploadRegistrationFile(
+        base64, file.type, tempId.current, fieldId, file.name
+      );
+      if ("path" in result) {
+        setFieldResponses((prev) => ({ ...prev, [fieldId]: result.path }));
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function onSubmit(data: GuestRegistrationInput) {
     setServerError(null);
-    const result = await createGuestRegistration(eventId, data);
+    const customValid = await validateCustomFields();
+    if (!customValid) return;
+    const result = await createGuestRegistration(eventId, data, fieldResponses);
 
     if ("error" in result) {
       setServerError(result.error);
@@ -180,6 +214,163 @@ export function GuestRegistrationForm({ eventId, ticketPrice }: GuestRegistratio
           {...register("dietary_restrictions")}
         />
       </div>
+
+      {/* Custom event fields */}
+      {eventFields.length > 0 && eventFields.map((field) => {
+        const options: string[] =
+          (field.field_options as { options?: string[] } | null)?.options ?? [];
+        const val = fieldResponses[field.id] ?? "";
+        const err = fieldErrors[field.id];
+
+        if (field.field_type === "short_text") {
+          return (
+            <div key={field.id} className="space-y-1.5">
+              <Label className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              <Input
+                type="text"
+                className={inputClass}
+                value={val}
+                onChange={(e) =>
+                  setFieldResponses((p) => ({ ...p, [field.id]: e.target.value }))
+                }
+              />
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        if (field.field_type === "long_text") {
+          return (
+            <div key={field.id} className="space-y-1.5">
+              <Label className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              <textarea
+                rows={4}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold transition-colors resize-none"
+                value={val}
+                onChange={(e) =>
+                  setFieldResponses((p) => ({ ...p, [field.id]: e.target.value }))
+                }
+              />
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        if (field.field_type === "dropdown") {
+          return (
+            <div key={field.id} className="space-y-1.5">
+              <Label className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              <select
+                className="h-9 w-full rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white focus:outline-none focus:border-sn-gold transition-colors"
+                value={val}
+                onChange={(e) =>
+                  setFieldResponses((p) => ({ ...p, [field.id]: e.target.value }))
+                }
+              >
+                <option value="" className="bg-sn-black">Select…</option>
+                {options.map((opt) => (
+                  <option key={opt} value={opt} className="bg-sn-black">{opt}</option>
+                ))}
+              </select>
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        if (field.field_type === "checkbox") {
+          return (
+            <div key={field.id} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id={`field-${field.id}`}
+                className="h-4 w-4 rounded border-white/20 bg-white/10 accent-sn-gold"
+                checked={val === "true"}
+                onChange={(e) =>
+                  setFieldResponses((p) => ({
+                    ...p,
+                    [field.id]: e.target.checked ? "true" : "false",
+                  }))
+                }
+              />
+              <Label htmlFor={`field-${field.id}`} className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        if (field.field_type === "multi_select") {
+          const selected = val !== "" ? val.split(",") : [];
+          return (
+            <div key={field.id} className="space-y-1.5">
+              <Label className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              <div className="space-y-1.5">
+                {options.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-white/20 bg-white/10 accent-sn-gold"
+                      checked={selected.includes(opt)}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...selected, opt]
+                          : selected.filter((s) => s !== opt);
+                        setFieldResponses((p) => ({
+                          ...p,
+                          [field.id]: next.join(","),
+                        }));
+                      }}
+                    />
+                    <span className="text-white/80 text-sm">{opt}</span>
+                  </label>
+                ))}
+              </div>
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        if (field.field_type === "file_upload") {
+          return (
+            <div key={field.id} className="space-y-1.5">
+              <Label className={labelClass}>
+                {field.field_label}
+                {field.required && <span className="text-red-400 ml-0.5">*</span>}
+              </Label>
+              <input
+                type="file"
+                className="w-full text-sm text-white/70 file:mr-3 file:rounded file:border-0 file:bg-white/10 file:px-3 file:py-1 file:text-sm file:text-white hover:file:bg-white/20 transition-colors"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file !== undefined) {
+                    void handleFileUpload(field.id, file);
+                  }
+                }}
+              />
+              {val !== "" && (
+                <p className="text-white/40 text-xs">File uploaded.</p>
+              )}
+              {err !== undefined && <p className={errorClass}>{err}</p>}
+            </div>
+          );
+        }
+
+        return null;
+      })}
 
       {/* Additional guests */}
       <div className="space-y-3">
