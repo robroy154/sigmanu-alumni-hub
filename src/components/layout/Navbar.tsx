@@ -52,10 +52,12 @@ export function Navbar({ firstName, lastName, isAdmin }: NavbarProps) {
   }, []);
 
   // Close both menus on navigation
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setMobileOpen(false);
     setDropdownOpen(false);
   }, [pathname]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <header className="sticky top-0 z-50 bg-sn-black border-b border-sn-gold/20">

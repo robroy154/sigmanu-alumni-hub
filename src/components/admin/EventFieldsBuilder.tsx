@@ -92,9 +92,11 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
   );
 
   // Sync when options change from outside (e.g., field type resets to no-options)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setOptionsText(field.field_options?.options.join(", ") ?? "");
   }, [field.field_options]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleTypeChange(newType: FieldType) {
     onUpdate({

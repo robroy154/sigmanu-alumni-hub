@@ -238,8 +238,11 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   }
 
   // ── Main form ──────────────────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/refs
+  const submitHandler = handleSubmit(onSubmit);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={submitHandler} className="space-y-4" noValidate>
 
       {/* Name */}
       <div className="grid grid-cols-2 gap-3">

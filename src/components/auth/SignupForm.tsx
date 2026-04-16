@@ -232,8 +232,11 @@ export function SignupForm() {
   }
   // ───────────────────────────────────────────────────────────────────────────
 
+  // eslint-disable-next-line react-hooks/refs
+  const submitHandler = handleSubmit(onSubmit);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={submitHandler} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="first_name" className="text-white/80 text-sm">
