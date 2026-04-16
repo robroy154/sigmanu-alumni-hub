@@ -31,18 +31,16 @@ export async function uploadEventBanner(
   const base64 = base64Data.replace(/^data:[^;]+;base64,/, "");
   const buffer = Buffer.from(base64, "base64");
 
-  const path = `${eventId}/banner.${ext}`;
+  const path = `${eventId}/banner-${Date.now()}.${ext}`;
 
   const admin = createAdminClient();
   const { error: uploadError } = await admin.storage
     .from("event-banners")
-    .upload(path, buffer, {
-      contentType: mimeType,
-      upsert: true,
-    });
+    .upload(path, buffer, { contentType: mimeType });
 
   if (uploadError !== null) {
-    return { error: "Upload failed. Please try again." };
+    console.error("[uploadEventBanner] Storage upload error:", uploadError);
+    return { error: `Upload failed: ${uploadError.message}` };
   }
 
   const { data: { publicUrl } } = admin.storage
