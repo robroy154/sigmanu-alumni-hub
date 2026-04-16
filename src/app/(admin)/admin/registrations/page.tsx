@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ClipboardList } from "lucide-react";
+import { DeleteRegistrationButton } from "@/components/admin/DeleteRegistrationButton";
 
 export const metadata: Metadata = { title: "Registrations — Admin" };
 
@@ -102,12 +103,13 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Amount</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Submitted</th>
+              <th className="px-4 py-3 text-sn-gray-text font-medium text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="flex flex-col items-center gap-3 py-12 text-center">
                     <ClipboardList className="size-8 text-sn-gray-medium" />
                     <p className="text-sn-gray-text text-sm">No registrations yet.</p>
@@ -167,6 +169,21 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                       day:   "numeric",
                       year:  "numeric",
                     })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/admin/registrations/${r.id}`}
+                        className="text-sn-gold hover:text-sn-gold-light text-xs transition-colors"
+                      >
+                        View
+                      </Link>
+                      <DeleteRegistrationButton
+                        registrationId={r.id}
+                        registrantName={r.registrant_name}
+                        eventTitle={eventTitle}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

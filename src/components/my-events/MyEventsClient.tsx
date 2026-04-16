@@ -199,16 +199,24 @@ function EventRow({
         </div>
       </Link>
 
-      {/* Manage registration toggle — upcoming events only */}
-      {!past && (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="w-full text-sn-gold hover:text-sn-gold-light text-xs py-2 px-5 text-left transition-colors"
+      {/* Action row: manage (upcoming) + view receipt */}
+      <div className="flex items-center gap-1">
+        {!past && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="flex-1 text-sn-gold hover:text-sn-gold-light text-xs py-2 px-5 text-left transition-colors"
+          >
+            {expanded ? "Hide details ▲" : "Manage registration ▼"}
+          </button>
+        )}
+        <Link
+          href={`/my-events/${registration.id}`}
+          className={`text-sn-gray-text hover:text-sn-off-white text-xs py-2 px-5 transition-colors ${past ? "flex-1" : "shrink-0"}`}
         >
-          {expanded ? "Hide details ▲" : "Manage registration ▼"}
-        </button>
-      )}
+          View Receipt →
+        </Link>
+      </div>
 
       {expanded && !past && (
         <div className="pt-1">

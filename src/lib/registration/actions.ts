@@ -35,11 +35,14 @@ export async function createRegistration(
   }
 
   // Guard against double-registration for the same member + event.
+  // Only block if a *paid* registration exists — unpaid rows are orphaned
+  // abandoned checkouts and should not prevent a fresh registration attempt.
   const { data: existing } = await supabase
     .from("registrations")
     .select("id")
     .eq("event_id", eventId)
     .eq("member_id", user.id)
+    .eq("payment_status", "paid")
     .maybeSingle();
 
   if (existing !== null) {

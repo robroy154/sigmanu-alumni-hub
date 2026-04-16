@@ -29,11 +29,14 @@ export async function createGuestRegistration(
   }
 
   // Guard against duplicate registration by email + event.
+  // Only block if a *paid* registration exists — unpaid rows are abandoned
+  // checkouts and should not prevent a fresh registration attempt.
   const { data: existing } = await admin
     .from("registrations")
     .select("id")
     .eq("event_id", eventId)
     .eq("email", data.email)
+    .eq("payment_status", "paid")
     .maybeSingle();
 
   if (existing !== null) {

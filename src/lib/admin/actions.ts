@@ -325,6 +325,31 @@ export async function adminMergeStub(
   return { success: true };
 }
 
+// ── Delete a registration ────────────────────────────────────────────────────
+export async function deleteRegistration(
+  registrationId: string
+): Promise<{ success: true } | { error: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // registration_guests, event_field_responses, and registration_payments
+  // cascade-delete automatically via FK ON DELETE CASCADE constraints.
+  const { error } = await admin
+    .from("registrations")
+    .delete()
+    .eq("id", registrationId);
+
+  if (error !== null) {
+    console.error("[deleteRegistration] failed:", error.message);
+    return { error: "Failed to delete registration." };
+  }
+
+  revalidatePath("/admin/registrations");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,
