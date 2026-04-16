@@ -2,9 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    serverActions: {
-      bodySizeLimit: "8mb",
-    },
+    // Increase server action body size limit for base64 image uploads (default 1MB)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    serverActions: { bodySizeLimit: "8mb" } as any,
   },
   turbopack: {
     // Silence workspace root inference warning caused by a lockfile in the home directory

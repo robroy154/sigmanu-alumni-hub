@@ -43,19 +43,25 @@ export function EventBannerUpload({ eventId, currentUrl, onUpload }: Props) {
       setPreview(base64);
       setLoading(true);
 
-      const result = await uploadEventBanner(
-        base64,
-        file.type,
-        eventId ?? "new",
-        ext
-      );
-      setLoading(false);
-
-      if ("error" in result) {
-        setError(result.error);
+      try {
+        const result = await uploadEventBanner(
+          base64,
+          file.type,
+          eventId ?? "new",
+          ext
+        );
+        if ("error" in result) {
+          setError(result.error);
+          setPreview(currentUrl ?? null);
+        } else {
+          onUpload(result.url);
+        }
+      } catch (err) {
+        console.error("[EventBannerUpload]", err);
+        setError("Upload failed. Please try again.");
         setPreview(currentUrl ?? null);
-      } else {
-        onUpload(result.url);
+      } finally {
+        setLoading(false);
       }
     };
     reader.readAsDataURL(file);

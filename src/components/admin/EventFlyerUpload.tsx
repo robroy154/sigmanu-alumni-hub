@@ -42,19 +42,25 @@ export function EventFlyerUpload({ eventId, currentUrl, onUpload }: Props) {
       setLoading(true);
 
       // Reuses the event-banners bucket — stored at [eventId]/flyer.[ext]
-      const result = await uploadEventBanner(
-        base64,
-        file.type,
-        `${eventId ?? "new"}-flyer`,
-        ext
-      );
-      setLoading(false);
-
-      if ("error" in result) {
-        setError(result.error);
+      try {
+        const result = await uploadEventBanner(
+          base64,
+          file.type,
+          `${eventId ?? "new"}-flyer`,
+          ext
+        );
+        if ("error" in result) {
+          setError(result.error);
+          setPreview(currentUrl ?? null);
+        } else {
+          onUpload(result.url);
+        }
+      } catch (err) {
+        console.error("[EventFlyerUpload]", err);
+        setError("Upload failed. Please try again.");
         setPreview(currentUrl ?? null);
-      } else {
-        onUpload(result.url);
+      } finally {
+        setLoading(false);
       }
     };
     reader.readAsDataURL(file);
