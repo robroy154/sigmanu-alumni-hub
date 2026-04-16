@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
-import { uploadEventBanner } from "@/lib/admin/upload-event-banner";
+import { getEventImageUploadUrl } from "@/lib/admin/upload-event-banner";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -14,10 +14,10 @@ interface Props {
 }
 
 export function EventBannerUpload({ eventId, currentUrl, onUpload }: Props) {
-  const [preview, setPreview]   = useState<string | null>(currentUrl ?? null);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
-  const inputRef                = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(currentUrl ?? null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+  const inputRef              = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     setError(null);
@@ -31,40 +31,45 @@ export function EventBannerUpload({ eventId, currentUrl, onUpload }: Props) {
       return;
     }
 
-    // Extract extension
     const ext = file.type === "image/jpeg" ? "jpg"
       : file.type === "image/png"  ? "png"
       : "webp";
 
-    // Read as base64
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      setPreview(base64);
-      setLoading(true);
+    // Show local preview immediately
+    const localUrl = URL.createObjectURL(file);
+    setPreview(localUrl);
+    setLoading(true);
 
-      try {
-        const result = await uploadEventBanner(
-          base64,
-          file.type,
-          eventId ?? "new",
-          ext
-        );
-        if ("error" in result) {
-          setError(result.error);
-          setPreview(currentUrl ?? null);
-        } else {
-          onUpload(result.url);
-        }
-      } catch (err) {
-        console.error("[EventBannerUpload]", err);
-        setError("Upload failed. Please try again.");
+    try {
+      // Step 1: get a signed upload URL from the server (tiny request, no file data)
+      const signed = await getEventImageUploadUrl(eventId ?? "new", ext, false);
+      if ("error" in signed) {
+        setError(signed.error);
         setPreview(currentUrl ?? null);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
-    reader.readAsDataURL(file);
+
+      // Step 2: upload the file directly to Supabase Storage (bypasses Next.js entirely)
+      const res = await fetch(signed.uploadUrl, {
+        method:  "PUT",
+        body:    file,
+        headers: { "Content-Type": file.type },
+      });
+
+      if (!res.ok) {
+        setError(`Upload failed (${res.status}). Please try again.`);
+        setPreview(currentUrl ?? null);
+        return;
+      }
+
+      onUpload(signed.publicUrl);
+    } catch (err) {
+      console.error("[EventBannerUpload]", err);
+      setError("Upload failed. Please try again.");
+      setPreview(currentUrl ?? null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {

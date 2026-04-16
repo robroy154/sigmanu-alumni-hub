@@ -4,17 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Uploads a base64-encoded image to the event-banners bucket.
- * Returns the public URL on success.
- * Only admins can call this action.
+ * Returns a signed upload URL for the event-banners bucket.
+ * The client uploads the file directly to Supabase Storage using this URL —
+ * the file never passes through Next.js, avoiding server action body size limits.
  */
-export async function uploadEventBanner(
-  base64Data: string,
-  mimeType: string,
+export async function getEventImageUploadUrl(
   eventId: string,
-  ext: string
-): Promise<{ error: string } | { url: string }> {
-  // Auth check
+  ext: string,
+  forFlyer: boolean = false,
+): Promise<{ error: string } | { uploadUrl: string; token: string; publicUrl: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (user === null) return { error: "Not authenticated." };
@@ -27,25 +25,22 @@ export async function uploadEventBanner(
 
   if (member?.status !== "admin") return { error: "Not authorized." };
 
-  // Decode base64
-  const base64 = base64Data.replace(/^data:[^;]+;base64,/, "");
-  const buffer = Buffer.from(base64, "base64");
-
-  const path = `${eventId}/banner-${Date.now()}.${ext}`;
+  const suffix = forFlyer ? "flyer" : "banner";
+  const path   = `${eventId}/${suffix}-${Date.now()}.${ext}`;
 
   const admin = createAdminClient();
-  const { error: uploadError } = await admin.storage
+  const { data, error } = await admin.storage
     .from("event-banners")
-    .upload(path, buffer, { contentType: mimeType });
+    .createSignedUploadUrl(path);
 
-  if (uploadError !== null) {
-    console.error("[uploadEventBanner] Storage upload error:", uploadError);
-    return { error: `Upload failed: ${uploadError.message}` };
+  if (error !== null || data === null) {
+    console.error("[getEventImageUploadUrl] Signed URL error:", error);
+    return { error: "Failed to generate upload URL. Please try again." };
   }
 
   const { data: { publicUrl } } = admin.storage
     .from("event-banners")
     .getPublicUrl(path);
 
-  return { url: publicUrl };
+  return { uploadUrl: data.signedUrl, token: data.token, publicUrl };
 }
