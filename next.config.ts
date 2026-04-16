@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "8mb",
+    },
+  },
   turbopack: {
     // Silence workspace root inference warning caused by a lockfile in the home directory
     root: __dirname,
