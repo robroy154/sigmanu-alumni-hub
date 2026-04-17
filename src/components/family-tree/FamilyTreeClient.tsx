@@ -40,14 +40,32 @@ export interface FamilyTreeMember {
 interface MemberNodeData extends FamilyTreeMember {
   isSelected: boolean;
   isDimmed:   boolean;
+  isMobile:   boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Node dimensions — must match dagre
 // ---------------------------------------------------------------------------
 
-const NODE_W = 220;
-const NODE_H = 90;
+const NODE_W        = 220;
+const NODE_H        = 90;
+const NODE_W_MOBILE = 160;
+const NODE_H_MOBILE = 76;
+
+// ---------------------------------------------------------------------------
+// Mobile detection hook (breakpoint 768px, defaults false for SSR)
+// ---------------------------------------------------------------------------
+
+function useIsMobile(breakpoint = 768): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 // ---------------------------------------------------------------------------
 // Custom member node
@@ -58,14 +76,18 @@ interface MemberNodeProps {
 }
 
 function MemberNode({ data: m }: MemberNodeProps) {
+  const nw           = m.isMobile ? NODE_W_MOBILE : NODE_W;
+  const avatarSize   = m.isMobile ? 32 : 40;
+  const nameFontSize = m.isMobile ? 12 : 14;
+  const metaFontSize = m.isMobile ? 10 : 11;
+
   const pinDisplay =
     m.pin_number !== null && m.pin_number !== ""
       ? `ΜΞ ${String(m.pin_number).padStart(3, "0")}`
       : null;
 
-  // Build node border/shadow style
   const nodeStyle: React.CSSProperties = {
-    width:        NODE_W,
+    width:        nw,
     padding:      "12px 16px",
     display:      "flex",
     alignItems:   "center",
@@ -78,10 +100,10 @@ function MemberNode({ data: m }: MemberNodeProps) {
     overflow:     "visible",
     ...(m.isDimmed
       ? {
-          background:  "#0B0B0C",
-          border:      "1px solid #3e2e14",
-          borderLeft:  "4px solid #C6A75E",
-          opacity:     0.25,
+          background: "#0B0B0C",
+          border:     "1px solid #3e2e14",
+          borderLeft: "4px solid #C6A75E",
+          opacity:    0.25,
         }
       : m.isSelected
         ? {
@@ -105,23 +127,23 @@ function MemberNode({ data: m }: MemberNodeProps) {
         style={{ background: "transparent", border: "none", width: 0, height: 0 }}
       />
 
-      {/* Unclaimed badge — floats above the top-right corner (negative top) */}
+      {/* Unclaimed badge — floats above the top-right corner */}
       {m.is_stub && (
         <span
           style={{
-            position:   "absolute",
-            top:        -9,
-            right:      8,
-            background: "#2e2010",
-            color:      "#8a6830",
-            border:     "1px solid #5a3e18",
-            fontSize:   9,
-            padding:    "2px 6px",
-            borderRadius: 999,
-            lineHeight: 1,
+            position:      "absolute",
+            top:           -9,
+            right:         8,
+            background:    "#2e2010",
+            color:         "#8a6830",
+            border:        "1px solid #5a3e18",
+            fontSize:      9,
+            padding:       "2px 6px",
+            borderRadius:  999,
+            lineHeight:    1,
             pointerEvents: "none",
-            zIndex:     10,
-            whiteSpace: "nowrap",
+            zIndex:        10,
+            whiteSpace:    "nowrap",
           }}
         >
           Unclaimed
@@ -132,8 +154,8 @@ function MemberNode({ data: m }: MemberNodeProps) {
       {m.is_stub ? (
         <div
           style={{
-            width:          40,
-            height:         40,
+            width:          avatarSize,
+            height:         avatarSize,
             borderRadius:   "50%",
             background:     "rgba(255,255,255,0.08)",
             display:        "flex",
@@ -143,18 +165,24 @@ function MemberNode({ data: m }: MemberNodeProps) {
             opacity:        0.5,
           }}
         >
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>
+          <span
+            style={{
+              fontSize:   m.isMobile ? 11 : 13,
+              color:      "rgba(255,255,255,0.6)",
+              fontWeight: 600,
+            }}
+          >
             {m.first_name[0]}{m.last_name[0]}
           </span>
         </div>
       ) : m.photo_url !== null ? (
         <div
           style={{
-            width:      40,
-            height:     40,
+            width:        avatarSize,
+            height:       avatarSize,
             borderRadius: "50%",
-            overflow:   "hidden",
-            flexShrink: 0,
+            overflow:     "hidden",
+            flexShrink:   0,
           }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -167,8 +195,8 @@ function MemberNode({ data: m }: MemberNodeProps) {
       ) : (
         <div
           style={{
-            width:          40,
-            height:         40,
+            width:          avatarSize,
+            height:         avatarSize,
             borderRadius:   "50%",
             background:     "rgba(198,167,94,0.15)",
             display:        "flex",
@@ -177,17 +205,23 @@ function MemberNode({ data: m }: MemberNodeProps) {
             flexShrink:     0,
           }}
         >
-          <span style={{ fontSize: 13, color: "#C6A75E", fontWeight: 600 }}>
+          <span
+            style={{
+              fontSize:   m.isMobile ? 11 : 13,
+              color:      "#C6A75E",
+              fontWeight: 600,
+            }}
+          >
             {m.first_name[0]}{m.last_name[0]}
           </span>
         </div>
       )}
 
       {/* Info — pr for stubs to avoid badge overlap */}
-      <div style={{ minWidth: 0, flex: 1, paddingRight: m.is_stub ? 48 : 0 }}>
+      <div style={{ minWidth: 0, flex: 1, paddingRight: m.is_stub ? (m.isMobile ? 36 : 48) : 0 }}>
         <p
           style={{
-            fontSize:     14,
+            fontSize:     nameFontSize,
             fontWeight:   500,
             color:        "#ffffff",
             overflow:     "hidden",
@@ -201,7 +235,7 @@ function MemberNode({ data: m }: MemberNodeProps) {
         {m.pledge_class !== null && (
           <p
             style={{
-              fontSize:      11,
+              fontSize:      metaFontSize,
               color:         "#C6A75E",
               textTransform: "uppercase",
               letterSpacing: "0.06em",
@@ -218,13 +252,13 @@ function MemberNode({ data: m }: MemberNodeProps) {
         {pinDisplay !== null && (
           <p
             style={{
-              fontSize:    11,
-              color:       "#C6A75E",
-              lineHeight:  1.2,
-              marginTop:   2,
-              overflow:    "hidden",
+              fontSize:     metaFontSize,
+              color:        "#C6A75E",
+              lineHeight:   1.2,
+              marginTop:    2,
+              overflow:     "hidden",
               textOverflow: "ellipsis",
-              whiteSpace:  "nowrap",
+              whiteSpace:   "nowrap",
             }}
           >
             {pinDisplay}
@@ -247,18 +281,35 @@ const nodeTypes = { member: MemberNode };
 // Dagre layout
 // ---------------------------------------------------------------------------
 
-function buildLayout(members: FamilyTreeMember[]): {
-  nodes: Node[];
-  edges: Edge[];
-} {
+interface LayoutDims {
+  nodeW:   number;
+  nodeH:   number;
+  nodesep: number;
+  ranksep: number;
+}
+
+const DEFAULT_DIMS: LayoutDims = {
+  nodeW: NODE_W, nodeH: NODE_H, nodesep: 80, ranksep: 120,
+};
+
+function buildLayout(
+  members: FamilyTreeMember[],
+  dims: LayoutDims = DEFAULT_DIMS
+): { nodes: Node[]; edges: Edge[] } {
   const g = new Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 80, ranksep: 120, marginx: 40, marginy: 40 });
+  g.setGraph({
+    rankdir: "TB",
+    nodesep: dims.nodesep,
+    ranksep: dims.ranksep,
+    marginx: 40,
+    marginy: 40,
+  });
 
   const memberIds = new Set(members.map((m) => m.id));
 
   members.forEach((m) => {
-    g.setNode(m.id, { width: NODE_W, height: NODE_H });
+    g.setNode(m.id, { width: dims.nodeW, height: dims.nodeH });
   });
 
   members.forEach((m) => {
@@ -274,8 +325,8 @@ function buildLayout(members: FamilyTreeMember[]): {
     return {
       id:       m.id,
       type:     "member",
-      position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 },
-      data:     { ...m, isSelected: false, isDimmed: false } as MemberNodeData,
+      position: { x: pos.x - dims.nodeW / 2, y: pos.y - dims.nodeH / 2 },
+      data:     { ...m, isSelected: false, isDimmed: false, isMobile: false } as MemberNodeData,
     };
   }) as unknown as Node[];
 
@@ -285,11 +336,11 @@ function buildLayout(members: FamilyTreeMember[]): {
       // pathOptions.borderRadius is a smoothstep-specific runtime prop not reflected in the
       // generic Edge type — attach it via Object.assign to satisfy strict TS.
       const edge: Edge = {
-        id:    `e-${m.big_id}-${m.id}`,
+        id:     `e-${m.big_id}-${m.id}`,
         source: m.big_id,
         target: m.id,
-        type:  "smoothstep",
-        style: { stroke: "rgba(198,167,94,0.35)", strokeWidth: 1.5 },
+        type:   "smoothstep",
+        style:  { stroke: "rgba(198,167,94,0.35)", strokeWidth: 1.5 },
       };
       Object.assign(edge, { pathOptions: { borderRadius: 12 } });
       edges.push(edge);
@@ -309,8 +360,8 @@ function getConnectedIds(
 ): Set<string> {
   const result = new Set<string>([selectedId]);
 
-  const bigMap: Record<string, string | null> = {};
-  const littlesMap: Record<string, string[]> = {};
+  const bigMap:     Record<string, string | null> = {};
+  const littlesMap: Record<string, string[]>      = {};
 
   members.forEach((m) => {
     bigMap[m.id] = m.big_id;
@@ -346,8 +397,8 @@ function getConnectedIds(
 // ---------------------------------------------------------------------------
 
 function getGenerationDepths(members: FamilyTreeMember[]): Record<string, number> {
-  const memberIds = new Set(members.map((m) => m.id));
-  const depths: Record<string, number> = {};
+  const memberIds  = new Set(members.map((m) => m.id));
+  const depths:     Record<string, number>  = {};
   const littlesMap: Record<string, string[]> = {};
 
   members.forEach((m) => {
@@ -412,7 +463,7 @@ function genLabel(n: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Side panel
+// Side panel — right panel on desktop, bottom sheet on mobile
 // ---------------------------------------------------------------------------
 
 interface SidePanelProps {
@@ -423,6 +474,7 @@ interface SidePanelProps {
   onFlyTo:      (id: string) => void;
   onFitLittles: () => void;
   viewerStatus: "member" | "admin";
+  isMobile:     boolean;
 }
 
 function SidePanel({
@@ -433,6 +485,7 @@ function SidePanel({
   onFlyTo,
   onFitLittles,
   viewerStatus,
+  isMobile,
 }: SidePanelProps) {
   const isOpen = member !== null;
 
@@ -465,7 +518,6 @@ function SidePanel({
       });
       const json = await res.json() as { error?: string };
       if (!res.ok) {
-        // Show error inline (no imported toast from here — use alert as last resort)
         alert(json.error ?? "Failed to send invite.");
       } else {
         setShowInviteForm(false);
@@ -484,35 +536,74 @@ function SidePanel({
       ? `ΜΞ ${String(pin).padStart(3, "0")}`
       : null;
 
-  return (
-    <div
-      style={{
-        position:   "absolute",
-        right:      0,
-        top:        0,
-        bottom:     0,
-        width:      280,
-        background: "#1a1208",
-        borderLeft: "1px solid rgba(198,167,94,0.25)",
-        zIndex:     10,
-        transform:  isOpen ? "translateX(0%)" : "translateX(100%)",
-        transition: "transform 0.2s ease",
-        display:    "flex",
+  // Desktop: right panel sliding in from right
+  // Mobile: bottom sheet sliding up from bottom
+  const panelStyle: React.CSSProperties = isMobile
+    ? {
+        position:      "absolute",
+        left:          0,
+        right:         0,
+        bottom:        0,
+        height:        "60vh",
+        background:    "#1a1208",
+        borderTop:     "1px solid rgba(198,167,94,0.25)",
+        zIndex:        10,
+        transform:     isOpen ? "translateY(0%)" : "translateY(100%)",
+        transition:    "transform 0.2s ease",
+        display:       "flex",
         flexDirection: "column",
-        overflow:   "hidden",
-      }}
-    >
+        overflow:      "hidden",
+      }
+    : {
+        position:      "absolute",
+        right:         0,
+        top:           0,
+        bottom:        0,
+        width:         280,
+        background:    "#1a1208",
+        borderLeft:    "1px solid rgba(198,167,94,0.25)",
+        zIndex:        10,
+        transform:     isOpen ? "translateX(0%)" : "translateX(100%)",
+        transition:    "transform 0.2s ease",
+        display:       "flex",
+        flexDirection: "column",
+        overflow:      "hidden",
+      };
+
+  return (
+    <div style={panelStyle}>
       {member !== null && (
         <>
+          {/* Mobile drag handle bar */}
+          {isMobile && (
+            <div
+              style={{
+                display:        "flex",
+                justifyContent: "center",
+                padding:        "10px 0 6px",
+                flexShrink:     0,
+              }}
+            >
+              <div
+                style={{
+                  width:        40,
+                  height:       4,
+                  borderRadius: 2,
+                  background:   "rgba(255,255,255,0.2)",
+                }}
+              />
+            </div>
+          )}
+
           {/* Header */}
           <div
             style={{
-              padding:        "16px 16px 12px",
-              borderBottom:   "1px solid rgba(198,167,94,0.15)",
-              display:        "flex",
-              alignItems:     "flex-start",
-              gap:            12,
-              flexShrink:     0,
+              padding:      isMobile ? "10px 16px 12px" : "16px 16px 12px",
+              borderBottom: "1px solid rgba(198,167,94,0.15)",
+              display:      "flex",
+              alignItems:   "flex-start",
+              gap:          12,
+              flexShrink:   0,
             }}
           >
             {/* Avatar */}
@@ -537,11 +628,11 @@ function SidePanel({
             ) : member.photo_url !== null ? (
               <div
                 style={{
-                  width:      56,
-                  height:     56,
+                  width:        56,
+                  height:       56,
                   borderRadius: "50%",
-                  overflow:   "hidden",
-                  flexShrink: 0,
+                  overflow:     "hidden",
+                  flexShrink:   0,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -635,12 +726,28 @@ function SidePanel({
           </div>
 
           {/* Body */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
-
+          <div
+            style={{
+              flex:          1,
+              overflowY:     "auto",
+              padding:       "12px 16px",
+              display:       "flex",
+              flexDirection: "column",
+              gap:           12,
+            }}
+          >
             {/* Big brother */}
             {bigMember !== null && (
               <div>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                <p
+                  style={{
+                    fontSize:      10,
+                    color:         "rgba(255,255,255,0.35)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom:  4,
+                  }}
+                >
                   Big Brother
                 </p>
                 {bigMember.status === "member" || bigMember.status === "admin" ? (
@@ -671,7 +778,15 @@ function SidePanel({
             {/* Little brothers */}
             {littleCount > 0 && (
               <div>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+                <p
+                  style={{
+                    fontSize:      10,
+                    color:         "rgba(255,255,255,0.35)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom:  4,
+                  }}
+                >
                   Little Brothers
                 </p>
                 <button
@@ -719,24 +834,24 @@ function SidePanel({
               <div style={{ marginTop: 4 }}>
                 {!showInviteForm ? (
                   <div style={{ display: "inline-block", width: "100%" }}>
-                    {/* Tooltip — position:fixed so it escapes the overflowY:auto scroll container */}
+                    {/* Tooltip — position:fixed escapes overflowY:auto scroll container */}
                     {showTooltip && tooltipPos !== null && (
                       <div
                         style={{
-                          position:     "fixed",
-                          bottom:       tooltipPos.bottom,
-                          left:         tooltipPos.left,
-                          transform:    "translateX(-50%)",
-                          background:   "#0B0B0C",
-                          border:       "1px solid rgba(198,167,94,0.3)",
-                          borderRadius: 6,
-                          padding:      "8px 10px",
-                          fontSize:     11,
-                          color:        "rgba(255,255,255,0.75)",
-                          width:        220,
-                          lineHeight:   1.5,
-                          zIndex:       9999,
-                          whiteSpace:   "normal",
+                          position:      "fixed",
+                          bottom:        tooltipPos.bottom,
+                          left:          tooltipPos.left,
+                          transform:     "translateX(-50%)",
+                          background:    "#0B0B0C",
+                          border:        "1px solid rgba(198,167,94,0.3)",
+                          borderRadius:  6,
+                          padding:       "8px 10px",
+                          fontSize:      11,
+                          color:         "rgba(255,255,255,0.75)",
+                          width:         220,
+                          lineHeight:    1.5,
+                          zIndex:        9999,
+                          whiteSpace:    "normal",
                           pointerEvents: "none",
                         }}
                       >
@@ -773,19 +888,19 @@ function SidePanel({
                       }}
                       onMouseLeave={() => setShowTooltip(false)}
                       style={{
-                        width:        "100%",
-                        display:      "flex",
-                        alignItems:   "center",
+                        width:          "100%",
+                        display:        "flex",
+                        alignItems:     "center",
                         justifyContent: "center",
-                        gap:          6,
-                        background:   "rgba(198,167,94,0.1)",
-                        border:       "1px solid rgba(198,167,94,0.3)",
-                        borderRadius: 4,
-                        color:        "#C6A75E",
-                        fontSize:     12,
-                        fontWeight:   600,
-                        padding:      "8px 0",
-                        cursor:       "pointer",
+                        gap:            6,
+                        background:     "rgba(198,167,94,0.1)",
+                        border:         "1px solid rgba(198,167,94,0.3)",
+                        borderRadius:   4,
+                        color:          "#C6A75E",
+                        fontSize:       12,
+                        fontWeight:     600,
+                        padding:        "8px 0",
+                        cursor:         "pointer",
                       }}
                     >
                       <Info size={14} />
@@ -795,7 +910,7 @@ function SidePanel({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                      Enter {member.first_name}'s email address to send them an invite:
+                      Enter {member.first_name}&apos;s email address to send them an invite:
                     </p>
                     <input
                       type="email"
@@ -863,29 +978,29 @@ function SidePanel({
 }
 
 // ---------------------------------------------------------------------------
-// Generation rail — rendered over the canvas, only when hideIsolated=true
+// Generation rail — desktop only, rendered when hideIsolated=true
 // ---------------------------------------------------------------------------
 
 interface GenerationRailProps {
-  layoutNodes: Node[];
+  layoutNodes:    Node[];
   visibleMembers: FamilyTreeMember[];
+  nodeH:          number;
 }
 
-function GenerationRail({ layoutNodes, visibleMembers }: GenerationRailProps) {
+function GenerationRail({ layoutNodes, visibleMembers, nodeH }: GenerationRailProps) {
   const { y: panY, zoom } = useViewport();
 
   const genYData = useMemo(() => {
     const depthMap = getGenerationDepths(visibleMembers);
 
-    // Compute average flow-space Y per depth
-    const sumY: Record<number, number>   = {};
-    const count: Record<number, number>  = {};
-    const maxDepth: { v: number }        = { v: 0 };
+    const sumY:     Record<number, number> = {};
+    const count:    Record<number, number> = {};
+    const maxDepth: { v: number }          = { v: 0 };
 
     layoutNodes.forEach((n) => {
       const depth = depthMap[n.id];
       if (depth === undefined) return;
-      const flowY = n.position.y + NODE_H / 2;
+      const flowY = n.position.y + nodeH / 2;
       sumY[depth]  = (sumY[depth]  ?? 0) + flowY;
       count[depth] = (count[depth] ?? 0) + 1;
       if (depth > maxDepth.v) maxDepth.v = depth;
@@ -898,7 +1013,7 @@ function GenerationRail({ layoutNodes, visibleMembers }: GenerationRailProps) {
       }
     }
     return result;
-  }, [layoutNodes, visibleMembers]);
+  }, [layoutNodes, visibleMembers, nodeH]);
 
   return (
     <div
@@ -950,28 +1065,43 @@ function FamilyTreeInner({
   members:      FamilyTreeMember[];
   viewerStatus: "member" | "admin";
 }) {
-  const rf = useReactFlow();
+  const rf       = useReactFlow();
+  const isMobile = useIsMobile();
 
   // Container ref for full screen
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Search
-  const searchRef           = useRef<HTMLInputElement>(null);
-  const debounceRef         = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const [query, setQuery]   = useState("");
-  const [searchResults, setSearchResults] = useState<FamilyTreeMember[]>([]);
-  const [showDropdown, setShowDropdown]   = useState(false);
-  const [noMatch, setNoMatch]             = useState(false);
+  const searchRef                          = useRef<HTMLInputElement>(null);
+  const debounceRef                        = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [query, setQuery]                  = useState("");
+  const [searchResults, setSearchResults]  = useState<FamilyTreeMember[]>([]);
+  const [showDropdown, setShowDropdown]    = useState(false);
+  const [noMatch, setNoMatch]              = useState(false);
 
   // Selection / panel
   const [selectedId, setSelected] = useState<string | null>(null);
 
   // Filters
-  const [hideIsolated, setHideIsolated]           = useState(true);
+  const [hideIsolated, setHideIsolated]               = useState(true);
   const [selectedPledgeClass, setSelectedPledgeClass] = useState<string | null>(null);
 
   // Full screen
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Touch hint (mobile only, shown once via localStorage)
+  const [showTouchHint, setShowTouchHint] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) return;
+    if (typeof window === "undefined") return;
+    const key = "sn_tree_touch_hint_shown";
+    if (localStorage.getItem(key) !== null) return;
+    setShowTouchHint(true);
+    localStorage.setItem(key, "1");
+    const timer = setTimeout(() => setShowTouchHint(false), 3000);
+    return () => clearTimeout(timer);
+  }, [isMobile]);
 
   useEffect(() => {
     const onFSChange = () => setIsFullscreen(document.fullscreenElement !== null);
@@ -986,6 +1116,15 @@ function FamilyTreeInner({
       void document.exitFullscreen();
     }
   }, []);
+
+  // Layout dims: compact on mobile
+  const dims = useMemo<LayoutDims>(
+    () =>
+      isMobile
+        ? { nodeW: NODE_W_MOBILE, nodeH: NODE_H_MOBILE, nodesep: 50, ranksep: 90 }
+        : { nodeW: NODE_W, nodeH: NODE_H, nodesep: 80, ranksep: 120 },
+    [isMobile]
+  );
 
   // Pledge classes (distinct, from all members)
   const pledgeClasses = useMemo(() => {
@@ -1019,8 +1158,8 @@ function FamilyTreeInner({
 
   // Dagre layout
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(
-    () => buildLayout(visibleMembers),
-    [visibleMembers]
+    () => buildLayout(visibleMembers, dims),
+    [visibleMembers, dims]
   );
 
   // fitView: deferred on initial load
@@ -1034,7 +1173,7 @@ function FamilyTreeInner({
     return () => clearTimeout(timer);
   }, [layoutNodes.length, rf]);
 
-  // fitView: re-fit on hideIsolated or pledgeClass change (skip first mount)
+  // fitView: re-fit on hideIsolated, pledgeClass, or mobile/desktop switch (skip first mount)
   const isFirstMount = useRef(true);
   useEffect(() => {
     if (isFirstMount.current) {
@@ -1045,7 +1184,7 @@ function FamilyTreeInner({
       void rf.fitView({ padding: 0.15, maxZoom: 1.2, duration: 400 });
     }, 50);
     return () => clearTimeout(timer);
-  }, [hideIsolated, selectedPledgeClass, rf]);
+  }, [hideIsolated, selectedPledgeClass, isMobile, rf]);
 
   // Connected ID set for selected node
   const connectedIds = useMemo(
@@ -1053,7 +1192,7 @@ function FamilyTreeInner({
     [selectedId, visibleMembers]
   );
 
-  // Display nodes
+  // Display nodes — inject selection/dim/isMobile state
   const displayNodes = useMemo(() => {
     return layoutNodes.map((n) => ({
       ...n,
@@ -1061,9 +1200,10 @@ function FamilyTreeInner({
         ...(n.data as unknown as MemberNodeData),
         isSelected: n.id === selectedId,
         isDimmed:   connectedIds !== null && !connectedIds.has(n.id),
+        isMobile,
       },
     }));
-  }, [layoutNodes, selectedId, connectedIds]);
+  }, [layoutNodes, selectedId, connectedIds, isMobile]);
 
   // Display edges
   const displayEdges = useMemo(() => {
@@ -1090,7 +1230,7 @@ function FamilyTreeInner({
         return;
       }
 
-      const lower       = q.trim().toLowerCase();
+      const lower        = q.trim().toLowerCase();
       const numericQuery = q.replace(/\D/g, "");
 
       const matches = visibleMembers.filter((m) => {
@@ -1126,8 +1266,8 @@ function FamilyTreeInner({
         const node = layoutNodes.find((n) => n.id === match.id);
         if (node !== undefined) {
           rf.setCenter(
-            node.position.x + NODE_W / 2,
-            node.position.y + NODE_H / 2,
+            node.position.x + dims.nodeW / 2,
+            node.position.y + dims.nodeH / 2,
             { zoom: 1.5, duration: 700 }
           );
         }
@@ -1137,7 +1277,7 @@ function FamilyTreeInner({
         setShowDropdown(true);
       }
     },
-    [visibleMembers, layoutNodes, rf]
+    [visibleMembers, layoutNodes, rf, dims]
   );
 
   const handleSearchChange = useCallback(
@@ -1156,16 +1296,16 @@ function FamilyTreeInner({
       const node = layoutNodes.find((n) => n.id === m.id);
       if (node !== undefined) {
         rf.setCenter(
-          node.position.x + NODE_W / 2,
-          node.position.y + NODE_H / 2,
+          node.position.x + dims.nodeW / 2,
+          node.position.y + dims.nodeH / 2,
           { zoom: 1.5, duration: 700 }
         );
       }
     },
-    [layoutNodes, rf]
+    [layoutNodes, rf, dims]
   );
 
-  // Node click: zoom + open panel (same node toggles off)
+  // Node click: zoom + open panel (same node click toggles off)
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
       const nodeData    = node.data as unknown as MemberNodeData;
@@ -1173,11 +1313,11 @@ function FamilyTreeInner({
       setSelected(isDeselect ? null : node.id);
 
       if (!isDeselect) {
-        const allRfNodes   = rf.getNodes();
+        const allRfNodes    = rf.getNodes();
         const directLittles = allRfNodes.filter(
           (n) => (n.data as unknown as MemberNodeData).big_id === node.id
         );
-        const bigId  = nodeData.big_id;
+        const bigId   = nodeData.big_id;
         const bigNode = bigId !== null ? allRfNodes.find((n) => n.id === bigId) : undefined;
         const targetNodes = [
           ...(bigNode !== undefined ? [bigNode] : []),
@@ -1256,117 +1396,212 @@ function FamilyTreeInner({
       : `${visibleClaimed} members (filtered)`;
   })();
 
+  // Search input (shared between mobile and desktop layouts)
+  const searchInput = (
+    <div className="relative">
+      <input
+        ref={searchRef}
+        type="search"
+        value={query}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setShowDropdown(false);
+            setQuery("");
+            handleSearchChange("");
+          }
+        }}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+        placeholder="Search brothers…"
+        className={[
+          "h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold",
+          isMobile ? "w-full" : "w-52",
+        ].join(" ")}
+      />
+      {/* No-match message */}
+      {noMatch && query.trim() !== "" && (
+        <div
+          style={{
+            position:     "absolute",
+            top:          "100%",
+            left:         0,
+            marginTop:    4,
+            background:   "rgba(11,11,12,0.95)",
+            border:       "1px solid rgba(255,255,255,0.12)",
+            borderRadius: 6,
+            padding:      "6px 10px",
+            fontSize:     12,
+            color:        "rgba(255,255,255,0.45)",
+            whiteSpace:   "nowrap",
+            zIndex:       20,
+          }}
+        >
+          No brothers found
+        </div>
+      )}
+      {/* Dropdown */}
+      {showDropdown && searchResults.length > 0 && (
+        <div
+          style={{
+            position:     "absolute",
+            top:          "100%",
+            left:         0,
+            marginTop:    4,
+            background:   "rgba(11,11,12,0.97)",
+            border:       "1px solid rgba(198,167,94,0.25)",
+            borderRadius: 6,
+            overflow:     "hidden",
+            zIndex:       20,
+            minWidth:     220,
+          }}
+        >
+          {searchResults.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onMouseDown={() => handleDropdownSelect(m)}
+              style={{
+                display:      "block",
+                width:        "100%",
+                textAlign:    "left",
+                background:   "transparent",
+                border:       "none",
+                padding:      "8px 12px",
+                cursor:       "pointer",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "rgba(198,167,94,0.08)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+              }}
+            >
+              <p style={{ fontSize: 13, color: "#ffffff", lineHeight: 1.2 }}>
+                {m.first_name} {m.last_name}
+              </p>
+              <p style={{ fontSize: 11, color: "#C6A75E", marginTop: 2 }}>
+                {[
+                  m.pledge_class,
+                  m.pin_number !== null
+                    ? `ΜΞ ${String(m.pin_number).padStart(3, "0")}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       ref={containerRef}
       className="relative w-full"
       style={{ height: "calc(100vh - 10rem)" }}
     >
-      {/* Generation rail (left side, hideIsolated only) */}
-      {hideIsolated && (
-        <GenerationRail layoutNodes={layoutNodes} visibleMembers={visibleMembers} />
+      {/* Generation rail — desktop only, hideIsolated mode only */}
+      {hideIsolated && !isMobile && (
+        <GenerationRail
+          layoutNodes={layoutNodes}
+          visibleMembers={visibleMembers}
+          nodeH={dims.nodeH}
+        />
       )}
 
-      {/* Top-left overlay: search + pledge class filter + controls */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-        {/* Row 1: search + pledge class */}
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <input
-              ref={searchRef}
-              type="search"
-              value={query}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setShowDropdown(false);
-                  setQuery("");
-                  handleSearchChange("");
+      {/* ── Desktop controls overlay ──────────────────────────────── */}
+      {!isMobile && (
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          {/* Row 1: search + pledge class */}
+          <div className="flex items-center gap-2">
+            {searchInput}
+            <div className="flex items-center gap-1">
+              <select
+                value={selectedPledgeClass ?? ""}
+                onChange={(e) =>
+                  setSelectedPledgeClass(e.target.value === "" ? null : e.target.value)
                 }
-              }}
-              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
-              placeholder="Search brothers…"
-              className="h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
-            />
-            {/* No-match message */}
-            {noMatch && query.trim() !== "" && (
-              <div
-                style={{
-                  position:   "absolute",
-                  top:        "100%",
-                  left:       0,
-                  marginTop:  4,
-                  background: "rgba(11,11,12,0.95)",
-                  border:     "1px solid rgba(255,255,255,0.12)",
-                  borderRadius: 6,
-                  padding:    "6px 10px",
-                  fontSize:   12,
-                  color:      "rgba(255,255,255,0.45)",
-                  whiteSpace: "nowrap",
-                  zIndex:     20,
-                }}
+                className="h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-2 text-sm text-white focus:outline-none focus:border-sn-gold max-w-35"
               >
-                No brothers found
-              </div>
-            )}
-            {/* Dropdown */}
-            {showDropdown && searchResults.length > 0 && (
-              <div
-                style={{
-                  position:   "absolute",
-                  top:        "100%",
-                  left:       0,
-                  marginTop:  4,
-                  background: "rgba(11,11,12,0.97)",
-                  border:     "1px solid rgba(198,167,94,0.25)",
-                  borderRadius: 6,
-                  overflow:   "hidden",
-                  zIndex:     20,
-                  minWidth:   220,
-                }}
-              >
-                {searchResults.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onMouseDown={() => handleDropdownSelect(m)}
-                    style={{
-                      display:    "block",
-                      width:      "100%",
-                      textAlign:  "left",
-                      background: "transparent",
-                      border:     "none",
-                      padding:    "8px 12px",
-                      cursor:     "pointer",
-                      borderBottom: "1px solid rgba(255,255,255,0.06)",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "rgba(198,167,94,0.08)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    }}
-                  >
-                    <p style={{ fontSize: 13, color: "#ffffff", lineHeight: 1.2 }}>
-                      {m.first_name} {m.last_name}
-                    </p>
-                    <p style={{ fontSize: 11, color: "#C6A75E", marginTop: 2 }}>
-                      {[m.pledge_class, m.pin_number !== null ? `ΜΞ ${String(m.pin_number).padStart(3, "0")}` : null]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </button>
+                <option value="">All classes</option>
+                {pledgeClasses.map((cls) => (
+                  <option key={cls} value={cls}>{cls}</option>
                 ))}
-              </div>
-            )}
+              </select>
+              {selectedPledgeClass !== null && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedPledgeClass(null)}
+                  className="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-sn-gold transition-colors"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Pledge class filter */}
+          {/* Row 2: toggle + selection controls + fullscreen */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHideIsolated((v) => !v)}
+              className={[
+                "h-8 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
+                hideIsolated
+                  ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
+                  : "bg-sn-black/90 border-white/20 text-white/50 hover:text-white",
+              ].join(" ")}
+            >
+              {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
+            </button>
+            {selectedId !== null && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleFitLineage}
+                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
+                >
+                  Fit lineage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+            {/* Full screen toggle */}
+            <button
+              type="button"
+              onClick={handleFullscreen}
+              className="h-8 w-8 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white transition-colors"
+              title={isFullscreen ? "Exit full screen" : "Full screen"}
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile controls overlay ───────────────────────────────── */}
+      {isMobile && (
+        <div className="absolute top-3 left-3 right-3 z-10 flex flex-col gap-1.5">
+          {/* Row 1: search (full width) */}
+          {searchInput}
+
+          {/* Row 2: pledge class (full width, own row) */}
           <div className="flex items-center gap-1">
             <select
               value={selectedPledgeClass ?? ""}
-              onChange={(e) => setSelectedPledgeClass(e.target.value === "" ? null : e.target.value)}
-              className="h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-2 text-sm text-white focus:outline-none focus:border-sn-gold max-w-35"
+              onChange={(e) =>
+                setSelectedPledgeClass(e.target.value === "" ? null : e.target.value)
+              }
+              className="flex-1 h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-2 text-sm text-white focus:outline-none focus:border-sn-gold"
             >
               <option value="">All classes</option>
               {pledgeClasses.map((cls) => (
@@ -1377,64 +1612,70 @@ function FamilyTreeInner({
               <button
                 type="button"
                 onClick={() => setSelectedPledgeClass(null)}
-                className="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-sn-gold transition-colors"
+                className="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 transition-colors"
               >
                 ×
               </button>
             )}
           </div>
-        </div>
 
-        {/* Row 2: toggle + selection controls */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setHideIsolated((v) => !v)}
-            className={[
-              "h-8 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
-              hideIsolated
-                ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
-                : "bg-sn-black/90 border-white/20 text-white/50 hover:text-white",
-            ].join(" ")}
-          >
-            {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
-          </button>
-          {selectedId !== null && (
-            <>
-              <button
-                type="button"
-                onClick={handleFitLineage}
-                className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
-              >
-                Fit lineage
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white text-xs transition-colors"
-              >
-                Clear
-              </button>
-            </>
-          )}
-          {/* Full screen toggle */}
-          <button
-            type="button"
-            onClick={handleFullscreen}
-            className="h-8 w-8 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 hover:text-white transition-colors"
-            title={isFullscreen ? "Exit full screen" : "Full screen"}
-          >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          </button>
-        </div>
-      </div>
+          {/* Row 3: toggle + optional selection controls + fullscreen */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHideIsolated((v) => !v)}
+              className={[
+                "flex-1 h-8 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
+                hideIsolated
+                  ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
+                  : "bg-sn-black/90 border-white/20 text-white/50",
+              ].join(" ")}
+            >
+              {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
+            </button>
+            {selectedId !== null && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleFitLineage}
+                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
+                >
+                  Fit lineage
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={handleFullscreen}
+              className="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 transition-colors"
+              title={isFullscreen ? "Exit full screen" : "Full screen"}
+            >
+              {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+          </div>
 
-      {/* Top-right overlay: member count */}
-      <div className="absolute top-3 right-3 z-10 pointer-events-none">
-        <span className="text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
-          {countLabel}
-        </span>
-      </div>
+          {/* Row 4: member count */}
+          <span className="self-start text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+            {countLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Top-right member count (desktop only) */}
+      {!isMobile && (
+        <div className="absolute top-3 right-3 z-10 pointer-events-none">
+          <span className="text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+            {countLabel}
+          </span>
+        </div>
+      )}
 
       <ReactFlow
         nodes={displayNodes as Node[]}
@@ -1461,15 +1702,37 @@ function FamilyTreeInner({
           color="#4a3418"
         />
         <Controls showInteractive={false} />
-        <div className="hidden md:block">
+        {!isMobile && (
           <MiniMap
             nodeColor="rgba(198,167,94,0.4)"
             maskColor="rgba(198,167,94,0.08)"
             style={{ background: "#1a1208", border: "1px solid rgba(198,167,94,0.2)" }}
             position="bottom-right"
           />
-        </div>
+        )}
       </ReactFlow>
+
+      {/* Touch hint (mobile, first load only, fades after 3s) */}
+      {showTouchHint && (
+        <div
+          style={{
+            position:      "absolute",
+            bottom:        selectedId !== null ? "calc(60% + 16px)" : 80,
+            left:          "50%",
+            transform:     "translateX(-50%)",
+            background:    "rgba(0,0,0,0.65)",
+            color:         "rgba(255,255,255,0.75)",
+            fontSize:      11,
+            padding:       "6px 14px",
+            borderRadius:  20,
+            whiteSpace:    "nowrap",
+            zIndex:        20,
+            pointerEvents: "none",
+          }}
+        >
+          Pinch to zoom · Drag to pan
+        </div>
+      )}
 
       {/* Side panel */}
       <SidePanel
@@ -1480,6 +1743,7 @@ function FamilyTreeInner({
         onFlyTo={handleFlyTo}
         onFitLittles={handleFitLittles}
         viewerStatus={viewerStatus}
+        isMobile={isMobile}
       />
     </div>
   );
