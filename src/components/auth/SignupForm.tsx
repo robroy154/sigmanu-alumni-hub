@@ -16,6 +16,7 @@ import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
 import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
 import { StubClaimStep } from "@/components/auth/StubClaimStep";
+import { BigBrotherSearch } from "@/components/auth/BigBrotherSearch";
 
 type DuplicateState =
   | { type: "none" }
@@ -35,9 +36,12 @@ export function SignupForm() {
   const [hasPrefill, setHasPrefill]       = useState(false);
   const [pinEntry, setPinEntry]           = useState("");
   const [stubClaim, setStubClaim]         = useState<StubClaimState>({ type: "none" });
+  const [bigBrotherId, setBigBrotherId]   = useState<string | null>(null);
 
   // Ref to carry the selected stub ID into the signUp call without stale closure issues.
-  const selectedStubIdRef = useRef<string | null>(null);
+  const selectedStubIdRef  = useRef<string | null>(null);
+  // Carries the big brother ID — set from form UI or inherited from stub claim.
+  const bigBrotherIdRef    = useRef<string | null>(null);
 
   const {
     register,
@@ -75,6 +79,9 @@ export function SignupForm() {
   // ── Core signup — called after stub check resolves ─────────────────────────
   async function proceedWithSignup(data: SignupInput) {
     const supabase = createClient();
+
+    // Diagnostic: confirm stub_id is being passed to the trigger
+    console.log("[SignupForm] stub_id being passed:", selectedStubIdRef.current);
 
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
@@ -118,6 +125,8 @@ export function SignupForm() {
       if (data.zip            !== undefined && data.zip            !== "") update.zip            = data.zip;
       if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
       if (data.birthday       !== undefined && data.birthday       !== "") update.birthday       = data.birthday;
+      // big_id: use explicit form selection, or fall back to stub's big_id if stub was claimed
+      if (bigBrotherIdRef.current !== null) update.big_id = bigBrotherIdRef.current;
       if (Object.keys(update).length > 0) {
         const { error: updateError } = await supabase.from("members").update(update).eq("id", signUpData.user.id);
         if (updateError !== null) {
@@ -220,8 +229,12 @@ export function SignupForm() {
     return (
       <StubClaimStep
         matches={stubClaim.matches}
-        onClaim={(stubId) => {
+        onClaim={(stubId, stubBigId) => {
           selectedStubIdRef.current = stubId;
+          // Carry stub's big_id forward if user hasn't explicitly selected one
+          if (stubBigId !== null && bigBrotherIdRef.current === null) {
+            bigBrotherIdRef.current = stubBigId;
+          }
           setStubClaim({ type: "none" });
           void handleSubmit(proceedWithSignup)();
         }}
@@ -357,6 +370,24 @@ export function SignupForm() {
         />
         <p className="text-white/40 text-xs">
           If known, helps us find your chapter record.
+        </p>
+      </div>
+
+      {/* ── Big Brother ───────────────────────────────────────────── */}
+      <div className="space-y-1.5">
+        <label className="text-white/80 text-sm">
+          Big Brother{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </label>
+        <BigBrotherSearch
+          value={bigBrotherId}
+          onChange={(id) => {
+            setBigBrotherId(id);
+            bigBrotherIdRef.current = id;
+          }}
+        />
+        <p className="text-white/40 text-xs">
+          Start typing a name or badge number to search.
         </p>
       </div>
 

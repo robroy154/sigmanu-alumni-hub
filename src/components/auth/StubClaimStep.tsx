@@ -5,7 +5,9 @@ import type { StubMatch } from "@/lib/auth/stub-search";
 
 interface StubClaimStepProps {
   matches:   StubMatch[];
-  onClaim:   (stubId: string) => void;
+  // bigId is the stub's existing big_id — passed back so the parent form can
+  // carry it forward into the signup update if the user hasn't picked one explicitly.
+  onClaim:   (stubId: string, bigId: string | null) => void;
   onDismiss: () => void;
   onBack:    () => void;
 }
@@ -59,7 +61,7 @@ export function StubClaimStep({ matches, onClaim, onDismiss, onBack }: StubClaim
             <Button
               type="button"
               size="sm"
-              onClick={() => onClaim(match.id)}
+              onClick={() => onClaim(match.id, match.bigId)}
               className="shrink-0 bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold"
             >
               This is me

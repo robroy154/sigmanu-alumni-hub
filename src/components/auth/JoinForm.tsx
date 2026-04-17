@@ -17,6 +17,7 @@ import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { toastError } from "@/lib/toast";
 import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
 import { StubClaimStep } from "@/components/auth/StubClaimStep";
+import { BigBrotherSearch } from "@/components/auth/BigBrotherSearch";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -59,9 +60,12 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   const [showResetPrompt, setShowResetPrompt] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [stubClaim, setStubClaim] = useState<StubClaimState>({ type: "none" });
+  const [bigBrotherId, setBigBrotherId] = useState<string | null>(null);
 
   // Carries the selected stub ID into signUp() without stale closure issues.
   const selectedStubIdRef = useRef<string | null>(null);
+  // Carries the big brother ID — set from form UI or inherited from stub claim.
+  const bigBrotherIdRef   = useRef<string | null>(null);
 
   const {
     register,
@@ -86,6 +90,9 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
       toastError(tokenCheck.error);
       return;
     }
+
+    // Diagnostic: confirm stub_id is being passed to the trigger
+    console.log("[JoinForm] stub_id being passed:", selectedStubIdRef.current);
 
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
@@ -132,6 +139,17 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
         // Non-blocking: user is signed up — just show a warning and continue.
         console.warn("[JoinForm] completeReferral:", result.error);
       }
+
+      // Update big_id if the user selected a big brother or one was inherited from a stub
+      if (bigBrotherIdRef.current !== null) {
+        const { error: bigError } = await supabase
+          .from("members")
+          .update({ big_id: bigBrotherIdRef.current })
+          .eq("id", signUpData.user.id);
+        if (bigError !== null) {
+          console.error("[JoinForm] big_id update failed:", bigError.message);
+        }
+      }
     }
 
     // Confirm to the member their account is pending review — fire-and-forget.
@@ -177,8 +195,12 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     return (
       <StubClaimStep
         matches={stubClaim.matches}
-        onClaim={(stubId) => {
+        onClaim={(stubId, stubBigId) => {
           selectedStubIdRef.current = stubId;
+          // Carry stub's big_id forward if user hasn't explicitly selected one
+          if (stubBigId !== null && bigBrotherIdRef.current === null) {
+            bigBrotherIdRef.current = stubBigId;
+          }
           setStubClaim({ type: "none" });
           void handleSubmit(proceedWithSignup)();
         }}
@@ -304,6 +326,24 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
             {...register("phone")} />
         </div>
+      </div>
+
+      {/* Big Brother */}
+      <div className="space-y-1.5">
+        <label className="text-white/80 text-sm">
+          Big Brother{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </label>
+        <BigBrotherSearch
+          value={bigBrotherId}
+          onChange={(id) => {
+            setBigBrotherId(id);
+            bigBrotherIdRef.current = id;
+          }}
+        />
+        <p className="text-white/40 text-xs">
+          Start typing a name or badge number to search.
+        </p>
       </div>
 
       {/* Birthday */}

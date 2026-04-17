@@ -11,6 +11,7 @@ export interface StubMatch {
   nickname:    string | null;
   pledgeClass: string | null;
   pinNumber:   string | null; // full value, never masked
+  bigId:       string | null; // big_id from the stub row, for pre-populating big brother on signup
   similarity:  number;
 }
 
@@ -45,6 +46,7 @@ export async function findStubMatches(input: {
     nickname:     string | null;
     pledge_class: string | null;
     pin_number:   string | null;
+    big_id:       string | null;
     similarity:   number;
   }>).map((row) => ({
     id:          row.id,
@@ -53,6 +55,7 @@ export async function findStubMatches(input: {
     nickname:    row.nickname,
     pledgeClass: row.pledge_class,
     pinNumber:   row.pin_number,
+    bigId:       row.big_id,
     similarity:  row.similarity,
   }));
 }
