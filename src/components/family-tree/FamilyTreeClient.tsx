@@ -17,7 +17,7 @@ import {
   type Edge,
 } from "@xyflow/react";
 import { Graph, layout } from "@dagrejs/dagre";
-import { Info, Maximize2, Minimize2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Maximize2, Minimize2, SlidersHorizontal, X } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 
 // ---------------------------------------------------------------------------
@@ -544,7 +544,9 @@ function SidePanel({
         left:          0,
         right:         0,
         bottom:        0,
-        height:        "60vh",
+        height:        "auto",
+        minHeight:     "160px",
+        maxHeight:     "50vh",
         background:    "#1a1208",
         borderTop:     "1px solid rgba(198,167,94,0.25)",
         zIndex:        10,
@@ -1089,6 +1091,12 @@ function FamilyTreeInner({
   // Full screen
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Filter panel open/close (mobile: collapsed by default; desktop: always open)
+  const [filtersOpen, setFiltersOpen] = useState<boolean>(false);
+  useEffect(() => {
+    setFiltersOpen(!isMobile);
+  }, [isMobile]);
+
   // Touch hint (mobile only, shown once via localStorage)
   const [showTouchHint, setShowTouchHint] = useState(false);
 
@@ -1379,6 +1387,11 @@ function FamilyTreeInner({
     return visibleMembers.filter((m) => m.big_id === selectedMember.id).length;
   }, [selectedMember, visibleMembers]);
 
+  // Active filter count (for the mobile filter pill badge)
+  const activeFilterCount =
+    (selectedPledgeClass !== null ? 1 : 0) +
+    (hideIsolated !== true ? 1 : 0);
+
   // Count display
   const totalClaimed   = members.filter((m) => !m.is_stub).length;
   const totalStubs     = members.filter((m) => m.is_stub).length;
@@ -1591,66 +1604,39 @@ function FamilyTreeInner({
       {/* ── Mobile controls overlay ───────────────────────────────── */}
       {isMobile && (
         <div className="absolute top-3 left-3 right-3 z-10 flex flex-col gap-1.5">
-          {/* Row 1: search (full width) */}
-          {searchInput}
 
-          {/* Row 2: pledge class (full width, own row) */}
-          <div className="flex items-center gap-1">
-            <select
-              value={selectedPledgeClass ?? ""}
-              onChange={(e) =>
-                setSelectedPledgeClass(e.target.value === "" ? null : e.target.value)
-              }
-              className="flex-1 h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-2 text-sm text-white focus:outline-none focus:border-sn-gold"
-            >
-              <option value="">All classes</option>
-              {pledgeClasses.map((cls) => (
-                <option key={cls} value={cls}>{cls}</option>
-              ))}
-            </select>
-            {selectedPledgeClass !== null && (
-              <button
-                type="button"
-                onClick={() => setSelectedPledgeClass(null)}
-                className="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 transition-colors"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Row 3: toggle + optional selection controls + fullscreen */}
+          {/* ── Always-visible strip row ── */}
           <div className="flex items-center gap-2">
+            {/* Filter pill — toggles expanded controls */}
             <button
               type="button"
-              onClick={() => setHideIsolated((v) => !v)}
-              className={[
-                "flex-1 h-8 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
-                hideIsolated
-                  ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
-                  : "bg-sn-black/90 border-white/20 text-white/50",
-              ].join(" ")}
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              className="flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-full border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/70 text-xs transition-colors"
             >
-              {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
+              <SlidersHorizontal size={13} />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span
+                  style={{
+                    background:   "#C6A75E",
+                    color:        "#0B0B0C",
+                    fontSize:     10,
+                    fontWeight:   700,
+                    lineHeight:   1,
+                    padding:      "2px 5px",
+                    borderRadius: 999,
+                    minWidth:     16,
+                    textAlign:    "center",
+                  }}
+                >
+                  {activeFilterCount}
+                </span>
+              )}
+              {filtersOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
             </button>
-            {selectedId !== null && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleFitLineage}
-                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
-                >
-                  Fit lineage
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelected(null)}
-                  className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
-                >
-                  Clear
-                </button>
-              </>
-            )}
+            <div style={{ flex: 1 }} />
+            {/* Fullscreen — always accessible regardless of filter panel state */}
             <button
               type="button"
               onClick={handleFullscreen}
@@ -1661,10 +1647,84 @@ function FamilyTreeInner({
             </button>
           </div>
 
-          {/* Row 4: member count */}
-          <span className="self-start text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
-            {countLabel}
-          </span>
+          {/* ── Animated expandable filter section ── */}
+          <div
+            style={{
+              maxHeight:  filtersOpen ? "250px" : "0px",
+              overflow:   "hidden",
+              transition: "max-height 0.2s ease",
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              {/* Row 1: search (full width) */}
+              {searchInput}
+
+              {/* Row 2: pledge class (full width) */}
+              <div className="flex items-center gap-1">
+                <select
+                  value={selectedPledgeClass ?? ""}
+                  onChange={(e) =>
+                    setSelectedPledgeClass(e.target.value === "" ? null : e.target.value)
+                  }
+                  className="flex-1 h-9 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm px-2 text-sm text-white focus:outline-none focus:border-sn-gold"
+                >
+                  <option value="">All classes</option>
+                  {pledgeClasses.map((cls) => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+                {selectedPledgeClass !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPledgeClass(null)}
+                    className="h-9 w-9 flex items-center justify-center rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Row 3: toggle + optional selection controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setHideIsolated((v) => !v)}
+                  className={[
+                    "flex-1 h-8 px-3 rounded-lg border text-xs transition-colors backdrop-blur-sm",
+                    hideIsolated
+                      ? "bg-sn-gold/20 border-sn-gold/60 text-sn-gold"
+                      : "bg-sn-black/90 border-white/20 text-white/50",
+                  ].join(" ")}
+                >
+                  {hideIsolated ? "Show Unlinked" : "Hide Unlinked"}
+                </button>
+                {selectedId !== null && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleFitLineage}
+                      className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
+                    >
+                      Fit lineage
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(null)}
+                      className="h-8 px-3 rounded-lg border border-white/20 bg-sn-black/90 backdrop-blur-sm text-white/50 text-xs transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Row 4: member count */}
+              <span className="self-start text-white/40 text-xs bg-sn-black/70 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+                {countLabel}
+              </span>
+            </div>
+          </div>
+
         </div>
       )}
 
@@ -1717,7 +1777,7 @@ function FamilyTreeInner({
         <div
           style={{
             position:      "absolute",
-            bottom:        selectedId !== null ? "calc(60% + 16px)" : 80,
+            bottom:        selectedId !== null ? "calc(50vh + 16px)" : 80,
             left:          "50%",
             transform:     "translateX(-50%)",
             background:    "rgba(0,0,0,0.65)",
