@@ -1,6 +1,9 @@
 -- ── Add big_id to search_stubs return ────────────────────────────────────────
 -- Required so the signup form can pre-populate the big brother dropdown when
 -- the user claims a stub that already has a big_id linked.
+-- DROP required because PostgreSQL disallows CREATE OR REPLACE when the
+-- RETURNS TABLE signature changes (adding big_id column).
+DROP FUNCTION IF EXISTS public.search_stubs(text, text, text);
 CREATE OR REPLACE FUNCTION public.search_stubs(
   search_name         text,
   search_pledge_class text DEFAULT NULL,
