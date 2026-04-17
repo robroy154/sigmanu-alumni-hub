@@ -73,7 +73,7 @@ export async function adminUpdateMember(
     home_address?: string | null;
     linkedin_url?: string | null;
     pin_number?: string | null;
-    status?: "pending" | "member" | "admin";
+    status?: "pending" | "member" | "admin" | "stub";
     big_id?: string | null;
   }
 ): Promise<{ error: string } | { success: true }> {
@@ -93,7 +93,7 @@ export async function adminUpdateMember(
   // Validate status if provided
   if (
     data.status !== undefined &&
-    !["pending", "member", "admin"].includes(data.status)
+    !["pending", "member", "admin", "stub"].includes(data.status)
   ) {
     return { error: "Invalid status." };
   }

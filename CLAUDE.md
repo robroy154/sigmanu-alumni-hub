@@ -132,7 +132,7 @@ Key runtime decisions:
 - Stripe webhook idempotency: original payment path adds `.eq("payment_status", "unpaid")` to update filter + checks updatedRows.length before sending confirmation email
 - registration_closes_at enforced server-side in createRegistration and createGuestRegistration (not just client-side UI); check added immediately after registration_open check
 - NEXT_PUBLIC_APP_URL guard: checked at runtime in createRegistration, createGuestRegistration, addGuestsToRegistration — hard error returned if unset (no localhost fallback)
-- supabase.ts members.status: manually patched to "pending"|"member"|"admin"|"stub" after CLI regeneration (CLI only captures pg enum types, not CHECK constraints); AdminMemberEditForm.Member prop accepts all four; form state defaults stub→pending
+- supabase.ts members.status: manually patched to "pending"|"member"|"admin"|"stub" after CLI regeneration (CLI only captures pg enum types, not CHECK constraints); AdminMemberEditForm.Member prop accepts all four; form state preserves stub status as-is (no longer defaults stub→pending); stub option added to status dropdown as first option ("Stub (unclaimed import)"); adminUpdateMember action allows stub in status validation allowlist and type
 - Post-login redirect: `/home` (was `/`)
 - Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)

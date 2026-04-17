@@ -64,8 +64,7 @@ export function AdminMemberEditForm({
     state:        member.state ?? "",
     home_address: member.home_address ?? "",
     linkedin_url: member.linkedin_url ?? "",
-    // Stubs default to "pending" in the form — admin sets final status when editing.
-    status:       (member.status === "stub" ? "pending" : member.status) as "pending" | "member" | "admin",
+    status:       member.status as "pending" | "member" | "admin" | "stub",
     big_id:       member.big_id ?? "",
   });
 
@@ -197,6 +196,7 @@ export function AdminMemberEditForm({
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status" labelClass={labelClass}>
             <select className={selectClass} value={form.status} onChange={set("status")}>
+              <option value="stub"    className="bg-sn-black">Stub (unclaimed import)</option>
               <option value="pending" className="bg-sn-black">Pending</option>
               <option value="member"  className="bg-sn-black">Member</option>
               <option value="admin"   className="bg-sn-black">Admin</option>
