@@ -125,7 +125,7 @@ export function SignupForm() {
       if (data.state          !== undefined && data.state          !== "") update.state          = data.state;
       if (data.zip            !== undefined && data.zip            !== "") update.zip            = data.zip;
       if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
-      if (data.birthday       !== undefined && data.birthday       !== "") update.birthday       = data.birthday;
+      if (data.birthday       !== undefined && data.birthday       !== "" && data.birthday !== null) update.birthday = data.birthday;
       // big_id: use explicit form selection, or fall back to stub's big_id if stub was claimed
       if (bigBrotherIdRef.current !== null) update.big_id = bigBrotherIdRef.current;
       if (Object.keys(update).length > 0) {
