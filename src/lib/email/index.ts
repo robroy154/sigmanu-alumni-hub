@@ -27,11 +27,11 @@ function getResend(): Resend | null {
   return new Resend(key);
 }
 
-const FROM =
-  process.env.RESEND_FROM_EMAIL !== undefined &&
-  process.env.RESEND_FROM_EMAIL !== ""
+const FROM = `Mu Xi Chapter of Sigma Nu Fraternity <${
+  process.env.RESEND_FROM_EMAIL !== undefined && process.env.RESEND_FROM_EMAIL !== ""
     ? process.env.RESEND_FROM_EMAIL
-    : "Sigma Nu Mu Xi <onboarding@resend.dev>";
+    : "onboarding@resend.dev"
+}>`;
 
 // ---------------------------------------------------------------------------
 // Base HTML template

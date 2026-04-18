@@ -136,7 +136,7 @@ Key runtime decisions:
 - Post-login redirect: `/home` (was `/`)
 - Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)
-- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
+- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`); all emails send with display name "Mu Xi Chapter of Sigma Nu Fraternity" — FROM constant wraps env var as `Mu Xi Chapter of Sigma Nu Fraternity <address>`
 - Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true; Google button shows reassurance note below it: "Google sign-in routes through a secure Supabase authentication screen — this is expected and your data is safe." (text-xs text-white/40, Google-only, rendered inside OAuthButtons.tsx map)
 - Favicon: public/favicon.svg — ΣΝ gold (#C6A75E) on black (#0B0B0C) circle, 32×32; referenced in root layout.tsx metadata icons field (icon/shortcut/apple all point to /favicon.svg)
 - Member registration receipt at /my-events/[registrationId]: read-only, server component, regular supabase client + .eq("member_id", user.id) for ownership (RLS defense-in-depth); shows event, registrant, guests, custom field responses, payment breakdown; "View Receipt →" link added to each EventRow in MyEventsClient
