@@ -408,7 +408,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | **6 — Admin panel** | Registration management, member management, account approvals, badge assignment, CSV export |
 | **7 — Directory** | Member directory page (authenticated only), search and filter by name/pledge class |
 | **8 — Family tree** | Big/little relationship management on profiles, React Flow visualization, minimap, search-to-fly |
-| **9 — Email notifications** | Admin announcement sending, registration confirmation emails, big brother update alerts |
+| **9 — Email notifications** | Admin announcement sending, registration confirmation emails, big brother update alerts, little brother claim notifications |
 | **10 — Polish** | Sigma Nu visual theming, mobile cleanup, performance review, final QA |
 
 **Why this order:**
@@ -552,6 +552,7 @@ A chronological record of every locked decision.
 | 57 | `rejectMember` server action uses `auth.admin.deleteUser` identical to `deleteMember` | Rejection is a hard delete — the pending user never completed any paid transactions, so no financial history is lost. If rejected in error they must sign up again. Guards against self-rejection. |
 | 58 | `scripts/cleanup-test-data.ts` is dry-run by default; requires `--execute` flag to delete | Prevents accidental data loss; protected set = admins + members with any paid registration + event with most total registrations |
 | 59 | `sendBigBrotherSetNotification()` in `src/lib/email/index.ts` fires after every successful `updateBigBrother()` call in `src/lib/profile/actions.ts`; sends to all admins; covers both set and clear cases | Admins need visibility into lineage changes for family tree integrity; fire-and-forget via `void import("@/lib/email").then(...)` so email failure never surfaces to the member; current member fetched via session client, big fetched via admin client so stubs are included |
+| 60 | `sendLittleBrotherNotification()` fires after `sendBigBrotherSetNotification()` in `updateBigBrother()`; sent directly to the big's email; skipped when `bigId` is null (clear) or big's status is `stub` | Big brothers who are stubs have no verified email address to notify; the email address is passed into the function directly so no admin client is needed inside it; status reused from the existing bigMember fetch (select extended to include `status`); email fetched via a separate single-column admin query |
 
 ---
 

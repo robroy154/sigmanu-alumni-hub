@@ -153,18 +153,20 @@ export async function updateBigBrother(
     .eq("id", user.id)
     .single();
 
-  let bigFirstName: string | null = null;
-  let bigLastName:  string | null = null;
+  let bigFirstName:    string | null = null;
+  let bigLastName:     string | null = null;
+  let bigMemberStatus: string | null = null;
 
   if (bigId !== null) {
     const adminDb = createAdminClient();
     const { data: bigMember } = await adminDb
       .from("members")
-      .select("first_name, last_name")
+      .select("first_name, last_name, status")
       .eq("id", bigId)
       .single();
-    bigFirstName = bigMember?.first_name ?? null;
-    bigLastName  = bigMember?.last_name  ?? null;
+    bigFirstName      = bigMember?.first_name ?? null;
+    bigLastName       = bigMember?.last_name  ?? null;
+    bigMemberStatus   = bigMember?.status     ?? null;
   }
 
   if (currentMember !== null) {
@@ -177,6 +179,32 @@ export async function updateBigBrother(
         bigLastName,
       })
     );
+  }
+
+  // Notify the big directly — only when setting (not clearing) and only for active members
+  if (
+    bigId !== null &&
+    (bigMemberStatus === "member" || bigMemberStatus === "admin") &&
+    bigFirstName !== null &&
+    currentMember !== null
+  ) {
+    const adminDb = createAdminClient();
+    const { data: bigEmailRow } = await adminDb
+      .from("members")
+      .select("email")
+      .eq("id", bigId)
+      .single();
+
+    if (bigEmailRow !== null) {
+      void import("@/lib/email").then(({ sendLittleBrotherNotification }) =>
+        sendLittleBrotherNotification({
+          to:              bigEmailRow.email,
+          bigFirstName,
+          littleFirstName: currentMember.first_name,
+          littleLastName:  currentMember.last_name,
+        })
+      );
+    }
   }
 
   return { success: true };

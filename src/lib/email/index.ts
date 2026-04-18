@@ -663,3 +663,51 @@ export async function sendBigBrotherSetNotification({
     console.error("[email] sendBigBrotherSetNotification threw:", err);
   }
 }
+
+// ---------------------------------------------------------------------------
+// 10. Little brother notification — sent to the big when a member claims them
+// ---------------------------------------------------------------------------
+
+export async function sendLittleBrotherNotification({
+  to,
+  bigFirstName,
+  littleFirstName,
+  littleLastName,
+}: {
+  to:              string;
+  bigFirstName:    string;
+  littleFirstName: string;
+  littleLastName:  string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">You have a new Little Brother!</h1>
+    <p style="${p}">
+      Hi ${bigFirstName},
+      <strong style="color:#ffffff;">${littleFirstName} ${littleLastName}</strong>
+      has added you as their Big Brother in the Mu Xi Alumni Hub.
+    </p>
+    <p style="${p}">
+      You can see your full lineage on the family tree.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/family-tree" style="${btn}">View Family Tree →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to,
+      subject: `${littleFirstName} ${littleLastName} claimed you as their Big Brother`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendLittleBrotherNotification failed:", error);
+  } catch (err) {
+    console.error("[email] sendLittleBrotherNotification threw:", err);
+  }
+}
