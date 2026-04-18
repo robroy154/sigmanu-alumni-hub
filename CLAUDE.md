@@ -196,6 +196,7 @@ Key runtime decisions:
 - rejectMember action: guards with requireAdmin(); blocks self-rejection; calls adminDb.auth.admin.deleteUser() same as deleteMember — hard deletes auth user and cascades to public.members; RejectMemberButton shown only for pending rows in admin members list alongside ApproveButton
 - NEXT_PUBLIC_HERO_IMAGE_URL: optional env var for landing page hero background image; if unset, solid sn-black background renders instead; no broken layout when absent
 - checkReferralToken: server action called in JoinForm before supabase.auth.signUp() — prevents dangling auth.users rows on expired tokens
+- completeReferral fixed: removed incorrect sendWelcomeEmail call (approval email must only fire on admin approval, not on referral signup); replaced dynamic import fire-and-forget with static import + awaited sendReferralCompleted wrapped in try/catch
 - deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column
 - Announcement notifications: notify_members boolean on announcements; createAnnouncement fires resend.batch.send() to all member+admin emails, chunked at 100

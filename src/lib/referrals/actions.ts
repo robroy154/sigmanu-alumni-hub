@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendReferralCompleted } from "@/lib/email";
 
 // ── Lightweight token check — called before signUp() in JoinForm ──────────────
 // Returns the invitee's name and email if the token is valid and pending,
@@ -124,21 +125,19 @@ export async function completeReferral(
     .eq("id", referral.referred_by)
     .single();
 
-  // Fire-and-forget emails.
-  void import("@/lib/email").then(({ sendWelcomeEmail, sendReferralCompleted }) => {
-    // Welcome email to new member (same as admin-approval welcome).
-    void sendWelcomeEmail({ to: user.email ?? "", firstName: referral.first_name });
-
-    // Notify referrer.
+  // Notify referrer that their invitee signed up.
+  try {
     if (referrer !== null) {
-      void sendReferralCompleted({
+      await sendReferralCompleted({
         to:                referrer.email,
         referrerFirstName: referrer.first_name,
         inviteeFirstName:  referral.first_name,
         inviteeLastName:   referral.last_name,
       });
     }
-  });
+  } catch (emailError) {
+    console.error("[completeReferral] email send failed:", emailError);
+  }
 
   return { success: true };
 }
