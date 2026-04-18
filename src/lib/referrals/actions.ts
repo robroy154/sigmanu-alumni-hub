@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendReferralCompleted } from "@/lib/email";
+import { sendReferralCompleted, sendReferralInvite } from "@/lib/email";
 
 // ── Lightweight token check — called before signUp() in JoinForm ──────────────
 // Returns the invitee's name and email if the token is valid and pending,
@@ -140,4 +140,41 @@ export async function completeReferral(
   }
 
   return { success: true };
+}
+
+export async function resendReferralInvite(
+  referralId: string,
+): Promise<{ success: true } | { error: string }> {
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("id, email, token, status, expires_at, first_name, referred_by")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+  if (referral.status !== "pending") return { error: "Referral is no longer pending." };
+  if (new Date(referral.expires_at) < new Date()) return { error: "Referral has expired." };
+
+  const { data: referrer } = await admin
+    .from("members")
+    .select("first_name, last_name")
+    .eq("id", referral.referred_by)
+    .maybeSingle();
+
+  try {
+    await sendReferralInvite({
+      to:               referral.email,
+      referrerFullName: referrer
+        ? `${referrer.first_name} ${referrer.last_name}`
+        : "A brother",
+      inviteeFirstName: referral.first_name,
+      token:            referral.token,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("[resendReferralInvite] failed:", error);
+    return { error: "Failed to send email." };
+  }
 }
