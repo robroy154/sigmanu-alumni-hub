@@ -1,7 +1,9 @@
 -- Phase 21 fix: handle_new_user trigger
 -- Uses UPDATE stub row in place instead of INSERT + DELETE
 -- Eliminates unique constraint violations on pin_number and other constrained columns
--- Empty string birthday guard added to SignupForm.tsx separately
+-- array_agg pattern: stores little brother IDs, nulls their big_id before the PK update,
+-- then re-points them to the new real member id — safely handles FK constraints
+-- regardless of little brother status mix (pending/member/admin/stub).
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
@@ -9,6 +11,7 @@ AS $$
 DECLARE
   stub_id uuid;
   stub_row public.members%ROWTYPE;
+  little_ids uuid[];
 BEGIN
   BEGIN
     stub_id := (new.raw_user_meta_data->>'stub_id')::uuid;
@@ -18,6 +21,17 @@ BEGIN
       WHERE id = stub_id AND status = 'stub';
 
       IF FOUND THEN
+        -- Store IDs of all littles pointing to this stub
+        SELECT array_agg(id) INTO little_ids
+        FROM public.members
+        WHERE big_id = stub_id;
+
+        -- NULL out their big_id to release FK constraint
+        UPDATE public.members
+        SET big_id = NULL
+        WHERE big_id = stub_id;
+
+        -- Update stub row in place with new auth user's id
         UPDATE public.members SET
           id         = new.id,
           email      = new.email,
@@ -29,6 +43,13 @@ BEGIN
           updated_at = now()
         WHERE id = stub_id;
 
+        -- Re-point all stored littles to the new real member id
+        IF little_ids IS NOT NULL THEN
+          UPDATE public.members
+          SET big_id = new.id
+          WHERE id = ANY(little_ids);
+        END IF;
+
         RETURN new;
       END IF;
     END IF;
@@ -36,6 +57,7 @@ BEGIN
     RAISE WARNING 'handle_new_user stub claim failed: % %', SQLERRM, SQLSTATE;
   END;
 
+  -- Normal signup path
   INSERT INTO public.members (id, email, first_name, last_name, status)
   VALUES (
     new.id,
