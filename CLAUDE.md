@@ -158,6 +158,7 @@ Key runtime decisions:
 - Google Places API key: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY — optional; degrades to plain text input without it
 - Social links: NEXT_PUBLIC_ALUMNI_FB_URL and NEXT_PUBLIC_ACTIVE_CHAPTER_FB_URL — optional; links hidden if unset on /home quick links
 - Referral tokens: one-time UUIDs, 7-day expiry, stored in referrals table; /join?token= is public
+- Referral emails: api/referrals/route.ts uses static imports for sendReferralInvite + sendReferralSentConfirmation (was dynamic import with voided calls — silent failures); both are now awaited with try/catch logging errors to console
 - referred_by on members: admin-only, SELECT revoked from authenticated role; only service role (admin client) can read it
 - CHAPTER_CONTACT_EMAIL env var: shown on expired/invalid invite error pages; hidden if unset
 - Token expiry maintenance: pg_cron nightly job — SQL in migration file comments, manual setup via Supabase dashboard
