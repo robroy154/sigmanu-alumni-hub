@@ -578,3 +578,88 @@ export async function sendReferralCompleted({
     console.error("[email] sendReferralCompleted threw:", err);
   }
 }
+
+// ---------------------------------------------------------------------------
+// 9. Big brother updated — sent to all admins when a member sets/clears their big
+// ---------------------------------------------------------------------------
+
+export async function sendBigBrotherSetNotification({
+  memberFirstName,
+  memberLastName,
+  memberEmail,
+  bigFirstName,
+  bigLastName,
+}: {
+  memberFirstName: string;
+  memberLastName:  string;
+  memberEmail:     string;
+  bigFirstName:    string | null;
+  bigLastName:     string | null;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminDb = createAdminClient();
+
+  const { data: admins } = await adminDb
+    .from("members")
+    .select("email")
+    .eq("status", "admin");
+
+  const adminEmails = (admins ?? []).map((a) => a.email);
+  if (adminEmails.length === 0) {
+    console.warn("[email] sendBigBrotherSetNotification: no admin accounts found to notify.");
+    return;
+  }
+
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const fullName  = `${memberFirstName} ${memberLastName}`;
+  const bigLine   =
+    bigFirstName !== null && bigLastName !== null
+      ? `${bigFirstName} ${bigLastName}`
+      : "Cleared (relationship removed)";
+  const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  const body = `
+    <h1 style="${h1}">Big brother relationship updated</h1>
+    <p style="${p}">
+      A member has updated their big brother relationship.
+    </p>
+    <hr style="${divider}">
+    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;">
+      <tr>
+        <td style="${label}">Member</td>
+        <td style="${value}">${fullName}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Email</td>
+        <td style="${value}">${memberEmail}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Big brother</td>
+        <td style="${value}">${bigLine}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Updated</td>
+        <td style="${value}">${timestamp} ET</td>
+      </tr>
+    </table>
+    <hr style="${divider}">
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/admin/members" style="${btn}">Review in Admin Panel →</a>
+    </p>
+  `;
+
+  try {
+    const { error } = await resend.emails.send({
+      from:    FROM,
+      to:      adminEmails,
+      subject: `Big brother updated — ${fullName}`,
+      html:    baseTemplate(body),
+    });
+    if (error !== null) console.error("[email] sendBigBrotherSetNotification failed:", error);
+  } catch (err) {
+    console.error("[email] sendBigBrotherSetNotification threw:", err);
+  }
+}

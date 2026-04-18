@@ -145,6 +145,40 @@ export async function updateBigBrother(
 
   revalidatePath("/profile");
   revalidatePath("/profile/edit");
+
+  // Fire-and-forget admin notification
+  const { data: currentMember } = await supabase
+    .from("members")
+    .select("first_name, last_name, email")
+    .eq("id", user.id)
+    .single();
+
+  let bigFirstName: string | null = null;
+  let bigLastName:  string | null = null;
+
+  if (bigId !== null) {
+    const adminDb = createAdminClient();
+    const { data: bigMember } = await adminDb
+      .from("members")
+      .select("first_name, last_name")
+      .eq("id", bigId)
+      .single();
+    bigFirstName = bigMember?.first_name ?? null;
+    bigLastName  = bigMember?.last_name  ?? null;
+  }
+
+  if (currentMember !== null) {
+    void import("@/lib/email").then(({ sendBigBrotherSetNotification }) =>
+      sendBigBrotherSetNotification({
+        memberFirstName: currentMember.first_name,
+        memberLastName:  currentMember.last_name,
+        memberEmail:     currentMember.email,
+        bigFirstName,
+        bigLastName,
+      })
+    );
+  }
+
   return { success: true };
 }
 
