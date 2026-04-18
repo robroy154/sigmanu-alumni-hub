@@ -408,7 +408,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | **6 — Admin panel** | Registration management, member management, account approvals, badge assignment, CSV export |
 | **7 — Directory** | Member directory page (authenticated only), search and filter by name/pledge class |
 | **8 — Family tree** | Big/little relationship management on profiles, React Flow visualization, minimap, search-to-fly |
-| **9 — Email notifications** | Admin announcement sending, registration confirmation emails |
+| **9 — Email notifications** | Admin announcement sending, registration confirmation emails, big brother update alerts, little brother claim notifications |
 | **10 — Polish** | Sigma Nu visual theming, mobile cleanup, performance review, final QA |
 
 **Why this order:**
@@ -429,7 +429,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | File storage | Supabase Storage — 1GB free, sufficient for profile photos at this scale |
 | Domain | Purchase separately (Namecheap, Porkbun, etc.) — connect to Vercel via DNS settings |
 | SSL | Automatic via Vercel — no configuration required |
-| Email (transactional) | Resend or Postmark — decide in Phase 9, both have free tiers |
+| Email (transactional) | Resend — integrated via `src/lib/email/index.ts`; `RESEND_API_KEY` required, `RESEND_FROM_EMAIL` optional |
 | Payments | Stripe — no hosting, SaaS, pay per transaction only |
 
 ### 8.2 Monthly Cost Estimate at Launch
@@ -551,6 +551,8 @@ A chronological record of every locked decision.
 | 56 | Landing page (`/`) has three sections: hero, upcoming events, platform features | Hero shows featured event card (next published by date) and optional background image via `NEXT_PUBLIC_HERO_IMAGE_URL`; upcoming events section lists all published events where `event_date >= now`; all published events are treated as publicly visible until an `event_type` column is added in a future phase to distinguish internal vs external events |
 | 57 | `rejectMember` server action uses `auth.admin.deleteUser` identical to `deleteMember` | Rejection is a hard delete — the pending user never completed any paid transactions, so no financial history is lost. If rejected in error they must sign up again. Guards against self-rejection. |
 | 58 | `scripts/cleanup-test-data.ts` is dry-run by default; requires `--execute` flag to delete | Prevents accidental data loss; protected set = admins + members with any paid registration + event with most total registrations |
+| 59 | `sendBigBrotherSetNotification()` in `src/lib/email/index.ts` fires after every successful `updateBigBrother()` call in `src/lib/profile/actions.ts`; sends to all admins; covers both set and clear cases | Admins need visibility into lineage changes for family tree integrity; fire-and-forget via `void import("@/lib/email").then(...)` so email failure never surfaces to the member; current member fetched via session client, big fetched via admin client so stubs are included |
+| 60 | `sendLittleBrotherNotification()` fires after `sendBigBrotherSetNotification()` in `updateBigBrother()`; sent directly to the big's email; skipped when `bigId` is null (clear) or big's status is `stub` | Big brothers who are stubs have no verified email address to notify; the email address is passed into the function directly so no admin client is needed inside it; status reused from the existing bigMember fetch (select extended to include `status`); email fetched via a separate single-column admin query |
 
 ---
 
