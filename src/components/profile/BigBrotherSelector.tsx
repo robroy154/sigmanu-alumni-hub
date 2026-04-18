@@ -11,12 +11,21 @@ interface Member {
   first_name: string;
   last_name: string;
   pledge_class: string | null;
+  pin_number:   string | null;
+  status:       string;
 }
 
 interface BigBrotherSelectorProps {
   currentBigId:   string | null;
   currentBigName: string | null;
   allMembers:     Member[];
+}
+
+function formatBigLabel(m: Member): string {
+  const pin = m.pin_number !== null ? ` — ΜΞ ${String(m.pin_number).padStart(3, "0")}` : "";
+  const pc  = m.pledge_class !== null ? ` · ${m.pledge_class}` : "";
+  const tag = m.status === "stub" ? " (unclaimed)" : "";
+  return `${m.first_name} ${m.last_name}${pin}${pc}${tag}`;
 }
 
 export function BigBrotherSelector({
@@ -85,8 +94,7 @@ export function BigBrotherSelector({
         </option>
         {allMembers.map((m) => (
           <option key={m.id} value={m.id} className="bg-sn-black">
-            {m.first_name} {m.last_name}
-            {m.pledge_class !== null ? ` (${m.pledge_class})` : ""}
+            {formatBigLabel(m)}
           </option>
         ))}
       </select>

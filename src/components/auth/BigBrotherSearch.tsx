@@ -18,8 +18,9 @@ function formatDisplay(c: BigBrotherCandidate): string {
   const pin = c.pinNumber !== null
     ? ` — ΜΞ ${String(c.pinNumber).padStart(3, "0")}`
     : "";
-  const pc = c.pledgeClass !== null ? ` · ${c.pledgeClass}` : "";
-  return `${c.firstName} ${c.lastName}${pin}${pc}`;
+  const pc  = c.pledgeClass !== null ? ` · ${c.pledgeClass}` : "";
+  const tag = c.status === "stub" ? " (unclaimed)" : "";
+  return `${c.firstName} ${c.lastName}${pin}${pc}${tag}`;
 }
 
 export function BigBrotherSearch({

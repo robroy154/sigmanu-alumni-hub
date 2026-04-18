@@ -34,7 +34,7 @@ interface Member {
 interface AdminMemberEditFormProps {
   member: Member;
   badges: Badge[];
-  allMembers: { id: string; first_name: string; last_name: string }[];
+  allMembers: { id: string; first_name: string; last_name: string; pin_number: string | null; pledge_class: string | null; status: string }[];
   resolvedBigName?: string | null | undefined;
   referrerName?: string | null;
   referrerId?:   string | null;
@@ -210,7 +210,7 @@ export function AdminMemberEditForm({
                 .filter((m) => m.id !== member.id)
                 .map((m) => (
                   <option key={m.id} value={m.id} className="bg-sn-black">
-                    {m.first_name} {m.last_name}
+                    {formatBigLabel(m)}
                   </option>
                 ))}
             </select>
@@ -310,6 +310,13 @@ export function AdminMemberEditForm({
       </section>
     </div>
   );
+}
+
+function formatBigLabel(m: { first_name: string; last_name: string; pin_number: string | null; pledge_class: string | null; status: string }): string {
+  const pin = m.pin_number !== null ? ` — ΜΞ ${String(m.pin_number).padStart(3, "0")}` : "";
+  const pc  = m.pledge_class !== null ? ` · ${m.pledge_class}` : "";
+  const tag = m.status === "stub" ? " (unclaimed)" : "";
+  return `${m.first_name} ${m.last_name}${pin}${pc}${tag}`;
 }
 
 function Field({

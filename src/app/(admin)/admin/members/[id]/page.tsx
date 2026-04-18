@@ -41,8 +41,8 @@ export default async function AdminMemberDetailPage({ params }: Props) {
         .eq("member_id", id),
       admin
         .from("members")
-        .select("id, first_name, last_name")
-        .in("status", ["member", "admin"])
+        .select("id, first_name, last_name, pin_number, pledge_class, status")
+        .in("status", ["member", "admin", "stub"])
         .order("last_name"),
     ]);
 
