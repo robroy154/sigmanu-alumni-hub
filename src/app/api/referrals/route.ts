@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
   const referrerName = `${caller.first_name} ${caller.last_name}`;
 
   void import("@/lib/email").then(({ sendReferralInvite, sendReferralSentConfirmation }) => {
+    console.log('[referrals] about to send invite email to:', email);
     void sendReferralInvite({
       to:               email,
       referrerFullName: referrerName,
