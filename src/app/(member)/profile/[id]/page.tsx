@@ -236,7 +236,7 @@ export default async function MemberProfilePage({ params }: Props) {
             />
           )}
           <Row label="Badge number" value={pinDisplay} />
-          {showAddress && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
+          {showAddress && isAdmin && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-sn-gray-text text-sm">Address</dt>
               <dd className="text-sn-off-white text-sm">
@@ -252,6 +252,12 @@ export default async function MemberProfilePage({ params }: Props) {
                 )}
               </dd>
             </div>
+          )}
+          {showAddress && !isAdmin && (member.city !== null || member.state !== null) && (
+            <Row
+              label="Location"
+              value={[member.city, member.state].filter(Boolean).join(", ")}
+            />
           )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
