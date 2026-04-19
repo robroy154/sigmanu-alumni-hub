@@ -136,7 +136,7 @@ Key runtime decisions:
 - Post-login redirect: `/home` (was `/`)
 - Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)
-- Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`); all emails send with display name "Mu Xi Chapter of Sigma Nu Fraternity" — FROM constant wraps env var as `Mu Xi Chapter of Sigma Nu Fraternity <address>`
+- Email: BREVO_API_KEY required (from app.brevo.com); BREVO_FROM_EMAIL required (verified sender in Brevo account); all emails send with display name "Mu Xi Chapter of Sigma Nu Fraternity" via SENDER_NAME/SENDER_EMAIL constants; Brevo v5 SDK (@getbrevo/brevo); Resend removed in Phase 23
 - Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true; Google button shows reassurance note below it: "Google sign-in routes through a secure Supabase authentication screen — this is expected and your data is safe." (text-xs text-white/40, Google-only, rendered inside OAuthButtons.tsx map)
 - Favicon: public/favicon.svg — ΣΝ gold (#C6A75E) on black (#0B0B0C) circle, 32×32; referenced in root layout.tsx metadata icons field (icon/shortcut/apple all point to /favicon.svg)
 - Member registration receipt at /my-events/[registrationId]: read-only, server component, regular supabase client + .eq("member_id", user.id) for ownership (RLS defense-in-depth); shows event, registrant, guests, custom field responses, payment breakdown; "View Receipt →" link added to each EventRow in MyEventsClient
@@ -201,8 +201,8 @@ Key runtime decisions:
 - deleteMember: calls adminDb.auth.admin.deleteUser(memberId) — cascades to public.members via FK; guards against self-deletion; DeleteMemberButton shown in danger zone on /admin/members/[id]
 - deleteReferral: blocks completed referrals (membership history); hard deletes pending/expired; DeleteReferralButton in /admin/referrals actions column
 - resendReferralInvite: server action in src/lib/referrals/actions.ts; fetches referral, validates still pending + not expired, re-sends invite email with existing token (no new record/token); ResendReferralButton client component in /admin/referrals row — only shown for pending non-expired rows; shows inline "Sent" / error message for 3s then resets
-- Announcement notifications: notify_members boolean on announcements; createAnnouncement fires resend.batch.send() to all member+admin emails, chunked at 100
-- Production setup reference: docs/PRODUCTION_SETUP.md — env vars, Supabase SMTP, Stripe webhook, Resend domain, Google OAuth, pg_cron, Vercel, pre-launch checklist
+- Announcement notifications: notify_members boolean on announcements; createAnnouncement fires sendAnnouncementNotification to all member+admin emails, chunked at 100 with individual Brevo sendTransacEmail calls per recipient
+- Production setup reference: docs/PRODUCTION_SETUP.md — env vars, Supabase SMTP, Stripe webhook, Brevo sender verification, Google OAuth, pg_cron, Vercel, pre-launch checklist
 - Slug routing: eventLookupFilter() in src/lib/events/slug.ts; UUID regex check → query by "id", otherwise query by "slug"; all [id] route files use explicit branching (not union column) for Supabase type safety: `filter.column === "id" ? .eq("id", ...) : .eq("slug", ...)`; eventHref() returns `/events/[slug ?? id]`
 - Event slugs: auto-generated from title on create (titleToSlug helper), editable in EventForm with uniqueness check via checkSlugAvailable server action; existing events backfilled by migration
 - Early bird pricing: applied_price resolved server-side in createRegistration and createGuestRegistration at checkout time; stored on registration row; Stripe unit_amount uses applied_price not ticket_price; webhook reads applied_price (falls back to ticket_price) to compute amount_paid
