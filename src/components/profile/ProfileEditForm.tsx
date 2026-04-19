@@ -200,7 +200,7 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
         />
         <PrivacyToggle
           id="show_address"
-          label="Show my address to other members"
+          label="Show my location to other members"
           helperText="Only your city and state are visible to other members."
           checked={showAddress}
           onChange={(v) => setValue("show_address", v, { shouldDirty: true })}
