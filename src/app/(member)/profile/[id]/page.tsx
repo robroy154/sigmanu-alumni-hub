@@ -227,7 +227,12 @@ export default async function MemberProfilePage({ params }: Props) {
           {showBirthday && member.birthday !== null && member.birthday !== undefined && (
             <Row
               label="Birthday"
-              value={new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              value={new Date(member.birthday + "T00:00:00").toLocaleDateString(
+                "en-US",
+                isAdmin
+                  ? { month: "long", day: "numeric", year: "numeric" }
+                  : { month: "long", day: "numeric" },
+              )}
             />
           )}
           <Row label="Badge number" value={pinDisplay} />
