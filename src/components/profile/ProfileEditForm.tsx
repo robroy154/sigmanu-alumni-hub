@@ -113,6 +113,7 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
       {/* ── Address ──────────────────────────────────────────────── */}
       <div className="space-y-3">
         <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">Address {optLabel}</p>
+        <p className="text-white/40 text-xs">Members will only see your city and state.</p>
 
         {/* Street address with Google Places autocomplete */}
         <div className="space-y-1.5">
