@@ -134,7 +134,7 @@ Key runtime decisions:
 - NEXT_PUBLIC_APP_URL guard: checked at runtime in createRegistration, createGuestRegistration, addGuestsToRegistration — hard error returned if unset (no localhost fallback)
 - supabase.ts members.status: manually patched to "pending"|"member"|"admin"|"stub" after CLI regeneration (CLI only captures pg enum types, not CHECK constraints); AdminMemberEditForm.Member prop accepts all four; form state preserves stub status as-is (no longer defaults stub→pending); stub option added to status dropdown as first option ("Stub (unclaimed import)"); adminUpdateMember action allows stub in status validation allowlist and type
 - Post-login redirect: `/home` (was `/`)
-- Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text)
+- Birthdays this month on /home: fetched via admin client (show_birthday=true), month-filtered client-side in JS (birthday stored YYYY-MM-DD text), then sorted ascending by day within the month (numeric parseInt, so day 9 sorts before day 10)
 - react-day-picker v9 used in EventsCalendar; custom inline styles for dark theme (CSS vars override)
 - Email: RESEND_API_KEY required; RESEND_FROM_EMAIL optional (defaults to `onboarding@resend.dev`)
 - Google OAuth: on by default; Facebook/Apple need NEXT_PUBLIC_*_OAUTH_ENABLED=true; Google button shows reassurance note below it: "Google sign-in routes through a secure Supabase authentication screen — this is expected and your data is safe." (text-xs text-white/40, Google-only, rendered inside OAuthButtons.tsx map)

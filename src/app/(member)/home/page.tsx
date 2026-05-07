@@ -85,6 +85,10 @@ export default async function HomePage() {
     const monthPart = parts[1];
     if (parts.length < 2 || monthPart === undefined) return false;
     return parseInt(monthPart, 10) === nowMonth;
+  }).sort((a, b) => {
+    const dayA = parseInt((a.birthday ?? "").split("-")[2] ?? "0", 10);
+    const dayB = parseInt((b.birthday ?? "").split("-")[2] ?? "0", 10);
+    return dayA - dayB;
   });
 
   const alumnisFbUrl  = process.env.NEXT_PUBLIC_ALUMNI_FB_URL ?? "";
