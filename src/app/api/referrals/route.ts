@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendReferralInvite, sendReferralSentConfirmation } from "@/lib/email";
 
 const BodySchema = z.object({
   first_name: z.string().min(1, "First name is required"),
@@ -98,27 +99,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── Send emails (fire-and-forget) ────────────────────────────────────────────
-  const appUrl       = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // ── Send emails ─────────────────────────────────────────────────────────────
   const referrerName = `${caller.first_name} ${caller.last_name}`;
 
-  void import("@/lib/email").then(({ sendReferralInvite, sendReferralSentConfirmation }) => {
-    void sendReferralInvite({
+  try {
+    await sendReferralInvite({
       to:               email,
       referrerFullName: referrerName,
       inviteeFirstName: first_name,
       token:            referral.token,
     });
-    void sendReferralSentConfirmation({
+    await sendReferralSentConfirmation({
       to:                caller.email,
       referrerFirstName: caller.first_name,
       inviteeFirstName:  first_name,
       inviteeLastName:   last_name,
     });
-  });
-
-  // Silence unused variable warning — appUrl used in email module
-  void appUrl;
+  } catch (emailError) {
+    console.error("[referrals] email send failed:", emailError);
+  }
 
   return NextResponse.json({
     success:   true,

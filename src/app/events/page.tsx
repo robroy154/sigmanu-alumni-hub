@@ -131,7 +131,7 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
   const eventDate = new Date(event.event_date);
 
   return (
-    <div className={`bg-sn-surface rounded-sm border-t-2 ${past ? "border-t-sn-gray-dark" : "border-t-sn-gold"} px-5 py-5`}>
+    <Link href={eventHref(event)} className={`block bg-sn-surface rounded-sm border-t-2 ${past ? "border-t-sn-gray-dark hover:border-t-sn-gray-medium" : "border-t-sn-gold hover:bg-sn-surface/80"} px-5 py-5 transition-colors`}>
       <div className="flex items-start gap-4">
         {/* Date badge */}
         <div className={`shrink-0 text-center rounded-sm px-3 py-2 min-w-[52px] border ${
@@ -187,14 +187,12 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
         {/* CTA */}
         {!past && (
           <div className="shrink-0">
-            <Link href={eventHref(event)}>
-              <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold whitespace-nowrap">
-                {isLoggedIn ? "Register" : "Learn more"}
-              </Button>
-            </Link>
+            <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold whitespace-nowrap">
+              {isLoggedIn ? "Register" : "Learn more"}
+            </Button>
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

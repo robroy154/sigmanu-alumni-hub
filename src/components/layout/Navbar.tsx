@@ -9,6 +9,7 @@ interface NavbarProps {
   firstName: string | null;
   lastName:  string | null;
   isAdmin:   boolean;
+  photoUrl:  string | null;
 }
 
 const BASE_LINKS = [
@@ -18,7 +19,7 @@ const BASE_LINKS = [
   { href: "/my-events",   label: "My Events" },
 ];
 
-export function Navbar({ firstName, lastName, isAdmin }: NavbarProps) {
+export function Navbar({ firstName, lastName, isAdmin, photoUrl }: NavbarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen]   = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -102,9 +103,11 @@ export function Navbar({ firstName, lastName, isAdmin }: NavbarProps) {
               onClick={() => setDropdownOpen((v) => !v)}
               aria-label="Account menu"
               aria-expanded={dropdownOpen}
-              className="w-8 h-8 rounded-full bg-sn-gold text-sn-black font-bold text-xs flex items-center justify-center hover:bg-sn-gold-light transition-colors select-none focus-visible:ring-2 focus-visible:ring-sn-gold focus-visible:ring-offset-2 focus-visible:ring-offset-sn-black focus-visible:outline-none"
+              className="w-8 h-8 rounded-full overflow-hidden bg-sn-gold text-sn-black font-bold text-xs flex items-center justify-center hover:opacity-90 transition-opacity select-none focus-visible:ring-2 focus-visible:ring-sn-gold focus-visible:ring-offset-2 focus-visible:ring-offset-sn-black focus-visible:outline-none"
             >
-              {initials}
+              {photoUrl !== null
+                ? <img src={photoUrl} alt={initials} className="w-full h-full object-cover" />
+                : initials}
             </button>
 
             {dropdownOpen && (
@@ -178,8 +181,10 @@ export function Navbar({ firstName, lastName, isAdmin }: NavbarProps) {
               href="/profile"
               className="flex items-center gap-3 group"
             >
-              <div className="w-8 h-8 rounded-full bg-sn-gold text-sn-black font-bold text-xs flex items-center justify-center select-none group-hover:bg-sn-gold-light transition-colors">
-                {initials}
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-sn-gold text-sn-black font-bold text-xs flex items-center justify-center select-none group-hover:opacity-90 transition-opacity">
+                {photoUrl !== null
+                  ? <img src={photoUrl} alt={initials} className="w-full h-full object-cover" />
+                  : initials}
               </div>
               <span className="text-sm text-sn-gray-text group-hover:text-sn-off-white transition-colors">
                 My Profile
