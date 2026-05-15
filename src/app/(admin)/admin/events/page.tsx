@@ -11,10 +11,30 @@ export const metadata: Metadata = { title: "Admin · Events" };
 
 export default async function AdminEventsPage() {
   const admin = createAdminClient();
-  const { data: events } = await admin
-    .from("events")
-    .select("id, title, slug, event_date, location, ticket_price, capacity, status, event_type, capacity_mode")
-    .order("event_date", { ascending: false });
+  const [{ data: events }, { data: regStats }] = await Promise.all([
+    admin
+      .from("events")
+      .select("id, title, slug, event_date, location, ticket_price, capacity, status, registration_open, event_type, capacity_mode")
+      .order("event_date", { ascending: false }),
+    admin
+      .from("registrations")
+      .select("event_id, payment_status, amount_paid, applied_price, guest_count")
+      .eq("payment_status", "paid"),
+  ]);
+
+  // Aggregate registration counts and revenue per event
+  type EventStat = { count: number; revenue: number };
+  const eventStatMap = new Map<string, EventStat>();
+  for (const r of regStats ?? []) {
+    const current = eventStatMap.get(r.event_id) ?? { count: 0, revenue: 0 };
+    const amount =
+      r.amount_paid !== null && r.amount_paid !== undefined
+        ? Number(r.amount_paid)
+        : (r.applied_price !== null && r.applied_price !== undefined
+            ? Number(r.applied_price)
+            : 0) * (1 + (r.guest_count ?? 0));
+    eventStatMap.set(r.event_id, { count: current.count + 1, revenue: current.revenue + amount });
+  }
 
   return (
     <div className="space-y-8">
@@ -34,9 +54,10 @@ export default async function AdminEventsPage() {
             <thead>
               <tr className="border-b border-white/10">
                 <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Event</th>
-                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Date</th>
-                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Price</th>
-                <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Capacity</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Date</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden lg:table-cell">Price</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden xl:table-cell">Registered</th>
+                <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden xl:table-cell">Revenue</th>
                 <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -48,6 +69,7 @@ export default async function AdminEventsPage() {
                   day:   "numeric",
                   year:  "numeric",
                 });
+                const stat = eventStatMap.get(event.id);
                 return (
                   <tr key={event.id} className="border-b border-white/5 last:border-0">
                     <td className="px-4 py-3">
@@ -56,20 +78,44 @@ export default async function AdminEventsPage() {
                         <p className="text-sn-gray-medium text-xs mt-0.5">{event.location}</p>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sn-gray-text">{date}</td>
-                    <td className="px-4 py-3 text-sn-gray-text">
+                    <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">{date}</td>
+                    <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">
                       {event.ticket_price > 0
                         ? `$${Number(event.ticket_price).toFixed(2)}`
                         : "Free"}
                     </td>
-                    <td className="px-4 py-3 text-sn-gray-text">
-                      {event.capacity !== null ? event.capacity : "—"}
+                    <td className="px-4 py-3 text-sn-gray-text hidden xl:table-cell">
+                      {stat !== undefined ? stat.count : 0}
+                    </td>
+                    <td className="px-4 py-3 text-sn-gray-text hidden xl:table-cell">
+                      {stat !== undefined && stat.revenue > 0
+                        ? `$${stat.revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={event.status} />
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <StatusBadge status={event.status} />
+                        {event.registration_open ? (
+                          <span className="text-xs rounded-full bg-green-500/15 text-green-400 border border-green-500/30 px-2 py-0.5">
+                            Open
+                          </span>
+                        ) : (
+                          <span className="text-xs rounded-full bg-white/5 text-white/40 border border-white/10 px-2 py-0.5">
+                            Closed
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2 justify-end">
+                        <Link
+                          href={`/events/${event.slug ?? event.id}`}
+                          target="_blank"
+                          className="text-white/40 hover:text-white text-xs transition-colors"
+                          title="View public page"
+                        >
+                          ↗
+                        </Link>
                         <Link href={`/admin/events/${event.id}/edit`}>
                           <Button
                             size="sm"

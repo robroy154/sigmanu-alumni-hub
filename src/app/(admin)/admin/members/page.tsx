@@ -17,7 +17,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
 
   let dbQuery = admin
     .from("members")
-    .select("id, first_name, last_name, email, pledge_class, status, created_at")
+    .select("id, first_name, last_name, email, pledge_class, pin_number, status, created_at")
     .order("created_at", { ascending: false });
 
   if (filterStatus === "pending") {
@@ -26,6 +26,8 @@ export default async function AdminMembersPage({ searchParams }: Props) {
     dbQuery = dbQuery.eq("status", "member");
   } else if (filterStatus === "admin") {
     dbQuery = dbQuery.eq("status", "admin");
+  } else if (filterStatus === "stub") {
+    dbQuery = dbQuery.eq("status", "stub");
   }
 
   const { data: members } = await dbQuery;
@@ -70,6 +72,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
             { label: "Pending", value: "pending" },
             { label: "Members", value: "member" },
             { label: "Admins", value: "admin" },
+            { label: "Stubs", value: "stub" },
           ].map(({ label, value }) => (
             <button
               key={value}
@@ -88,6 +91,10 @@ export default async function AdminMembersPage({ searchParams }: Props) {
         </div>
       </form>
 
+      <p className="text-sn-gray-text text-xs">
+        Showing <span className="text-sn-off-white font-medium">{filtered.length}</span> member{filtered.length !== 1 ? "s" : ""}
+      </p>
+
       {/* Table */}
       <div className="rounded-sm border border-sn-gold/20 overflow-x-auto">
         <table className="w-full text-sm">
@@ -96,6 +103,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Name</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Email</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden lg:table-cell">Pledge Class</th>
+              <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden xl:table-cell">Badge #</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Joined</th>
               <th className="px-4 py-3" />
@@ -104,7 +112,7 @@ export default async function AdminMembersPage({ searchParams }: Props) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className="flex flex-col items-center gap-3 py-12 text-center">
                     <Users className="size-8 text-sn-gray-medium" />
                     <p className="text-sn-gray-text text-sm">No members found.</p>
@@ -132,6 +140,11 @@ export default async function AdminMembersPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">
                   {m.pledge_class ?? <span className="text-sn-gray-medium">—</span>}
+                </td>
+                <td className="px-4 py-3 text-sn-gray-text font-mono text-xs hidden xl:table-cell">
+                  {m.pin_number !== null && m.pin_number !== undefined
+                    ? `ΜΞ ${String(m.pin_number).padStart(3, "0")}`
+                    : <span className="text-sn-gray-medium">—</span>}
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={m.status} />
@@ -175,6 +188,7 @@ function StatusBadge({ status }: { status: string }) {
     pending: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     member:  "bg-green-500/20 text-green-400 border-green-500/30",
     admin:   "bg-sn-gold/20 text-sn-gold border-sn-gold/30",
+    stub:    "bg-white/10 text-white/50 border-white/20",
   };
   return (
     <span

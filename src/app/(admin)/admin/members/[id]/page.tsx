@@ -102,17 +102,35 @@ export default async function AdminMemberDetailPage({ params }: Props) {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/members"
-          className="text-sn-gray-text hover:text-sn-off-white text-sm transition-colors"
-        >
-          ← Members
-        </Link>
-        <h1 className="text-sn-off-white text-xl font-bold">
-          {member.first_name} {member.last_name}
-        </h1>
-        <span className="text-sn-gray-medium text-sm">{member.email}</span>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/members"
+            className="text-sn-gray-text hover:text-sn-off-white text-sm transition-colors"
+          >
+            ← Members
+          </Link>
+          <h1 className="text-sn-off-white text-xl font-bold">
+            {member.first_name} {member.last_name}
+          </h1>
+          <span className="text-sn-gray-medium text-sm">{member.email}</span>
+        </div>
+        {member.status !== "stub" && (
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/profile/${member.id}`}
+              className="text-xs text-sn-gray-text hover:text-sn-gold transition-colors border border-white/20 rounded-sm px-3 py-1.5"
+            >
+              View public profile ↗
+            </Link>
+            <Link
+              href={`/admin/registrations?q=${encodeURIComponent(member.email)}`}
+              className="text-xs text-sn-gray-text hover:text-sn-gold transition-colors border border-white/20 rounded-sm px-3 py-1.5"
+            >
+              View registrations →
+            </Link>
+          </div>
+        )}
       </div>
 
       <AdminMemberEditForm

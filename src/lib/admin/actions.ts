@@ -369,3 +369,27 @@ export async function removeBadge(
   revalidatePath(`/admin/members/${memberId}`);
   return { success: true };
 }
+
+// ── Mark a registration as refunded ───────────────────────────────────────────
+export async function markRegistrationRefunded(
+  registrationId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("registrations")
+    .update({ payment_status: "refunded" })
+    .eq("id", registrationId)
+    .eq("payment_status", "paid");
+
+  if (error !== null) {
+    console.error("[markRegistrationRefunded] failed:", error.message);
+    return { error: "Failed to mark registration as refunded." };
+  }
+
+  revalidatePath(`/admin/registrations/${registrationId}`);
+  revalidatePath("/admin/registrations");
+  return { success: true };
+}
