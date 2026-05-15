@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/lib/auth/actions";
+import { AdminNavLink } from "@/components/admin/AdminNavLink";
 
 export default async function AdminLayout({
   children,
@@ -43,7 +43,7 @@ export default async function AdminLayout({
             <AdminNavLink href="/admin/events">Events</AdminNavLink>
             <AdminNavLink href="/admin/referrals">Referrals</AdminNavLink>
             <AdminNavLink href="/admin/announcements">Announcements</AdminNavLink>
-            <AdminNavLink href="/admin/import">Import</AdminNavLink>
+            <AdminNavLink href="/admin/stubs">Stubs</AdminNavLink>
             <AdminNavLink href="/directory">← Site</AdminNavLink>
           </nav>
 
@@ -65,19 +65,3 @@ export default async function AdminLayout({
   );
 }
 
-function AdminNavLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="text-white/70 hover:text-white text-sm px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors"
-    >
-      {children}
-    </Link>
-  );
-}

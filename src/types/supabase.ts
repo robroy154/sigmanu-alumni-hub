@@ -21,6 +21,7 @@ export type Database = {
           created_by: string
           id: string
           is_active: boolean
+          is_pinned: boolean
           notify_members: boolean
           title: string
           updated_at: string
@@ -31,6 +32,7 @@ export type Database = {
           created_by: string
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           notify_members?: boolean
           title: string
           updated_at?: string
@@ -41,6 +43,7 @@ export type Database = {
           created_by?: string
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           notify_members?: boolean
           title?: string
           updated_at?: string

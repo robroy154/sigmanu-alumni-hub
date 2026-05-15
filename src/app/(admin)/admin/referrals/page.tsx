@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CancelReferralButton } from "@/components/admin/CancelReferralButton";
 import { DeleteReferralButton } from "@/components/admin/DeleteReferralButton";
 import { ResendReferralButton } from "@/components/admin/ResendReferralButton";
+import { ReactivateReferralButton } from "@/components/admin/ReactivateReferralButton";
 
 export const metadata: Metadata = { title: "Referrals — Admin" };
 
@@ -123,7 +124,7 @@ export default async function AdminReferralsPage({ searchParams }: Props) {
                   const isExpiredByDate = r.status === "pending" && new Date(r.expires_at) < new Date();
                   const effectiveStatus = isExpiredByDate ? "expired" : r.status;
                   return (
-                    <tr key={r.id} className="hover:bg-white/3 transition-colors">
+                    <tr key={r.id} className="hover:bg-white/5 transition-colors">
                       <td className="px-4 py-3 text-sn-off-white font-medium">
                         {r.first_name} {r.last_name}
                       </td>
@@ -149,12 +150,15 @@ export default async function AdminReferralsPage({ searchParams }: Props) {
                             })}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {r.status === "pending" && !isExpiredByDate && (
                             <ResendReferralButton referralId={r.id} />
                           )}
                           {r.status === "pending" && !isExpiredByDate && (
                             <CancelReferralButton referralId={r.id} />
+                          )}
+                          {effectiveStatus === "expired" && (
+                            <ReactivateReferralButton referralId={r.id} />
                           )}
                           {effectiveStatus !== "completed" && (
                             <DeleteReferralButton referralId={r.id} />

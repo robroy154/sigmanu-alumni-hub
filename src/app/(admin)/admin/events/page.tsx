@@ -5,13 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EventForm } from "@/components/admin/EventForm";
 import { ArchiveEventButton } from "@/components/admin/ArchiveEventButton";
+import { DuplicateEventButton } from "@/components/admin/DuplicateEventButton";
+import { ToggleEventStatusButton } from "@/components/admin/ToggleEventStatusButton";
 import { CalendarDays } from "lucide-react";
 
 export const metadata: Metadata = { title: "Admin · Events" };
 
-export default async function AdminEventsPage() {
+interface Props {
+  searchParams: Promise<{ q?: string }>;
+}
+
+export default async function AdminEventsPage({ searchParams }: Props) {
+  const { q: query } = await searchParams;
   const admin = createAdminClient();
-  const [{ data: events }, { data: regStats }] = await Promise.all([
+  const [{ data: allEvents }, { data: regStats }] = await Promise.all([
     admin
       .from("events")
       .select("id, title, slug, event_date, location, ticket_price, capacity, status, registration_open, event_type, capacity_mode")
@@ -21,6 +28,13 @@ export default async function AdminEventsPage() {
       .select("event_id, payment_status, amount_paid, applied_price, guest_count")
       .eq("payment_status", "paid"),
   ]);
+
+  const events =
+    query !== undefined && query.trim() !== ""
+      ? (allEvents ?? []).filter((e) =>
+          e.title.toLowerCase().includes(query.toLowerCase())
+        )
+      : (allEvents ?? []);
 
   // Aggregate registration counts and revenue per event
   type EventStat = { count: number; revenue: number };
@@ -38,16 +52,37 @@ export default async function AdminEventsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-sn-off-white text-2xl font-bold">Events</h1>
-      </div>
+      <h1 className="text-sn-off-white text-2xl font-bold">Events</h1>
+
+      {/* Search */}
+      <form method="GET" className="flex gap-2 items-center">
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Search by title…"
+          className="h-8 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-64"
+        />
+        <button
+          type="submit"
+          className="h-8 px-3 rounded-lg border border-white/20 text-white/70 hover:bg-white/10 text-sm transition-colors"
+        >
+          Filter
+        </button>
+        {query !== undefined && query !== "" && (
+          <a href="/admin/events" className="text-white/40 hover:text-white text-sm transition-colors">
+            Clear
+          </a>
+        )}
+      </form>
 
       {/* Events table */}
       <div className="bg-sn-surface rounded-xl overflow-hidden">
-        {events === null || events.length === 0 ? (
+        {events.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <CalendarDays className="size-8 text-sn-gray-medium" />
-            <p className="text-sn-gray-text text-sm">No events yet. Create your first event below.</p>
+            <p className="text-sn-gray-text text-sm">
+              {query !== undefined && query !== "" ? "No events match your search." : "No events yet. Create your first event below."}
+            </p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -71,7 +106,7 @@ export default async function AdminEventsPage() {
                 });
                 const stat = eventStatMap.get(event.id);
                 return (
-                  <tr key={event.id} className="border-b border-white/5 last:border-0">
+                  <tr key={event.id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
                     <td className="px-4 py-3">
                       <span className="text-sn-off-white font-medium">{event.title}</span>
                       {event.location !== null && (
@@ -107,15 +142,29 @@ export default async function AdminEventsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2 justify-end">
+                      <div className="flex items-center gap-1 justify-end flex-wrap">
+                        <Link
+                          href={`/admin/registrations?event_id=${event.id}`}
+                          className="text-white/40 hover:text-sn-gold text-xs transition-colors px-1"
+                          title="View registrations"
+                        >
+                          Regs
+                        </Link>
                         <Link
                           href={`/events/${event.slug ?? event.id}`}
                           target="_blank"
-                          className="text-white/40 hover:text-white text-xs transition-colors"
+                          className="text-white/40 hover:text-white text-xs transition-colors px-1"
                           title="View public page"
                         >
                           ↗
                         </Link>
+                        <DuplicateEventButton eventId={event.id} />
+                        {(event.status === "draft" || event.status === "published") && (
+                          <ToggleEventStatusButton
+                            eventId={event.id}
+                            currentStatus={event.status as "draft" | "published"}
+                          />
+                        )}
                         <Link href={`/admin/events/${event.id}/edit`}>
                           <Button
                             size="sm"

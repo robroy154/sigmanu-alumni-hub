@@ -128,12 +128,21 @@ export default async function AdminMembersPage({ searchParams }: Props) {
                 }`}
               >
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/members/${m.id}`}
-                    className="text-sn-off-white hover:text-sn-gold transition-colors font-medium"
-                  >
-                    {m.first_name} {m.last_name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/members/${m.id}`}
+                      className="text-sn-off-white hover:text-sn-gold transition-colors font-medium"
+                    >
+                      {m.first_name} {m.last_name}
+                    </Link>
+                    {(m.status === "member" || m.status === "admin") &&
+                     (m.pin_number === null || m.pin_number === undefined || m.pledge_class === null || m.pledge_class === undefined) && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"
+                        title="Profile incomplete (missing badge number or pledge class)"
+                      />
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">
                   {m.email}

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendReferralCompleted, sendReferralInvite } from "@/lib/email";
@@ -139,6 +140,66 @@ export async function completeReferral(
     console.error("[completeReferral] email send failed:", emailError);
   }
 
+  return { success: true };
+}
+
+// ── Reactivate an expired referral ───────────────────────────────────────────
+export async function reactivateReferral(
+  referralId: string,
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user === null) return { error: "Not authenticated." };
+
+  const { data: callerMember } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  if (callerMember?.status !== "admin") return { error: "Not authorized." };
+
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("id, email, token, status, first_name, referred_by")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+  if (referral.status !== "expired") return { error: "Referral is not expired." };
+
+  const newExpiresAt = new Date();
+  newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+
+  const { error: updateError } = await admin
+    .from("referrals")
+    .update({ status: "pending", expires_at: newExpiresAt.toISOString() })
+    .eq("id", referralId);
+
+  if (updateError !== null) return { error: "Failed to reactivate referral." };
+
+  const { data: referrer } = await admin
+    .from("members")
+    .select("first_name, last_name")
+    .eq("id", referral.referred_by)
+    .maybeSingle();
+
+  try {
+    await sendReferralInvite({
+      to:               referral.email,
+      referrerFullName: referrer
+        ? `${referrer.first_name} ${referrer.last_name}`
+        : "A brother",
+      inviteeFirstName: referral.first_name,
+      token:            referral.token,
+    });
+  } catch (error) {
+    console.error("[reactivateReferral] email send failed:", error);
+  }
+
+  revalidatePath("/admin/referrals");
   return { success: true };
 }
 

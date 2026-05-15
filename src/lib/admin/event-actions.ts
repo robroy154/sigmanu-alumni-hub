@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EventStatus, CapacityMode, EventType } from "@/types/database";
 import type { EventFieldDraft } from "@/components/admin/EventFieldsBuilder";
+import { titleToSlug } from "@/lib/events/slug";
 
 // ── Guard ─────────────────────────────────────────────────────────────────────
 async function requireAdmin(): Promise<{ id: string } | { error: string }> {
@@ -174,6 +175,90 @@ export async function archiveEvent(
   if (error !== null) {
     return { error: "Failed to archive event." };
   }
+
+  revalidatePath("/admin/events");
+  revalidatePath("/");
+  return { success: true };
+}
+
+// ── Duplicate an event ────────────────────────────────────────────────────────
+export async function duplicateEvent(
+  id: string
+): Promise<{ error: string } | { success: true; newId: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  const { data: source } = await admin
+    .from("events")
+    .select("title, slug, description, rich_description, event_date, location, ticket_price, early_bird_price, early_bird_ends_at, registration_closes_at, capacity_mode, capacity, event_type, banner_image_url, flyer_url")
+    .eq("id", id)
+    .single();
+
+  if (source === null) return { error: "Event not found." };
+
+  const newTitle = `${source.title} (copy)`;
+  let newSlug = titleToSlug(newTitle);
+
+  // Ensure slug is unique by appending a suffix if needed
+  const { data: existing } = await admin
+    .from("events")
+    .select("id")
+    .eq("slug", newSlug);
+
+  if ((existing ?? []).length > 0) {
+    newSlug = `${newSlug}-${Date.now()}`;
+  }
+
+  const { data: newEvent, error } = await admin
+    .from("events")
+    .insert({
+      title:                  newTitle,
+      slug:                   newSlug,
+      description:            source.description,
+      rich_description:       source.rich_description,
+      event_date:             source.event_date,
+      location:               source.location,
+      ticket_price:           source.ticket_price,
+      early_bird_price:       source.early_bird_price,
+      early_bird_ends_at:     source.early_bird_ends_at,
+      registration_closes_at: source.registration_closes_at,
+      capacity_mode:          source.capacity_mode as CapacityMode,
+      capacity:               source.capacity,
+      status:                 "draft" as EventStatus,
+      registration_open:      false,
+      event_type:             source.event_type as EventType,
+      banner_image_url:       source.banner_image_url,
+      flyer_url:              source.flyer_url,
+    })
+    .select("id")
+    .single();
+
+  if (error !== null || newEvent === null) {
+    console.error("[duplicateEvent] failed:", error?.message);
+    return { error: "Failed to duplicate event." };
+  }
+
+  revalidatePath("/admin/events");
+  return { success: true, newId: newEvent.id };
+}
+
+// ── Toggle event status (draft ↔ published) ──────────────────────────────────
+export async function updateEventStatus(
+  id: string,
+  status: "draft" | "published"
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("events")
+    .update({ status: status as EventStatus, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error !== null) return { error: "Failed to update event status." };
 
   revalidatePath("/admin/events");
   revalidatePath("/");

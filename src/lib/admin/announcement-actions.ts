@@ -116,6 +116,27 @@ export async function toggleAnnouncement(
   return { success: true };
 }
 
+// ── Pin / unpin announcement ──────────────────────────────────────────────────
+export async function pinAnnouncement(
+  announcementId: string,
+  pinned: boolean,
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("announcements")
+    .update({ is_pinned: pinned, updated_at: new Date().toISOString() })
+    .eq("id", announcementId);
+
+  if (error !== null) return { error: "Failed to update announcement." };
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/home");
+  return { success: true };
+}
+
 // ── Delete announcement ───────────────────────────────────────────────────────
 export async function deleteAnnouncement(
   announcementId: string
