@@ -70,6 +70,31 @@ export async function createAnnouncement(
   return { success: true };
 }
 
+// ── Update announcement title and body ────────────────────────────────────────
+export async function updateAnnouncement(
+  announcementId: string,
+  title: string,
+  body: string,
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (title.trim() === "") return { error: "Title is required." };
+  if (body.trim() === "") return { error: "Body is required." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("announcements")
+    .update({ title: title.trim(), body: body.trim(), updated_at: new Date().toISOString() })
+    .eq("id", announcementId);
+
+  if (error !== null) return { error: "Failed to update announcement." };
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/home");
+  return { success: true };
+}
+
 // ── Toggle announcement active state ─────────────────────────────────────────
 export async function toggleAnnouncement(
   announcementId: string,

@@ -7,30 +7,48 @@ import { DeleteRegistrationButton } from "@/components/admin/DeleteRegistrationB
 export const metadata: Metadata = { title: "Registrations — Admin" };
 
 interface Props {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; event_id?: string }>;
 }
 
 export default async function AdminRegistrationsPage({ searchParams }: Props) {
-  const { status: filterStatus } = await searchParams;
+  const { status: filterStatus, q: query, event_id: eventIdFilter } = await searchParams;
   const admin = createAdminClient();
 
-  let dbQuery = admin
-    .from("registrations")
-    .select(
-      "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, amount_paid, applied_price, events(title, ticket_price), registration_guests(guest_name)"
-    )
-    .order("submitted_at", { ascending: false });
+  const [{ data: registrations }, { data: events }] = await Promise.all([
+    (() => {
+      let dbQuery = admin
+        .from("registrations")
+        .select(
+          "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, amount_paid, applied_price, event_id, events(title, ticket_price), registration_guests(guest_name)"
+        )
+        .order("submitted_at", { ascending: false });
 
-  if (filterStatus === "paid" || filterStatus === "unpaid" || filterStatus === "refunded") {
-    dbQuery = dbQuery.eq("payment_status", filterStatus);
-  }
+      if (filterStatus === "paid" || filterStatus === "unpaid" || filterStatus === "refunded") {
+        dbQuery = dbQuery.eq("payment_status", filterStatus);
+      }
+      if (eventIdFilter !== undefined && eventIdFilter !== "") {
+        dbQuery = dbQuery.eq("event_id", eventIdFilter);
+      }
+      return dbQuery;
+    })(),
+    admin.from("events").select("id, title").order("event_date", { ascending: false }),
+  ]);
 
-  const { data: registrations } = await dbQuery;
+  const allRows = registrations ?? [];
+  const rows =
+    query !== undefined && query.trim() !== ""
+      ? allRows.filter((r) => {
+          const q = query.toLowerCase();
+          return (
+            r.registrant_name.toLowerCase().includes(q) ||
+            r.email.toLowerCase().includes(q)
+          );
+        })
+      : allRows;
 
-  const rows = registrations ?? [];
-
-  // Totals
+  // Totals (computed from the full filtered result set)
   const paidRows = rows.filter((r) => r.payment_status === "paid");
+  const unpaidRows = rows.filter((r) => r.payment_status === "unpaid");
   const totalRevenue = paidRows.reduce((sum, r) => {
     if (r.amount_paid !== null && r.amount_paid !== undefined) {
       return sum + Number(r.amount_paid);
@@ -62,12 +80,57 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           <span className="text-green-400 font-medium">{paidRows.length}</span> paid
         </span>
         <span className="text-sn-gray-text">
+          <span className="text-amber-400 font-medium">{unpaidRows.length}</span> unpaid
+        </span>
+        <span className="text-sn-gray-text">
           Revenue:{" "}
           <span className="text-sn-gold font-medium">
             ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
         </span>
       </div>
+
+      {/* Search + event filter */}
+      <form method="GET" className="flex flex-wrap gap-2 items-center">
+        {filterStatus !== undefined && filterStatus !== "" && (
+          <input type="hidden" name="status" value={filterStatus} />
+        )}
+        {eventIdFilter !== undefined && eventIdFilter !== "" && (
+          <input type="hidden" name="event_id" value={eventIdFilter} />
+        )}
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Search name or email…"
+          className="h-8 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-64"
+        />
+        <select
+          name="event_id"
+          defaultValue={eventIdFilter ?? ""}
+          className="h-8 rounded-lg border border-white/20 bg-sn-surface px-3 text-sm text-white focus:outline-none focus:border-sn-gold"
+        >
+          <option value="">All events</option>
+          {(events ?? []).map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.title}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="h-8 px-3 rounded-lg border border-white/20 text-white/70 hover:bg-white/10 text-sm transition-colors"
+        >
+          Filter
+        </button>
+        {(query !== undefined && query !== "") || (eventIdFilter !== undefined && eventIdFilter !== "") ? (
+          <Link
+            href={filterStatus !== undefined && filterStatus !== "" ? `/admin/registrations?status=${filterStatus}` : "/admin/registrations"}
+            className="h-8 px-3 rounded-lg text-white/40 hover:text-white text-sm transition-colors flex items-center"
+          >
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       {/* Filter */}
       <div className="flex gap-1">
@@ -76,19 +139,26 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           { label: "Paid", value: "paid" },
           { label: "Unpaid", value: "unpaid" },
           { label: "Refunded", value: "refunded" },
-        ].map(({ label, value }) => (
-          <Link
-            key={value}
-            href={value === "" ? "/admin/registrations" : `/admin/registrations?status=${value}`}
-            className={`h-8 px-3 rounded-sm text-sm transition-colors flex items-center ${
-              (filterStatus ?? "") === value
-                ? "bg-sn-gold text-sn-black font-semibold"
-                : "border border-white/20 text-white/70 hover:bg-white/10"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
+        ].map(({ label, value }) => {
+          const params = new URLSearchParams();
+          if (value !== "") params.set("status", value);
+          if (query !== undefined && query !== "") params.set("q", query);
+          if (eventIdFilter !== undefined && eventIdFilter !== "") params.set("event_id", eventIdFilter);
+          const href = params.size > 0 ? `/admin/registrations?${params.toString()}` : "/admin/registrations";
+          return (
+            <Link
+              key={value}
+              href={href}
+              className={`h-8 px-3 rounded-sm text-sm transition-colors flex items-center ${
+                (filterStatus ?? "") === value
+                  ? "bg-sn-gold text-sn-black font-semibold"
+                  : "border border-white/20 text-white/70 hover:bg-white/10"
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Table */}

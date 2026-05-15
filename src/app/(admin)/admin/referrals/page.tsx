@@ -6,7 +6,12 @@ import { ResendReferralButton } from "@/components/admin/ResendReferralButton";
 
 export const metadata: Metadata = { title: "Referrals — Admin" };
 
-export default async function AdminReferralsPage() {
+interface Props {
+  searchParams: Promise<{ q?: string }>;
+}
+
+export default async function AdminReferralsPage({ searchParams }: Props) {
+  const { q: query } = await searchParams;
   const admin = createAdminClient();
 
   // Fetch all referrals, join referrer name via a second query.
@@ -28,24 +33,72 @@ export default async function AdminReferralsPage() {
     (referrerMembers ?? []).map((m) => [m.id, `${m.first_name} ${m.last_name}`])
   );
 
-  const rows = referrals ?? [];
+  const allRows = referrals ?? [];
+  const rows =
+    query !== undefined && query.trim() !== ""
+      ? allRows.filter((r) => {
+          const q = query.toLowerCase();
+          return (
+            r.first_name.toLowerCase().includes(q) ||
+            r.last_name.toLowerCase().includes(q) ||
+            r.email.toLowerCase().includes(q)
+          );
+        })
+      : allRows;
 
   const counts = {
-    pending:   rows.filter((r) => r.status === "pending").length,
-    completed: rows.filter((r) => r.status === "completed").length,
-    expired:   rows.filter((r) => r.status === "expired").length,
+    pending:   allRows.filter((r) => r.status === "pending").length,
+    completed: allRows.filter((r) => r.status === "completed").length,
+    expired:   allRows.filter((r) => r.status === "expired").length,
   };
+  const conversionRate =
+    counts.completed + counts.expired > 0
+      ? Math.round((counts.completed / (counts.completed + counts.expired)) * 100)
+      : null;
 
   return (
     <div className="space-y-6">
       <h1 className="text-sn-off-white text-2xl font-bold">Referrals</h1>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Pending"   value={counts.pending}   color="text-sn-gold" />
         <StatCard label="Joined"    value={counts.completed} color="text-green-400" />
         <StatCard label="Expired"   value={counts.expired}   color="text-sn-gray-medium" />
+        <div className="bg-sn-surface rounded-xl border border-sn-gold/20 px-5 py-4">
+          <p className="text-sn-gray-text text-xs uppercase tracking-wider">Conversion Rate</p>
+          <p className="text-sn-off-white text-3xl font-bold mt-1">
+            {conversionRate !== null ? `${conversionRate}%` : "—"}
+          </p>
+          <p className="text-sn-gray-medium text-xs mt-0.5">of sent invites joined</p>
+        </div>
       </div>
+
+      {/* Search */}
+      <form method="GET" className="flex gap-2 items-center">
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Search name or email…"
+          className="h-8 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-64"
+        />
+        <button
+          type="submit"
+          className="h-8 px-3 rounded-lg border border-white/20 text-white/70 hover:bg-white/10 text-sm transition-colors"
+        >
+          Filter
+        </button>
+        {query !== undefined && query !== "" && (
+          <a href="/admin/referrals" className="text-white/40 hover:text-white text-sm transition-colors">
+            Clear
+          </a>
+        )}
+      </form>
+      {query !== undefined && query !== "" && (
+        <p className="text-sn-gray-text text-xs">
+          Showing <span className="text-sn-off-white font-medium">{rows.length}</span> of {allRows.length} referrals
+        </p>
+      )}
 
       {/* Table */}
       <div className="bg-sn-surface rounded-xl overflow-hidden">

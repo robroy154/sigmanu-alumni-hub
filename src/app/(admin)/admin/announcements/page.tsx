@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementForm } from "@/components/admin/AnnouncementForm";
 import { AnnouncementControls } from "@/components/admin/AnnouncementControls";
+import { EditAnnouncementForm } from "@/components/admin/EditAnnouncementForm";
 import { Megaphone } from "lucide-react";
 
 export const metadata: Metadata = { title: "Announcements — Admin" };
@@ -65,6 +66,11 @@ export default async function AdminAnnouncementsPage() {
                       month: "short", day: "numeric", year: "numeric",
                     })}
                   </p>
+                  <EditAnnouncementForm
+                    announcementId={a.id}
+                    initialTitle={a.title}
+                    initialBody={a.body}
+                  />
                 </div>
                 <AnnouncementControls announcementId={a.id} isActive={a.is_active} />
               </div>

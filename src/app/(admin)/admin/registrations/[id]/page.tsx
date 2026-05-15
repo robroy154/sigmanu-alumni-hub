@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DeleteRegistrationButton } from "@/components/admin/DeleteRegistrationButton";
+import { MarkRefundedButton } from "@/components/admin/MarkRefundedButton";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -135,7 +136,15 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
           <InfoRow label="Type" value="Guest (no account)" />
         )}
         <InfoRow label="Name"  value={reg.registrant_name} />
-        <InfoRow label="Email" value={reg.email} />
+        <div className="flex gap-3">
+          <span className="w-32 shrink-0 text-sn-gray-text text-sm">Email</span>
+          <a
+            href={`mailto:${reg.email}`}
+            className="text-sn-off-white text-sm hover:text-sn-gold transition-colors break-all"
+          >
+            {reg.email}
+          </a>
+        </div>
         {reg.phone !== null && reg.phone !== "" && (
           <InfoRow label="Phone" value={reg.phone} />
         )}
@@ -203,6 +212,12 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
         )}
         {reg.stripe_payment_id !== null && reg.stripe_payment_id !== "" && (
           <InfoRow label="Stripe ref" value={reg.stripe_payment_id} />
+        )}
+        {reg.payment_status === "paid" && (
+          <div className="flex gap-3 pt-1 border-t border-white/10">
+            <span className="w-32 shrink-0 text-sn-gray-text text-sm">Actions</span>
+            <MarkRefundedButton registrationId={reg.id} />
+          </div>
         )}
       </Section>
 
