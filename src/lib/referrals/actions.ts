@@ -163,12 +163,17 @@ export async function reactivateReferral(
 
   const { data: referral } = await admin
     .from("referrals")
-    .select("id, email, token, status, first_name, referred_by")
+    .select("id, email, token, status, expires_at, first_name, referred_by")
     .eq("id", referralId)
     .maybeSingle();
 
   if (referral === null) return { error: "Referral not found." };
-  if (referral.status !== "expired") return { error: "Referral is not expired." };
+
+  const isEffectivelyExpired =
+    referral.status === "expired" ||
+    (referral.status === "pending" && new Date(referral.expires_at) < new Date());
+
+  if (!isEffectivelyExpired) return { error: "Referral is not expired." };
 
   const newExpiresAt = new Date();
   newExpiresAt.setDate(newExpiresAt.getDate() + 7);
