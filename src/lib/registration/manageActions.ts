@@ -173,3 +173,55 @@ export async function addGuestsToRegistration(
 
   return { checkoutUrl: session.url };
 }
+
+// ── Cancel a free (unpaid) registration ───────────────────────────────────────
+// Only unpaid registrations can be self-cancelled. Paid cancellations require admin.
+export async function cancelRegistration(
+  registrationId: string
+): Promise<{ error: string } | { success: true }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user === null) return { error: "Not authenticated." };
+
+  // Verify ownership and check payment status + registration_open via session client.
+  const { data: reg } = await supabase
+    .from("registrations")
+    .select("payment_status, event_id")
+    .eq("id", registrationId)
+    .eq("member_id", user.id)
+    .single();
+
+  if (reg === null) return { error: "Registration not found." };
+  if (reg.payment_status === "paid") {
+    return { error: "Paid registrations must be cancelled by an admin. Please contact us." };
+  }
+
+  // Confirm the event is still open (can't cancel after event closes).
+  const { data: event } = await supabase
+    .from("events")
+    .select("registration_open")
+    .eq("id", reg.event_id)
+    .single();
+
+  if (event?.registration_open !== true) {
+    return { error: "Registration is closed for this event." };
+  }
+
+  // Hard delete — cascades to registration_guests + event_field_responses.
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("registrations")
+    .delete()
+    .eq("id", registrationId)
+    .eq("member_id", user.id)
+    .eq("payment_status", "unpaid");
+
+  if (error !== null) {
+    return { error: "Failed to cancel registration. Please try again." };
+  }
+
+  return { success: true };
+}

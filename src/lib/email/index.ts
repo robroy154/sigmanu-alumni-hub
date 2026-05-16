@@ -700,3 +700,44 @@ export async function sendLittleBrotherNotification({
     console.error("[email] sendLittleBrotherNotification threw:", err);
   }
 }
+
+// ── Waitlist promotion notification ──────────────────────────────────────────
+export async function sendWaitlistPromotionNotification({
+  to,
+  firstName,
+  eventTitle,
+  registrationUrl,
+}: {
+  to:              string;
+  firstName:       string;
+  eventTitle:      string;
+  registrationUrl: string;
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
+
+  const btn = "display:inline-block;padding:10px 20px;background:#C6A75E;color:#0B0B0C;text-decoration:none;border-radius:4px;font-weight:600;";
+
+  const body = `
+    <p>Hi ${firstName},</p>
+    <p>Good news — a spot has opened up for <strong>${eventTitle}</strong>!</p>
+    <p>You were on the waitlist and now have a chance to register. Complete your registration soon, as spots are limited.</p>
+    <p style="margin-top:24px;">
+      <a href="${registrationUrl}" style="${btn}">Complete Registration →</a>
+    </p>
+    <p style="margin-top:16px;color:#6B6B73;font-size:13px;">
+      If you're no longer interested, you can simply ignore this email.
+    </p>
+  `;
+
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `A spot opened up for ${eventTitle}`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
+    });
+  } catch (err) {
+    console.error("[email] sendWaitlistPromotionNotification threw:", err);
+  }
+}

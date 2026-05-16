@@ -18,7 +18,7 @@ interface Props {
 export default async function AdminEventsPage({ searchParams }: Props) {
   const { q: query } = await searchParams;
   const admin = createAdminClient();
-  const [{ data: allEvents }, { data: regStats }] = await Promise.all([
+  const [{ data: allEvents }, { data: regStats }, { data: waitlistCounts }] = await Promise.all([
     admin
       .from("events")
       .select("id, title, slug, event_date, location, ticket_price, capacity, status, registration_open, event_type, capacity_mode")
@@ -27,6 +27,9 @@ export default async function AdminEventsPage({ searchParams }: Props) {
       .from("registrations")
       .select("event_id, payment_status, amount_paid, applied_price, guest_count")
       .eq("payment_status", "paid"),
+    admin
+      .from("waitlist")
+      .select("event_id"),
   ]);
 
   const events =
@@ -35,6 +38,12 @@ export default async function AdminEventsPage({ searchParams }: Props) {
           e.title.toLowerCase().includes(query.toLowerCase())
         )
       : (allEvents ?? []);
+
+  // Waitlist counts per event
+  const waitlistCountMap = new Map<string, number>();
+  for (const w of waitlistCounts ?? []) {
+    waitlistCountMap.set(w.event_id, (waitlistCountMap.get(w.event_id) ?? 0) + 1);
+  }
 
   // Aggregate registration counts and revenue per event
   type EventStat = { count: number; revenue: number };
@@ -150,6 +159,15 @@ export default async function AdminEventsPage({ searchParams }: Props) {
                         >
                           Regs
                         </Link>
+                        {event.capacity_mode === "waitlist" && (
+                          <Link
+                            href={`/admin/events/${event.id}/waitlist`}
+                            className="text-white/40 hover:text-sn-gold text-xs transition-colors px-1"
+                            title="View waitlist"
+                          >
+                            Waitlist{(waitlistCountMap.get(event.id) ?? 0) > 0 && ` (${waitlistCountMap.get(event.id) ?? 0})`}
+                          </Link>
+                        )}
                         <Link
                           href={`/events/${event.slug ?? event.id}`}
                           target="_blank"

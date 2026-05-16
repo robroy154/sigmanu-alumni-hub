@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { stripe } from "@/lib/stripe/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 
 // ── Guard: verify caller is admin ─────────────────────────────────────────────
@@ -378,6 +379,31 @@ export async function markRegistrationRefunded(
   if ("error" in guard) return guard;
 
   const admin = createAdminClient();
+
+  // Fetch stripe_payment_id before issuing the refund.
+  const { data: reg } = await admin
+    .from("registrations")
+    .select("stripe_payment_id")
+    .eq("id", registrationId)
+    .eq("payment_status", "paid")
+    .single();
+
+  if (reg === null) {
+    return { error: "Registration not found or is not in a paid state." };
+  }
+
+  // Attempt Stripe refund for paid events that have a payment intent.
+  if (reg.stripe_payment_id !== null && reg.stripe_payment_id !== "") {
+    try {
+      await stripe.refunds.create({ payment_intent: reg.stripe_payment_id });
+    } catch (stripeErr) {
+      const msg = stripeErr instanceof Error ? stripeErr.message : "Unknown Stripe error";
+      console.error("[markRegistrationRefunded] Stripe refund failed:", msg);
+      return { error: `Stripe refund failed: ${msg}` };
+    }
+  }
+
+  // Update DB only after Stripe succeeds (or for free registrations with no payment intent).
   const { error } = await admin
     .from("registrations")
     .update({ payment_status: "refunded" })
@@ -385,11 +411,93 @@ export async function markRegistrationRefunded(
     .eq("payment_status", "paid");
 
   if (error !== null) {
-    console.error("[markRegistrationRefunded] failed:", error.message);
-    return { error: "Failed to mark registration as refunded." };
+    console.error("[markRegistrationRefunded] DB update failed:", error.message);
+    return { error: "Stripe refund issued but failed to update status. Contact support." };
   }
 
   revalidatePath(`/admin/registrations/${registrationId}`);
   revalidatePath("/admin/registrations");
+  return { success: true };
+}
+
+// ── Promote a waitlist entry to a registration ────────────────────────────────
+export async function promoteFromWaitlist(
+  waitlistId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Fetch the waitlist row.
+  const { data: entry } = await admin
+    .from("waitlist")
+    .select("id, member_id, guest_email, guest_name, event_id")
+    .eq("id", waitlistId)
+    .single();
+
+  if (entry === null) return { error: "Waitlist entry not found." };
+
+  // Create a registration for this person.
+  const { error: insertError } = await admin
+    .from("registrations")
+    .insert({
+      event_id:       entry.event_id,
+      member_id:      entry.member_id,
+      payment_status: "unpaid",
+      guest_count:    0,
+    });
+
+  if (insertError !== null) {
+    console.error("[promoteFromWaitlist] registration insert failed:", insertError.message);
+    return { error: "Failed to create registration." };
+  }
+
+  // Remove the waitlist row.
+  await admin.from("waitlist").delete().eq("id", waitlistId);
+
+  revalidatePath(`/admin/events/${entry.event_id}/waitlist`);
+  revalidatePath("/admin/events");
+
+  // Notify the member by email if we have their address.
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  let notifyEmail: string | null = null;
+  let notifyFirstName = "there";
+
+  if (entry.member_id !== null) {
+    const { data: member } = await admin
+      .from("members")
+      .select("email, first_name")
+      .eq("id", entry.member_id)
+      .single();
+    if (member !== null) {
+      notifyEmail     = member.email;
+      notifyFirstName = member.first_name;
+    }
+  } else if (entry.guest_email !== null) {
+    notifyEmail     = entry.guest_email;
+    notifyFirstName = entry.guest_name ?? "there";
+  }
+
+  if (notifyEmail !== null) {
+    const { data: event } = await admin
+      .from("events")
+      .select("title, slug, id")
+      .eq("id", entry.event_id)
+      .single();
+
+    if (event !== null) {
+      const slug = event.slug ?? event.id;
+      void import("@/lib/email").then(({ sendWaitlistPromotionNotification }) =>
+        sendWaitlistPromotionNotification({
+          to:              notifyEmail!,
+          firstName:       notifyFirstName,
+          eventTitle:      event.title,
+          registrationUrl: `${appUrl}/events/${slug}/register`,
+        })
+      );
+    }
+  }
+
   return { success: true };
 }

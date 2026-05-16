@@ -12,7 +12,7 @@ export default async function AdminAnnouncementsPage() {
 
   const { data: announcements } = await admin
     .from("announcements")
-    .select("id, title, body, is_active, is_pinned, created_at, updated_at")
+    .select("id, title, body, is_active, is_pinned, show_on_login, created_at, updated_at")
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -85,7 +85,7 @@ export default async function AdminAnnouncementsPage() {
                     initialBody={a.body}
                   />
                 </div>
-                <AnnouncementControls announcementId={a.id} isActive={a.is_active} isPinned={a.is_pinned} />
+                <AnnouncementControls announcementId={a.id} isActive={a.is_active} isPinned={a.is_pinned} showOnLogin={a.show_on_login} />
               </div>
             ))}
           </div>

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementCard } from "@/components/home/AnnouncementCard";
+import { AnnouncementSplash } from "@/components/home/AnnouncementSplash";
 import { HomeEventsSection } from "@/components/home/HomeEventsSection";
+import { Users, GitBranch, User, Calendar, ExternalLink } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export const metadata: Metadata = { title: "Home — Sigma Nu Mu Xi Alumni" };
 
@@ -17,7 +20,7 @@ export default async function HomePage() {
   const admin = createAdminClient();
 
   // Parallel fetches: member info, upcoming events, birthdays, announcements
-  const [memberResult, eventsResult, birthdayResult, announcementsResult] = await Promise.all([
+  const [memberResult, eventsResult, birthdayResult, announcementsResult, dismissedResult] = await Promise.all([
     supabase
       .from("members")
       .select("first_name, status")
@@ -42,17 +45,29 @@ export default async function HomePage() {
 
     supabase
       .from("announcements")
-      .select("id, title, body, created_at")
+      .select("id, title, body, created_at, is_pinned, show_on_login")
       .eq("is_active", true)
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(5),
+
+    // Dismissed announcement IDs for the current user (for splash filtering)
+    supabase
+      .from("dismissed_announcements")
+      .select("announcement_id")
+      .eq("member_id", user!.id),
   ]);
 
   const member        = memberResult.data;
   const events        = eventsResult.data ?? [];
   const allBirthdays  = birthdayResult.data ?? [];
   const announcements = announcementsResult.data ?? [];
+  const dismissedIds  = new Set((dismissedResult.data ?? []).map((d) => d.announcement_id));
+
+  // First undismissed show_on_login announcement to display as a splash.
+  const splashAnnouncement = announcements.find(
+    (a) => a.show_on_login && !dismissedIds.has(a.id)
+  ) ?? null;
 
   // Fetch this user's registrations for the upcoming events shown on the home page.
   const eventIds = events.map((e) => e.id);
@@ -97,6 +112,15 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-12">
+      {/* Announcement login splash */}
+      {splashAnnouncement !== null && (
+        <AnnouncementSplash
+          announcementId={splashAnnouncement.id}
+          title={splashAnnouncement.title}
+          body={splashAnnouncement.body}
+        />
+      )}
+
       {/* Welcome header */}
       <div>
         <h1 className="text-sn-off-white text-3xl font-bold">
@@ -140,6 +164,7 @@ export default async function HomePage() {
                     title={a.title}
                     body={a.body}
                     date={a.created_at}
+                    isPinned={a.is_pinned}
                   />
                 ))}
               </div>
@@ -195,15 +220,15 @@ export default async function HomePage() {
           <section>
             <h2 className="text-sn-off-white font-semibold mb-3">Quick Links</h2>
             <div className="bg-sn-surface rounded-xl overflow-hidden divide-y divide-white/5">
-              <QuickLink href="/directory" label="Brother Directory" />
-              <QuickLink href="/family-tree" label="Family Tree" />
-              <QuickLink href="/profile" label="My Profile" />
-              <QuickLink href="/my-events" label="My Events" />
+              <QuickLink href="/directory"   label="Brother Directory"         Icon={Users} />
+              <QuickLink href="/family-tree" label="Family Tree"               Icon={GitBranch} />
+              <QuickLink href="/profile"     label="My Profile"                Icon={User} />
+              <QuickLink href="/my-events"   label="My Events"                 Icon={Calendar} />
               {alumnisFbUrl !== "" && (
-                <QuickLink href={alumnisFbUrl} label="Alumni Facebook Group" external />
+                <QuickLink href={alumnisFbUrl} label="Alumni Facebook Group"   Icon={ExternalLink} external />
               )}
               {chapterFbUrl !== "" && (
-                <QuickLink href={chapterFbUrl} label="Active Chapter Facebook" external />
+                <QuickLink href={chapterFbUrl} label="Active Chapter Facebook" Icon={ExternalLink} external />
               )}
             </div>
           </section>
@@ -216,10 +241,12 @@ export default async function HomePage() {
 function QuickLink({
   href,
   label,
+  Icon,
   external = false,
 }: {
   href: string;
   label: string;
+  Icon: LucideIcon;
   external?: boolean;
 }) {
   return (
@@ -227,9 +254,10 @@ function QuickLink({
       href={href}
       target={external ? "_blank" : undefined}
       rel={external ? "noopener noreferrer" : undefined}
-      className="flex items-center justify-between px-4 py-2.5 text-sn-gray-text hover:text-sn-off-white hover:bg-white/5 transition-colors text-sm"
+      className="flex items-center gap-3 px-4 py-2.5 text-sn-gray-text hover:text-sn-off-white hover:bg-white/5 transition-colors text-sm"
     >
-      <span>{label}</span>
+      <Icon className="w-4 h-4 text-sn-gold shrink-0" />
+      <span className="flex-1">{label}</span>
       <span className="text-sn-gray-medium text-xs">{external ? "↗" : "→"}</span>
     </Link>
   );

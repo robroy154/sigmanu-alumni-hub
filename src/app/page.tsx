@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { Users, GitBranch, Calendar } from "lucide-react";
+import { Users, GitBranch, Calendar, ArrowRight } from "lucide-react";
 import { eventHref } from "@/lib/events/slug";
 
 // event routing: dynamic, no hardcoded IDs
@@ -208,42 +208,53 @@ export default async function LandingPage() {
               No upcoming events at this time. Check back soon.
             </p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(upcomingEvents ?? []).map((ev) => (
-                <div
-                  key={ev.id}
-                  className="bg-sn-surface border border-sn-gold/20 border-t-2 border-t-sn-gold rounded-sm p-6 flex flex-col gap-4"
-                >
-                  <div className="flex-1 space-y-1.5">
-                    <p className="text-sn-off-white font-bold text-lg leading-snug">
-                      {ev.title}
-                    </p>
-                    <p className="text-sn-gray-text text-sm">
-                      {formatDate(ev.event_date)}
-                    </p>
-                    {ev.location !== null && (
-                      <p className="text-sn-gray-text text-sm">{ev.location}</p>
-                    )}
-                    {ev.ticket_price > 0 ? (
-                      <p className="text-sn-gold text-sm font-medium">
-                        ${ev.ticket_price.toFixed(2)} per person
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(upcomingEvents ?? []).map((ev) => (
+                  <div
+                    key={ev.id}
+                    className="bg-sn-surface border border-sn-gold/20 border-t-2 border-t-sn-gold rounded-sm p-6 flex flex-col gap-4"
+                  >
+                    <div className="flex-1 space-y-1.5">
+                      <p className="text-sn-off-white font-bold text-lg leading-snug">
+                        {ev.title}
                       </p>
-                    ) : (
-                      <p className="text-green-400 text-sm font-medium">Free</p>
-                    )}
+                      <p className="text-sn-gray-text text-sm">
+                        {formatDate(ev.event_date)}
+                      </p>
+                      {ev.location !== null && (
+                        <p className="text-sn-gray-text text-sm">{ev.location}</p>
+                      )}
+                      {ev.ticket_price > 0 ? (
+                        <p className="text-sn-gold text-sm font-medium">
+                          ${ev.ticket_price.toFixed(2)} per person
+                        </p>
+                      ) : (
+                        <p className="text-green-400 text-sm font-medium">Free</p>
+                      )}
+                    </div>
+                    <Link href={eventHref(ev)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full bg-transparent border-sn-gold/40 text-sn-gold hover:bg-sn-gold/10 hover:border-sn-gold/60"
+                      >
+                        View Event
+                      </Button>
+                    </Link>
                   </div>
-                  <Link href={eventHref(ev)}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full bg-transparent border-sn-gold/40 text-sn-gold hover:bg-sn-gold/10 hover:border-sn-gold/60"
-                    >
-                      View Event
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <div className="mt-8 text-right">
+                <Link
+                  href="/events"
+                  className="inline-flex items-center gap-1.5 text-sn-gold hover:text-sn-gold-light text-sm transition-colors"
+                >
+                  Browse all events
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -260,30 +271,30 @@ export default async function LandingPage() {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
-            <div className="space-y-3">
+            <Link href="/directory" className="space-y-3 group hover:opacity-80 transition-opacity">
               <Users className="w-8 h-8 text-sn-gold" />
-              <p className="text-sn-off-white font-bold text-lg">Directory</p>
+              <p className="text-sn-off-white font-bold text-lg group-hover:text-sn-gold-light transition-colors">Directory</p>
               <p className="text-sn-gray-text text-sm leading-relaxed">
                 Search and browse the full alumni roster with contact info,
                 pledge class, and profile photos.
               </p>
-            </div>
-            <div className="space-y-3">
+            </Link>
+            <Link href="/family-tree" className="space-y-3 group hover:opacity-80 transition-opacity">
               <GitBranch className="w-8 h-8 text-sn-gold" />
-              <p className="text-sn-off-white font-bold text-lg">Family Tree</p>
+              <p className="text-sn-off-white font-bold text-lg group-hover:text-sn-gold-light transition-colors">Family Tree</p>
               <p className="text-sn-gray-text text-sm leading-relaxed">
                 Visualize the full Big/Little lineage across every generation
                 of the Mu Xi Chapter.
               </p>
-            </div>
-            <div className="space-y-3">
+            </Link>
+            <Link href="/events" className="space-y-3 group hover:opacity-80 transition-opacity">
               <Calendar className="w-8 h-8 text-sn-gold" />
-              <p className="text-sn-off-white font-bold text-lg">Events</p>
+              <p className="text-sn-off-white font-bold text-lg group-hover:text-sn-gold-light transition-colors">Events</p>
               <p className="text-sn-gray-text text-sm leading-relaxed">
                 Register for chapter events, track your registrations, and
                 manage guests — all from one place.
               </p>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
@@ -291,8 +302,15 @@ export default async function LandingPage() {
       {/* ── Footer ────────────────────────────────────────────────────────────── */}
       <footer className="border-t border-sn-gold/20 px-6 py-6 text-center">
         <p className="text-sn-gray-medium text-sm">
-          Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University
+          © {new Date().getFullYear()} Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University
         </p>
+        <div className="flex items-center justify-center gap-4 mt-1.5 text-xs text-sn-gray-medium/60">
+          <Link href="/privacy" className="hover:text-sn-gray-medium transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-sn-gray-medium transition-colors">Terms of Service</Link>
+          <span>·</span>
+          <a href="mailto:info@csusigmanu.com" className="hover:text-sn-gray-medium transition-colors">info@csusigmanu.com</a>
+        </div>
       </footer>
 
     </div>

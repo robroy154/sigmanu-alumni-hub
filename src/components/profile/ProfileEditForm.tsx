@@ -46,9 +46,10 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
   const labelClass = "text-white/80 text-sm";
   const optLabel   = <span className="text-white/40 font-normal">(optional)</span>;
 
-  const showAddress  = watch("show_address")  ?? defaultValues.show_address  ?? true;
-  const showBirthday = watch("show_birthday") ?? defaultValues.show_birthday ?? true;
-  const showPhone    = watch("show_phone")    ?? defaultValues.show_phone    ?? true;
+  const showAddress      = watch("show_address")       ?? defaultValues.show_address      ?? true;
+  const showBirthday    = watch("show_birthday")      ?? defaultValues.show_birthday     ?? true;
+  const showPhone        = watch("show_phone")         ?? defaultValues.show_phone        ?? true;
+  const newsletterOptOut = watch("newsletter_opt_out") ?? defaultValues.newsletter_opt_out ?? false;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
@@ -212,6 +213,19 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
           checked={showBirthday}
           onChange={(v) => setValue("show_birthday", v, { shouldDirty: true })}
         />
+
+        <div className="pt-2 border-t border-white/5">
+          <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-3">
+            Email Preferences
+          </p>
+          <PrivacyToggle
+            id="newsletter_opt_out"
+            label="Opt out of chapter announcements and newsletters"
+            helperText="You will still receive account and registration emails."
+            checked={newsletterOptOut}
+            onChange={(v) => setValue("newsletter_opt_out", v, { shouldDirty: true })}
+          />
+        </div>
       </div>
 
       <Button

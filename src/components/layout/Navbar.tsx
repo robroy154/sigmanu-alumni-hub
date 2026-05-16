@@ -14,6 +14,7 @@ interface NavbarProps {
 
 const BASE_LINKS = [
   { href: "/home",        label: "Home" },
+  { href: "/events",      label: "Events" },
   { href: "/directory",   label: "Directory" },
   { href: "/family-tree", label: "Family Tree" },
   { href: "/my-events",   label: "My Events" },
@@ -118,6 +119,12 @@ export function Navbar({ firstName, lastName, isAdmin, photoUrl }: NavbarProps) 
                 >
                   My Profile
                 </Link>
+                <Link
+                  href="/settings"
+                  className="block px-4 py-2.5 text-sm text-sn-gray-text hover:text-sn-off-white hover:bg-white/5 transition-colors"
+                >
+                  Settings
+                </Link>
                 <div className="border-t border-white/10" />
                 <form action={signOut}>
                   <button
@@ -176,7 +183,7 @@ export function Navbar({ firstName, lastName, isAdmin, photoUrl }: NavbarProps) 
 
           <div className="border-t border-white/10 mx-6" />
 
-          <div className="px-6 py-4 flex items-center justify-between">
+          <div className="px-6 py-4 space-y-3">
             <Link
               href="/profile"
               className="flex items-center gap-3 group"
@@ -190,14 +197,22 @@ export function Navbar({ firstName, lastName, isAdmin, photoUrl }: NavbarProps) 
                 My Profile
               </span>
             </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="text-sm text-sn-gray-text hover:text-sn-off-white transition-colors"
-              >
-                Sign Out
-              </button>
-            </form>
+            <Link
+              href="/settings"
+              className="block text-sm text-sn-gray-text hover:text-sn-off-white transition-colors pl-11"
+            >
+              Settings
+            </Link>
+            <div className="pt-1">
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="text-sm text-sn-gray-text hover:text-sn-off-white transition-colors"
+                >
+                  Sign Out
+                </button>
+              </form>
+            </div>
           </div>
         </div>
       )}

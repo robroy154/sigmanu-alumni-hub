@@ -23,7 +23,7 @@ export default async function ProfileEditPage() {
     supabase
       .from("members")
       .select(
-        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
+        "first_name, last_name, nickname, pledge_class, pin_number, phone, email, city, state, linkedin_url, profile_photo_url, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone, newsletter_opt_out"
       )
       .eq("id", user.id)
       .single(),
@@ -72,9 +72,10 @@ export default async function ProfileEditPage() {
     zip:            member.zip ?? undefined,
     country:        member.country ?? undefined,
     birthday:       member.birthday ?? undefined,
-    show_address:   member.show_address,
-    show_birthday:  member.show_birthday,
-    show_phone:     member.show_phone,
+    show_address:        member.show_address,
+    show_birthday:       member.show_birthday,
+    show_phone:          member.show_phone,
+    newsletter_opt_out:  member.newsletter_opt_out,
   };
 
   return (

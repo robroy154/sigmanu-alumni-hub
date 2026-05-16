@@ -45,7 +45,7 @@ export default async function MemberProfilePage({ params }: Props) {
   const { data: member } = await supabase
     .from("members")
     .select(
-      "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
+      "first_name, last_name, nickname, pledge_class, pin_number, phone, email, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
     )
     .eq("id", id)
     .in("status", ["member", "admin"])
@@ -223,6 +223,19 @@ export default async function MemberProfilePage({ params }: Props) {
           Contact &amp; Details
         </h2>
         <dl className="space-y-3">
+          {member.email !== null && member.email !== undefined && member.email !== "" && (
+            <div className="flex gap-3">
+              <dt className="w-28 shrink-0 text-sn-gray-text text-sm">Email</dt>
+              <dd>
+                <a
+                  href={`mailto:${member.email}`}
+                  className="text-sn-gold text-sm hover:underline break-all"
+                >
+                  {member.email}
+                </a>
+              </dd>
+            </div>
+          )}
           {showPhone && <Row label="Phone" value={member.phone} />}
           {showBirthday && member.birthday !== null && member.birthday !== undefined && (
             <Row
