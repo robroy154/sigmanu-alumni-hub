@@ -438,14 +438,37 @@ export async function promoteFromWaitlist(
 
   if (entry === null) return { error: "Waitlist entry not found." };
 
+  // Resolve registrant info before insert (email + registrant_name are required fields).
+  let regEmail: string;
+  let regName: string;
+  let notifyFirstName = "there";
+
+  if (entry.member_id !== null) {
+    const { data: member } = await admin
+      .from("members")
+      .select("email, first_name, last_name")
+      .eq("id", entry.member_id)
+      .single();
+    if (member === null) return { error: "Member not found." };
+    regEmail        = member.email;
+    regName         = `${member.first_name} ${member.last_name}`;
+    notifyFirstName = member.first_name;
+  } else {
+    regEmail        = entry.guest_email ?? "";
+    regName         = entry.guest_name  ?? "";
+    notifyFirstName = entry.guest_name  ?? "there";
+  }
+
   // Create a registration for this person.
   const { error: insertError } = await admin
     .from("registrations")
     .insert({
-      event_id:       entry.event_id,
-      member_id:      entry.member_id,
-      payment_status: "unpaid",
-      guest_count:    0,
+      event_id:        entry.event_id,
+      member_id:       entry.member_id,
+      email:           regEmail,
+      registrant_name: regName,
+      payment_status:  "unpaid",
+      guest_count:     0,
     });
 
   if (insertError !== null) {
@@ -459,27 +482,9 @@ export async function promoteFromWaitlist(
   revalidatePath(`/admin/events/${entry.event_id}/waitlist`);
   revalidatePath("/admin/events");
 
-  // Notify the member by email if we have their address.
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  let notifyEmail: string | null = null;
-  let notifyFirstName = "there";
-
-  if (entry.member_id !== null) {
-    const { data: member } = await admin
-      .from("members")
-      .select("email, first_name")
-      .eq("id", entry.member_id)
-      .single();
-    if (member !== null) {
-      notifyEmail     = member.email;
-      notifyFirstName = member.first_name;
-    }
-  } else if (entry.guest_email !== null) {
-    notifyEmail     = entry.guest_email;
-    notifyFirstName = entry.guest_name ?? "there";
-  }
-
-  if (notifyEmail !== null) {
+  // Notify the registrant by email.
+  if (regEmail !== "") {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const { data: event } = await admin
       .from("events")
       .select("title, slug, id")
@@ -490,7 +495,7 @@ export async function promoteFromWaitlist(
       const slug = event.slug ?? event.id;
       void import("@/lib/email").then(({ sendWaitlistPromotionNotification }) =>
         sendWaitlistPromotionNotification({
-          to:              notifyEmail!,
+          to:              regEmail,
           firstName:       notifyFirstName,
           eventTitle:      event.title,
           registrationUrl: `${appUrl}/events/${slug}/register`,
