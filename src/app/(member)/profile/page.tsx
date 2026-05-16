@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ReferralForm } from "@/components/profile/ReferralForm";
 import { Info, GitFork, UserPlus } from "lucide-react";
 
@@ -9,13 +10,15 @@ export const metadata: Metadata = { title: "My Profile" };
 
 export default async function ProfilePage() {
   const supabase = await createClient();
+  const admin = createAdminClient();
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (user === null) redirect("/login");
 
-  const [{ data: member }, { data: littles }, { data: referrals }] = await Promise.all([
+  const [{ data: member }, { data: referrals }] = await Promise.all([
     supabase
       .from("members")
       .select(
@@ -23,12 +26,6 @@ export default async function ProfilePage() {
       )
       .eq("id", user.id)
       .single(),
-    supabase
-      .from("members")
-      .select("id, first_name, last_name, nickname")
-      .eq("big_id", user.id)
-      .in("status", ["member", "admin"])
-      .order("last_name"),
     supabase
       .from("referrals")
       .select("id, first_name, last_name, email, status, created_at")
@@ -48,22 +45,59 @@ export default async function ProfilePage() {
     photoUrl = signed?.signedUrl ?? null;
   }
 
-  const [{ data: badges }, { data: bigMember }] = await Promise.all([
-    supabase.from("badges").select("id, badge_type").eq("member_id", user.id),
-    member.big_id !== null
-      ? supabase
-          .from("members")
-          .select("id, first_name, last_name")
-          .eq("id", member.big_id)
-          .single()
-      : Promise.resolve({ data: null }),
-  ]);
+  // Fetch badges and lineage in parallel.
+  // Lineage uses admin client so stubs are included.
+  const [{ data: badges }, { data: bigMember }, { data: littles }] =
+    await Promise.all([
+      supabase.from("badges").select("id, badge_type").eq("member_id", user.id),
+      member.big_id !== null
+        ? admin
+            .from("members")
+            .select("id, first_name, last_name, pledge_class, status, profile_photo_url")
+            .eq("id", member.big_id)
+            .single()
+        : Promise.resolve({ data: null }),
+      admin
+        .from("members")
+        .select("id, first_name, last_name, pledge_class, status, profile_photo_url")
+        .eq("big_id", user.id)
+        .order("last_name"),
+    ]);
+
+  // Resolve signed URLs for big and little brother photos.
+  const lineagePhotoPaths = [
+    ...(bigMember?.profile_photo_url !== null && bigMember?.profile_photo_url !== undefined && bigMember.profile_photo_url !== ""
+      ? [bigMember.profile_photo_url]
+      : []),
+    ...(littles ?? [])
+      .map((l) => l.profile_photo_url)
+      .filter((p): p is string => p !== null && p !== ""),
+  ];
+
+  const lineagePhotoMap: Record<string, string> = {};
+  if (lineagePhotoPaths.length > 0) {
+    const { data: signed } = await admin.storage
+      .from("profile-photos")
+      .createSignedUrls(lineagePhotoPaths, 3600);
+    signed?.forEach(({ path, signedUrl, error }) => {
+      if (error === null && path !== null && path !== undefined) {
+        lineagePhotoMap[path] = signedUrl;
+      }
+    });
+  }
 
   const fullName = [member.first_name, member.last_name].join(" ");
   const location =
     member.city !== null && member.state !== null
       ? `${member.city}, ${member.state}`
       : (member.city ?? member.state ?? null);
+
+  const pinDisplay =
+    member.pin_number !== null && member.pin_number !== ""
+      ? `ΜΞ ${String(member.pin_number).padStart(3, "0")}`
+      : null;
+
+  const hasLineage = bigMember !== null || (littles !== null && littles.length > 0);
 
   // Completeness: flag missing key profile fields
   const missingFields: string[] = [];
@@ -155,6 +189,49 @@ export default async function ProfilePage() {
         </div>
       </div>
 
+      {/* Family line — between header and contact */}
+      {hasLineage && (
+        <div className="bg-sn-surface rounded-xl p-6 space-y-5">
+          <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
+            <GitFork className="w-4 h-4" />
+            Family Line
+          </h2>
+
+          {bigMember !== null && (
+            <div>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
+                Big Brother
+              </p>
+              <LineagePerson
+                person={bigMember}
+                photoUrl={bigMember.profile_photo_url !== null && bigMember.profile_photo_url !== ""
+                  ? (lineagePhotoMap[bigMember.profile_photo_url] ?? null)
+                  : null}
+              />
+            </div>
+          )}
+
+          {littles !== null && littles.length > 0 && (
+            <div>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
+                Little Brother{littles.length !== 1 ? "s" : ""}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {littles.map((l) => (
+                  <LineagePerson
+                    key={l.id}
+                    person={l}
+                    photoUrl={l.profile_photo_url !== null && l.profile_photo_url !== ""
+                      ? (lineagePhotoMap[l.profile_photo_url] ?? null)
+                      : null}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Contact details */}
       <div className="bg-sn-surface rounded-xl p-6 space-y-4">
         <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
@@ -162,10 +239,10 @@ export default async function ProfilePage() {
           Contact &amp; Details
         </h2>
         <dl className="space-y-3">
-          <Row label="Email"      value={user.email ?? null} />
-          <Row label="Phone"      value={member.phone} />
-          <Row label="Birthday"   value={member.birthday !== null && member.birthday !== undefined ? new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null} />
-          <Row label="Pin number" value={member.pin_number} />
+          <Row label="Email"        value={user.email ?? null} />
+          <Row label="Phone"        value={member.phone} />
+          <Row label="Birthday"     value={member.birthday !== null && member.birthday !== undefined ? new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : null} />
+          <Row label="Badge number" value={pinDisplay} />
           {/* Address — show full address on own profile */}
           {member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
             <div className="flex gap-3">
@@ -202,51 +279,6 @@ export default async function ProfilePage() {
         </dl>
       </div>
 
-      {/* Family line */}
-      {(bigMember !== null || (littles !== null && littles.length > 0)) && (
-        <div className="bg-sn-surface rounded-xl p-6 space-y-4">
-          <h2 className="flex items-center gap-2 text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
-            <GitFork className="w-4 h-4" />
-            Family Line
-          </h2>
-
-          {bigMember !== null && (
-            <div>
-              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
-              <Link
-                href={`/profile/${bigMember.id}`}
-                className="inline-flex items-center gap-2 text-sn-off-white text-sm font-medium hover:text-sn-gold transition-colors"
-              >
-                {bigMember.first_name} {bigMember.last_name}
-                <span className="text-sn-gray-medium">→</span>
-              </Link>
-            </div>
-          )}
-
-          {littles !== null && littles.length > 0 && (
-            <div>
-              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
-                Little Brother{littles.length !== 1 ? "s" : ""}
-              </p>
-              <div className="space-y-1.5">
-                {littles.map((l) => (
-                  <Link
-                    key={l.id}
-                    href={`/profile/${l.id}`}
-                    className="flex items-center gap-2 text-sn-off-white text-sm hover:text-sn-gold transition-colors"
-                  >
-                    {l.first_name} {l.last_name}
-                    {l.nickname !== null && l.nickname !== "" && (
-                      <span className="text-sn-gray-medium text-xs">&ldquo;{l.nickname}&rdquo;</span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Invite a Brother */}
       <div className="bg-sn-surface rounded-xl p-6 space-y-4">
         <div className="space-y-0.5">
@@ -262,6 +294,63 @@ export default async function ProfilePage() {
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Shared sub-components
+// ---------------------------------------------------------------------------
+
+interface LineagePersonProps {
+  person: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    pledge_class: string | null;
+    status: "pending" | "member" | "admin" | "stub";
+  };
+  photoUrl: string | null;
+}
+
+function LineagePerson({ person, photoUrl }: LineagePersonProps) {
+  const initials = (person.first_name[0] ?? "") + (person.last_name[0] ?? "");
+  const isReal = person.status === "member" || person.status === "admin";
+
+  const inner = (
+    <div className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-full overflow-hidden bg-sn-black-secondary border border-sn-gold/30 flex items-center justify-center shrink-0 select-none">
+        {photoUrl !== null ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photoUrl} alt={`${person.first_name} ${person.last_name}`} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-sn-gold text-xs font-bold">{initials}</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className={[
+          "text-sm font-medium leading-tight",
+          isReal ? "text-sn-off-white" : "text-sn-off-white/60",
+        ].join(" ")}>
+          {person.first_name} {person.last_name}
+        </p>
+        {person.pledge_class !== null && (
+          <p className="text-sn-gray-text text-xs mt-0.5">{person.pledge_class} Class</p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isReal) {
+    return (
+      <Link
+        href={`/profile/${person.id}`}
+        className="inline-block hover:opacity-80 transition-opacity"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div>{inner}</div>;
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {

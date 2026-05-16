@@ -4,18 +4,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import type { GuestRegistrationInput } from "@/lib/registration/schemas";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export async function createGuestRegistration(
   eventId: string,
-  data: GuestRegistrationInput
+  data: GuestRegistrationInput,
+  fieldResponses?: Record<string, string>
 ): Promise<{ checkoutUrl: string } | { confirmationUrl: string } | { error: string }> {
   const admin = createAdminClient();
 
   // Validate event exists, is published, and registration is open.
   const { data: event } = await admin
     .from("events")
-    .select("id, title, ticket_price, status, registration_open")
+    .select("id, title, ticket_price, early_bird_price, early_bird_ends_at, registration_closes_at, status, registration_open")
     .eq("id", eventId)
     .maybeSingle();
 
@@ -23,17 +24,33 @@ export async function createGuestRegistration(
     return { error: "This event is not currently open for registration." };
   }
 
+  if (event.registration_closes_at !== null && new Date(event.registration_closes_at) <= new Date()) {
+    return { error: "Registration for this event has closed." };
+  }
+
   // Guard against duplicate registration by email + event.
+  // Only block if a *paid* registration exists — unpaid rows are abandoned
+  // checkouts and should not prevent a fresh registration attempt.
   const { data: existing } = await admin
     .from("registrations")
     .select("id")
     .eq("event_id", eventId)
     .eq("email", data.email)
+    .eq("payment_status", "paid")
     .maybeSingle();
 
   if (existing !== null) {
     return { error: "A registration with this email address already exists for this event." };
   }
+
+  // Resolve applied price server-side.
+  const now = new Date();
+  const appliedPrice =
+    event.early_bird_price !== null &&
+    event.early_bird_ends_at !== null &&
+    new Date(event.early_bird_ends_at) > now
+      ? Number(event.early_bird_price)
+      : event.ticket_price;
 
   const guestCount = data.guest_names.length;
   const totalAttendees = 1 + guestCount;
@@ -48,10 +65,9 @@ export async function createGuestRegistration(
       registrant_name:      registrantName,
       email:                data.email,
       phone:                data.phone ?? null,
-      dietary_restrictions: data.dietary_restrictions ?? null,
-      tshirt_size:          data.tshirt_size,
       guest_count:          guestCount,
       payment_status:       "unpaid",
+      applied_price:        appliedPrice,
     })
     .select("id")
     .single();
@@ -76,11 +92,30 @@ export async function createGuestRegistration(
     }
   }
 
+  // Insert custom field responses.
+  if (fieldResponses !== undefined) {
+    const responseRows = Object.entries(fieldResponses)
+      .filter(([, value]) => value !== "")
+      .map(([fieldId, value]) => ({
+        registration_id: registration.id,
+        field_id:        fieldId,
+        response_value:  value,
+      }));
+    if (responseRows.length > 0) {
+      await admin.from("event_field_responses").insert(responseRows);
+    }
+  }
+
+  if (APP_URL === undefined || APP_URL === "") {
+    console.error("[createGuestRegistration] NEXT_PUBLIC_APP_URL is not set");
+    return { error: "Server configuration error. Please contact an administrator." };
+  }
+
   // Free event — mark paid immediately, skip Stripe.
-  if (event.ticket_price === 0) {
+  if (appliedPrice === 0) {
     await admin
       .from("registrations")
-      .update({ payment_status: "paid" })
+      .update({ payment_status: "paid", amount_paid: 0 })
       .eq("id", registration.id);
 
     return {
@@ -96,7 +131,7 @@ export async function createGuestRegistration(
         price_data: {
           currency:     "usd",
           product_data: { name: `${event.title} — Ticket` },
-          unit_amount:  Math.round(event.ticket_price * 100),
+          unit_amount:  Math.round(appliedPrice * 100),
         },
         quantity: totalAttendees,
       },

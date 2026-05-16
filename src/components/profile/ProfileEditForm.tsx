@@ -113,6 +113,7 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
       {/* ── Address ──────────────────────────────────────────────── */}
       <div className="space-y-3">
         <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">Address {optLabel}</p>
+        <p className="text-white/40 text-xs">Members will only see your city and state.</p>
 
         {/* Street address with Google Places autocomplete */}
         <div className="space-y-1.5">
@@ -199,13 +200,15 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
         />
         <PrivacyToggle
           id="show_address"
-          label="Show my address to other members"
+          label="Show my location to other members"
+          helperText="Only your city and state are visible to other members."
           checked={showAddress}
           onChange={(v) => setValue("show_address", v, { shouldDirty: true })}
         />
         <PrivacyToggle
           id="show_birthday"
           label="Show my birthday to other members"
+          helperText="Only your month and day will be visible to other members."
           checked={showBirthday}
           onChange={(v) => setValue("show_birthday", v, { shouldDirty: true })}
         />
@@ -225,26 +228,33 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
 function PrivacyToggle({
   id,
   label,
+  helperText,
   checked,
   onChange,
 }: {
-  id:       string;
-  label:    string;
-  checked:  boolean;
-  onChange: (v: boolean) => void;
+  id:          string;
+  label:       string;
+  helperText?: string;
+  checked:     boolean;
+  onChange:    (v: boolean) => void;
 }) {
   return (
-    <label htmlFor={id} className="flex items-center gap-3 cursor-pointer group">
+    <label htmlFor={id} className="flex items-start gap-3 cursor-pointer group">
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="w-4 h-4 rounded border border-white/30 bg-white/10 accent-sn-gold cursor-pointer"
+        className="w-4 h-4 mt-0.5 rounded border border-white/30 bg-white/10 accent-sn-gold cursor-pointer shrink-0"
       />
-      <span className="text-white/70 text-sm group-hover:text-white transition-colors">
-        {label}
-      </span>
+      <div>
+        <span className="text-white/70 text-sm group-hover:text-white transition-colors">
+          {label}
+        </span>
+        {helperText !== undefined && (
+          <p className="text-white/40 text-xs mt-0.5">{helperText}</p>
+        )}
+      </div>
     </label>
   );
 }

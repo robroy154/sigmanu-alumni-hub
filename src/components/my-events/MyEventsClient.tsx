@@ -127,10 +127,10 @@ function EventRow({
   guests:       GuestRow[];
   past?:        boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   const event = registration.events;
   if (event === null) return null;
-
-  const [expanded, setExpanded] = useState(false);
 
   const myGuests    = guests.filter((g) => g.registration_id === registration.id);
   const eventDate   = new Date(event.event_date);
@@ -184,12 +184,10 @@ function EventRow({
             )}
             <div className="flex items-center gap-3 mt-1.5">
               <PaymentBadge status={registration.payment_status} />
-              {registration.guest_count > 0 && (
-                <span className="text-sn-gray-medium text-xs">
-                  +{registration.guest_count} guest
-                  {registration.guest_count !== 1 ? "s" : ""}
-                </span>
-              )}
+              <span className="text-sn-gray-medium text-xs">
+                {1 + registration.guest_count} attendee{1 + registration.guest_count !== 1 ? "s" : ""}
+                {registration.guest_count > 0 && ` (you + ${registration.guest_count} guest${registration.guest_count !== 1 ? "s" : ""})`}
+              </span>
               {total > 0 && (
                 <span className="flex items-center gap-1 text-sn-gray-medium text-xs">
                   <Ticket className="w-3 h-3" />
@@ -201,16 +199,24 @@ function EventRow({
         </div>
       </Link>
 
-      {/* Manage registration toggle — upcoming events only */}
-      {!past && (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="w-full text-sn-gold hover:text-sn-gold-light text-xs py-2 px-5 text-left transition-colors"
+      {/* Action row: manage (upcoming) + view receipt */}
+      <div className="flex items-center gap-1">
+        {!past && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="flex-1 text-sn-gold hover:text-sn-gold-light text-xs py-2 px-5 text-left transition-colors"
+          >
+            {expanded ? "Hide details ▲" : "Manage registration ▼"}
+          </button>
+        )}
+        <Link
+          href={`/my-events/${registration.id}`}
+          className={`text-sn-gray-text hover:text-sn-off-white text-xs py-2 px-5 transition-colors ${past ? "flex-1" : "shrink-0"}`}
         >
-          {expanded ? "Hide details ▲" : "Manage registration ▼"}
-        </button>
-      )}
+          View Receipt →
+        </Link>
+      </div>
 
       {expanded && !past && (
         <div className="pt-1">

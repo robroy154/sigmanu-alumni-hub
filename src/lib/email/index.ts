@@ -1,37 +1,36 @@
 "use server";
 
 /**
- * Email sending module — wraps Resend.
+ * Email sending module — wraps Brevo.
  *
  * Required env vars:
- *   RESEND_API_KEY       — from resend.com dashboard
- *   RESEND_FROM_EMAIL    — verified sender (e.g. "noreply@yourdomain.com")
- *                          defaults to "onboarding@resend.dev" for local dev
+ *   BREVO_API_KEY        — from app.brevo.com dashboard
+ *   BREVO_FROM_EMAIL     — verified sender (e.g. "noreply@yourdomain.com")
  *
  * All send functions are fire-and-forget: they log errors but never throw,
  * so a failed email never blocks the primary operation.
  */
 
-import { Resend } from "resend";
+import { BrevoClient } from "@getbrevo/brevo";
 
 // ---------------------------------------------------------------------------
 // Client
 // ---------------------------------------------------------------------------
 
-function getResend(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
+function getBrevo(): BrevoClient | null {
+  const key = process.env.BREVO_API_KEY;
   if (key === undefined || key === "") {
-    console.warn("[email] RESEND_API_KEY not set — emails disabled.");
+    console.warn("[email] BREVO_API_KEY not set — emails disabled.");
     return null;
   }
-  return new Resend(key);
+  return new BrevoClient({ apiKey: key });
 }
 
-const FROM =
-  process.env.RESEND_FROM_EMAIL !== undefined &&
-  process.env.RESEND_FROM_EMAIL !== ""
-    ? process.env.RESEND_FROM_EMAIL
-    : "Sigma Nu Mu Xi <onboarding@resend.dev>";
+const SENDER_NAME  = "Mu Xi Chapter of Sigma Nu Fraternity";
+const SENDER_EMAIL =
+  process.env.BREVO_FROM_EMAIL !== undefined && process.env.BREVO_FROM_EMAIL !== ""
+    ? process.env.BREVO_FROM_EMAIL
+    : "noreply@csusigmanu.com";
 
 // ---------------------------------------------------------------------------
 // Base HTML template
@@ -85,14 +84,14 @@ function baseTemplate(bodyHtml: string): string {
 }
 
 // Shared inline styles used in templates
-const h1 = `color:#ffffff;font-size:22px;font-weight:bold;margin:0 0 12px;line-height:1.3;`;
-const p  = `color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin:0 0 14px;font-family:Arial,sans-serif;`;
-const btn = `display:inline-block;background:#C6A75E;color:#0B0B0C;font-family:Arial,sans-serif;
+const h1      = `color:#ffffff;font-size:22px;font-weight:bold;margin:0 0 12px;line-height:1.3;`;
+const p       = `color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin:0 0 14px;font-family:Arial,sans-serif;`;
+const btn     = `display:inline-block;background:#C6A75E;color:#0B0B0C;font-family:Arial,sans-serif;
              font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px;
              text-decoration:none;letter-spacing:0.5px;`;
-const label = `color:#C6A75E;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
+const label   = `color:#C6A75E;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
                font-family:Arial,sans-serif;`;
-const value = `color:#ffffff;font-size:15px;font-family:Arial,sans-serif;`;
+const value   = `color:#ffffff;font-size:15px;font-family:Arial,sans-serif;`;
 const divider = `border:none;border-top:1px solid rgba(198,167,94,0.2);margin:20px 0;`;
 
 // ---------------------------------------------------------------------------
@@ -106,8 +105,8 @@ export async function sendWelcomeEmail({
   to:        string;
   firstName: string;
 }): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -146,13 +145,12 @@ export async function sendWelcomeEmail({
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to,
-      subject: "You're approved — Welcome to the Mu Xi Alumni Hub",
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     "You're approved — Welcome to the Mu Xi Alumni Hub",
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
     });
-    if (error !== null) console.error("[email] sendWelcomeEmail failed:", error);
   } catch (err) {
     console.error("[email] sendWelcomeEmail threw:", err);
   }
@@ -179,10 +177,10 @@ export async function sendRegistrationConfirmation({
   guestCount:    number;
   totalPaid:     number; // dollars
 }): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
-  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const guestLine =
     guestCount === 0
       ? "No additional guests."
@@ -228,13 +226,12 @@ export async function sendRegistrationConfirmation({
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to,
-      subject: `Registration confirmed — ${eventTitle}`,
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `Registration confirmed — ${eventTitle}`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
     });
-    if (error !== null) console.error("[email] sendRegistrationConfirmation failed:", error);
   } catch (err) {
     console.error("[email] sendRegistrationConfirmation threw:", err);
   }
@@ -244,29 +241,48 @@ export async function sendRegistrationConfirmation({
 // 3. New member alert — sent to all admins when someone signs up
 // ---------------------------------------------------------------------------
 
-export async function notifyAdminsNewMember(): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+export async function notifyAdminsNewMember(member?: {
+  firstName: string;
+  lastName:  string;
+  email:     string;
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
   // Import here to avoid circular deps — this file is "use server"
-  const { createClient }      = await import("@/lib/supabase/server");
   const { createAdminClient } = await import("@/lib/supabase/admin");
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (user === null) return;
+  let resolvedMember: { first_name: string; last_name: string; email: string };
+
+  if (member !== undefined) {
+    // Caller supplied member data directly — skip session lookup.
+    // This is the reliable path when called immediately after signUp(),
+    // where the session cookie may not yet be available on the server.
+    resolvedMember = {
+      first_name: member.firstName,
+      last_name:  member.lastName,
+      email:      member.email,
+    };
+  } else {
+    // Fallback: derive member from the active session.
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user === null) return;
+
+    const adminDb = createAdminClient();
+    const { data: fetched } = await adminDb
+      .from("members")
+      .select("first_name, last_name, email")
+      .eq("id", user.id)
+      .single();
+    if (fetched === null) return;
+    resolvedMember = fetched;
+  }
 
   const adminDb = createAdminClient();
-
-  // Fetch the new member's data from DB (don't trust client-supplied values)
-  const { data: member } = await adminDb
-    .from("members")
-    .select("first_name, last_name, email")
-    .eq("id", user.id)
-    .single();
-  if (member === null) return;
 
   // Fetch all admin email addresses
   const { data: admins } = await adminDb
@@ -280,8 +296,8 @@ export async function notifyAdminsNewMember(): Promise<void> {
     return;
   }
 
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const fullName  = `${member.first_name} ${member.last_name}`;
+  const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const fullName = `${resolvedMember.first_name} ${resolvedMember.last_name}`;
 
   const body = `
     <h1 style="${h1}">New member signup</h1>
@@ -296,7 +312,7 @@ export async function notifyAdminsNewMember(): Promise<void> {
       </tr>
       <tr>
         <td style="${label}">Email</td>
-        <td style="${value}">${member.email}</td>
+        <td style="${value}">${resolvedMember.email}</td>
       </tr>
     </table>
     <hr style="${divider}">
@@ -306,20 +322,114 @@ export async function notifyAdminsNewMember(): Promise<void> {
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to:      adminEmails,
-      subject: `New member signup — ${fullName}`,
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `New member signup — ${fullName}`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          adminEmails.map((email) => ({ email })),
     });
-    if (error !== null) console.error("[email] notifyAdminsNewMember failed:", error);
   } catch (err) {
     console.error("[email] notifyAdminsNewMember threw:", err);
   }
 }
 
 // ---------------------------------------------------------------------------
-// 4. Referral invite — sent to the person being invited
+// 4. Pending confirmation — sent to member immediately after signup
+// ---------------------------------------------------------------------------
+
+export async function sendPendingConfirmation({
+  to,
+  firstName,
+}: {
+  to:        string;
+  firstName: string;
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">Thanks for signing up, ${firstName}!</h1>
+    <p style="${p}">
+      Your account for the <strong style="color:#C6A75E;">Sigma Nu Mu Xi Chapter Alumni Hub</strong>
+      has been received and is pending review by a chapter administrator.
+    </p>
+    <p style="${p}">
+      You will receive an email as soon as your account is approved. This typically
+      happens within a day or two.
+    </p>
+    <p style="${p}">
+      In the meantime, you can return to sign in at any time — you'll be held at
+      the pending approval page until an admin activates your account.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/login" style="${btn}">Sign In →</a>
+    </p>
+  `;
+
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     "Your Sigma Nu Mu Xi account is pending approval",
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
+    });
+  } catch (err) {
+    console.error("[email] sendPendingConfirmation threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 5. Announcement notification — sent to all members when admin posts
+// ---------------------------------------------------------------------------
+
+export async function sendAnnouncementNotification({
+  title,
+  body: announcementBody,
+  memberEmails,
+}: {
+  title:        string;
+  body:         string;
+  memberEmails: string[];
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
+
+  if (memberEmails.length === 0) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const emailHtml = baseTemplate(`
+    <h1 style="${h1}">${title}</h1>
+    <p style="${p}">${announcementBody}</p>
+    <hr style="${divider}">
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/home" style="${btn}">Visit the Hub →</a>
+    </p>
+  `);
+
+  // Process in chunks of 100 — send individually within each chunk.
+  const CHUNK = 100;
+  for (let i = 0; i < memberEmails.length; i += CHUNK) {
+    const chunk = memberEmails.slice(i, i + CHUNK);
+    for (const email of chunk) {
+      try {
+        await brevo.transactionalEmails.sendTransacEmail({
+          subject:     `New announcement: ${title}`,
+          htmlContent: emailHtml,
+          sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+          to:          [{ email }],
+        });
+      } catch (err) {
+        console.error(`[email] sendAnnouncementNotification failed for ${email}:`, err);
+      }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6. Referral invite — sent to the person being invited
 // ---------------------------------------------------------------------------
 
 export async function sendReferralInvite({
@@ -333,8 +443,8 @@ export async function sendReferralInvite({
   inviteeFirstName: string;
   token:            string;
 }): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
   const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join?token=${token}`;
@@ -360,20 +470,19 @@ export async function sendReferralInvite({
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to,
-      subject: "You're invited to join the Sigma Nu Mu Xi Alumni Hub",
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     "You're invited to join the Sigma Nu Mu Xi Alumni Hub",
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
     });
-    if (error !== null) console.error("[email] sendReferralInvite failed:", error);
   } catch (err) {
     console.error("[email] sendReferralInvite threw:", err);
   }
 }
 
 // ---------------------------------------------------------------------------
-// 5. Referral sent confirmation — sent to the referring member
+// 7. Referral sent confirmation — sent to the referring member
 // ---------------------------------------------------------------------------
 
 export async function sendReferralSentConfirmation({
@@ -387,8 +496,8 @@ export async function sendReferralSentConfirmation({
   inviteeFirstName:  string;
   inviteeLastName:   string;
 }): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
   const body = `
     <h1 style="${h1}">Your invite has been sent!</h1>
@@ -406,20 +515,19 @@ export async function sendReferralSentConfirmation({
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to,
-      subject: `Your invite to ${inviteeFirstName} has been sent`,
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `Your invite to ${inviteeFirstName} has been sent`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
     });
-    if (error !== null) console.error("[email] sendReferralSentConfirmation failed:", error);
   } catch (err) {
     console.error("[email] sendReferralSentConfirmation threw:", err);
   }
 }
 
 // ---------------------------------------------------------------------------
-// 6. Referral completed — sent to the referring member when invitee joins
+// 8. Referral completed — sent to the referring member when invitee joins
 // ---------------------------------------------------------------------------
 
 export async function sendReferralCompleted({
@@ -433,8 +541,8 @@ export async function sendReferralCompleted({
   inviteeFirstName:  string;
   inviteeLastName:   string;
 }): Promise<void> {
-  const resend = getResend();
-  if (resend === null) return;
+  const brevo = getBrevo();
+  if (brevo === null) return;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -451,14 +559,144 @@ export async function sendReferralCompleted({
   `;
 
   try {
-    const { error } = await resend.emails.send({
-      from:    FROM,
-      to,
-      subject: `${inviteeFirstName} ${inviteeLastName} just joined!`,
-      html:    baseTemplate(body),
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `${inviteeFirstName} ${inviteeLastName} just joined!`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
     });
-    if (error !== null) console.error("[email] sendReferralCompleted failed:", error);
   } catch (err) {
     console.error("[email] sendReferralCompleted threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 9. Big brother updated — sent to all admins when a member sets/clears their big
+// ---------------------------------------------------------------------------
+
+export async function sendBigBrotherSetNotification({
+  memberFirstName,
+  memberLastName,
+  memberEmail,
+  bigFirstName,
+  bigLastName,
+}: {
+  memberFirstName: string;
+  memberLastName:  string;
+  memberEmail:     string;
+  bigFirstName:    string | null;
+  bigLastName:     string | null;
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminDb = createAdminClient();
+
+  const { data: admins } = await adminDb
+    .from("members")
+    .select("email")
+    .eq("status", "admin");
+
+  const adminEmails = (admins ?? []).map((a) => a.email);
+  if (adminEmails.length === 0) {
+    console.warn("[email] sendBigBrotherSetNotification: no admin accounts found to notify.");
+    return;
+  }
+
+  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const fullName  = `${memberFirstName} ${memberLastName}`;
+  const bigLine   =
+    bigFirstName !== null && bigLastName !== null
+      ? `${bigFirstName} ${bigLastName}`
+      : "Cleared (relationship removed)";
+  const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  const body = `
+    <h1 style="${h1}">Big brother relationship updated</h1>
+    <p style="${p}">
+      A member has updated their big brother relationship.
+    </p>
+    <hr style="${divider}">
+    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;">
+      <tr>
+        <td style="${label}">Member</td>
+        <td style="${value}">${fullName}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Email</td>
+        <td style="${value}">${memberEmail}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Big brother</td>
+        <td style="${value}">${bigLine}</td>
+      </tr>
+      <tr>
+        <td style="${label}">Updated</td>
+        <td style="${value}">${timestamp} ET</td>
+      </tr>
+    </table>
+    <hr style="${divider}">
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/admin/members" style="${btn}">Review in Admin Panel →</a>
+    </p>
+  `;
+
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `Big brother updated — ${fullName}`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          adminEmails.map((email) => ({ email })),
+    });
+  } catch (err) {
+    console.error("[email] sendBigBrotherSetNotification threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 10. Little brother notification — sent to the big when a member claims them
+// ---------------------------------------------------------------------------
+
+export async function sendLittleBrotherNotification({
+  to,
+  bigFirstName,
+  littleFirstName,
+  littleLastName,
+}: {
+  to:              string;
+  bigFirstName:    string;
+  littleFirstName: string;
+  littleLastName:  string;
+}): Promise<void> {
+  const brevo = getBrevo();
+  if (brevo === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const body = `
+    <h1 style="${h1}">You have a new Little Brother!</h1>
+    <p style="${p}">
+      Hi ${bigFirstName},
+      <strong style="color:#ffffff;">${littleFirstName} ${littleLastName}</strong>
+      has added you as their Big Brother in the Mu Xi Alumni Hub.
+    </p>
+    <p style="${p}">
+      You can see your full lineage on the family tree.
+    </p>
+    <p style="text-align:center;margin:28px 0;">
+      <a href="${appUrl}/family-tree" style="${btn}">View Family Tree →</a>
+    </p>
+  `;
+
+  try {
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject:     `${littleFirstName} ${littleLastName} claimed you as their Big Brother`,
+      htmlContent: baseTemplate(body),
+      sender:      { name: SENDER_NAME, email: SENDER_EMAIL },
+      to:          [{ email: to }],
+    });
+  } catch (err) {
+    console.error("[email] sendLittleBrotherNotification threw:", err);
   }
 }

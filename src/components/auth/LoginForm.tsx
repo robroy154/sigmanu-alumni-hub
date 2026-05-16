@@ -62,7 +62,7 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     if (member?.status === "pending") {
       router.push("/pending-approval");
     } else {
-      router.push(redirectTo ?? "/directory");
+      router.push(redirectTo ?? "/home");
     }
 
     router.refresh();

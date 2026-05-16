@@ -25,7 +25,8 @@ async function requireAdmin(): Promise<{ id: string } | { error: string }> {
 // ── Create announcement ───────────────────────────────────────────────────────
 export async function createAnnouncement(
   title: string,
-  body: string
+  body: string,
+  notifyMembers: boolean,
 ): Promise<{ error: string } | { success: true }> {
   const guard = await requireAdmin();
   if ("error" in guard) return guard;
@@ -35,12 +36,59 @@ export async function createAnnouncement(
 
   const admin = createAdminClient();
   const { error } = await admin.from("announcements").insert({
-    title:      title.trim(),
-    body:       body.trim(),
-    created_by: guard.id,
+    title:          title.trim(),
+    body:           body.trim(),
+    created_by:     guard.id,
+    notify_members: notifyMembers,
   });
 
   if (error !== null) return { error: "Failed to create announcement." };
+
+  // Send notification emails if requested — fire-and-forget.
+  if (notifyMembers) {
+    void (async () => {
+      const { data: members } = await admin
+        .from("members")
+        .select("email")
+        .in("status", ["member", "admin"])
+        .not("email", "is", null);
+
+      const emails = (members ?? []).map((m) => m.email);
+      if (emails.length > 0) {
+        const { sendAnnouncementNotification } = await import("@/lib/email");
+        await sendAnnouncementNotification({
+          title: title.trim(),
+          body:  body.trim(),
+          memberEmails: emails,
+        });
+      }
+    })();
+  }
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/home");
+  return { success: true };
+}
+
+// ── Update announcement title and body ────────────────────────────────────────
+export async function updateAnnouncement(
+  announcementId: string,
+  title: string,
+  body: string,
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (title.trim() === "") return { error: "Title is required." };
+  if (body.trim() === "") return { error: "Body is required." };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("announcements")
+    .update({ title: title.trim(), body: body.trim(), updated_at: new Date().toISOString() })
+    .eq("id", announcementId);
+
+  if (error !== null) return { error: "Failed to update announcement." };
 
   revalidatePath("/admin/announcements");
   revalidatePath("/home");
@@ -59,6 +107,27 @@ export async function toggleAnnouncement(
   const { error } = await admin
     .from("announcements")
     .update({ is_active: isActive, updated_at: new Date().toISOString() })
+    .eq("id", announcementId);
+
+  if (error !== null) return { error: "Failed to update announcement." };
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/home");
+  return { success: true };
+}
+
+// ── Pin / unpin announcement ──────────────────────────────────────────────────
+export async function pinAnnouncement(
+  announcementId: string,
+  pinned: boolean,
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("announcements")
+    .update({ is_pinned: pinned, updated_at: new Date().toISOString() })
     .eq("id", announcementId);
 
   if (error !== null) return { error: "Failed to update announcement." };

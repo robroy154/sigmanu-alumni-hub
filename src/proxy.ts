@@ -1,3 +1,4 @@
+// event routing: no hardcoded event IDs or slugs in proxy redirect logic
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
@@ -15,7 +16,7 @@ const AUTH_ROUTES = [
   "/pending-approval",
   "/complete-profile",
 ];
-const PENDING_ALLOWED = ["/register", "/events"];
+const PENDING_ALLOWED = ["/register", "/events", "/auth/claim-stub"];
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
 function matchesRoute(pathname: string, routes: string[]): boolean {
@@ -55,6 +56,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // Server action requests carry a Next-Action header. Let them through
+  // unconditionally — they have their own auth checks inside the action.
+  if (request.headers.has("Next-Action")) {
+    return supabaseResponse;
+  }
 
   const isPublicRoute = matchesRoute(pathname, PUBLIC_ROUTES);
   const isAuthRoute = matchesRoute(pathname, AUTH_ROUTES);
@@ -101,6 +108,12 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // ── Stub ───────────────────────────────────────────────────────────────────
+  // Stub rows have no valid session destination — redirect to pending-approval.
+  if (status === "stub") {
+    return NextResponse.redirect(new URL("/pending-approval", request.url));
+  }
+
   // ── Member ─────────────────────────────────────────────────────────────────
   if (status === "member") {
     if (matchesRoute(pathname, ADMIN_ROUTES)) {
@@ -115,8 +128,8 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Unknown status: fail safe — redirect to home
-  return NextResponse.redirect(new URL("/home", request.url));
+  // Unknown status: fail safe — redirect to pending-approval
+  return NextResponse.redirect(new URL("/pending-approval", request.url));
 }
 
 export const config = {

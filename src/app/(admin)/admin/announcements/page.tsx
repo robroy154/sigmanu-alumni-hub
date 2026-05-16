@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementForm } from "@/components/admin/AnnouncementForm";
 import { AnnouncementControls } from "@/components/admin/AnnouncementControls";
+import { EditAnnouncementForm } from "@/components/admin/EditAnnouncementForm";
 import { Megaphone } from "lucide-react";
 
 export const metadata: Metadata = { title: "Announcements — Admin" };
@@ -11,7 +12,8 @@ export default async function AdminAnnouncementsPage() {
 
   const { data: announcements } = await admin
     .from("announcements")
-    .select("id, title, body, is_active, created_at")
+    .select("id, title, body, is_active, is_pinned, created_at, updated_at")
+    .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false });
 
   const rows = announcements ?? [];
@@ -60,13 +62,30 @@ export default async function AdminAnnouncementsPage() {
                     )}
                   </div>
                   <p className="text-sn-gray-text text-xs line-clamp-2">{a.body}</p>
-                  <p className="text-sn-gray-medium text-xs mt-1">
-                    {new Date(a.created_at).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric", year: "numeric",
-                    })}
+                  <p className="text-sn-gray-medium text-xs mt-1 flex items-center gap-2">
+                    <span>
+                      {new Date(a.created_at).toLocaleDateString("en-US", {
+                        month: "short", day: "numeric", year: "numeric",
+                      })}
+                    </span>
+                    {a.updated_at !== null && a.updated_at !== a.created_at && (
+                      <span className="text-white/30">
+                        · Edited {new Date(a.updated_at).toLocaleDateString("en-US", {
+                          month: "short", day: "numeric",
+                        })}
+                      </span>
+                    )}
+                    {a.is_pinned && (
+                      <span className="text-sn-gold text-[10px] font-semibold uppercase tracking-wide">Pinned</span>
+                    )}
                   </p>
+                  <EditAnnouncementForm
+                    announcementId={a.id}
+                    initialTitle={a.title}
+                    initialBody={a.body}
+                  />
                 </div>
-                <AnnouncementControls announcementId={a.id} isActive={a.is_active} />
+                <AnnouncementControls announcementId={a.id} isActive={a.is_active} isPinned={a.is_pinned} />
               </div>
             ))}
           </div>

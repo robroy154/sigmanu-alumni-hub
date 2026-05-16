@@ -27,14 +27,15 @@ interface Member {
   state: string | null;
   home_address: string | null;
   linkedin_url: string | null;
-  status: string;
+  status: "pending" | "member" | "admin" | "stub";
   big_id: string | null;
 }
 
 interface AdminMemberEditFormProps {
   member: Member;
   badges: Badge[];
-  allMembers: { id: string; first_name: string; last_name: string }[];
+  allMembers: { id: string; first_name: string; last_name: string; pin_number: string | null; pledge_class: string | null; status: string }[];
+  resolvedBigName?: string | null | undefined;
   referrerName?: string | null;
   referrerId?:   string | null;
 }
@@ -43,6 +44,7 @@ export function AdminMemberEditForm({
   member,
   badges,
   allMembers,
+  resolvedBigName,
   referrerName,
   referrerId,
 }: AdminMemberEditFormProps) {
@@ -62,7 +64,7 @@ export function AdminMemberEditForm({
     state:        member.state ?? "",
     home_address: member.home_address ?? "",
     linkedin_url: member.linkedin_url ?? "",
-    status:       member.status,
+    status:       member.status as "pending" | "member" | "admin" | "stub",
     big_id:       member.big_id ?? "",
   });
 
@@ -194,6 +196,7 @@ export function AdminMemberEditForm({
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status" labelClass={labelClass}>
             <select className={selectClass} value={form.status} onChange={set("status")}>
+              <option value="stub"    className="bg-sn-black">Stub (unclaimed import)</option>
               <option value="pending" className="bg-sn-black">Pending</option>
               <option value="member"  className="bg-sn-black">Member</option>
               <option value="admin"   className="bg-sn-black">Admin</option>
@@ -207,10 +210,20 @@ export function AdminMemberEditForm({
                 .filter((m) => m.id !== member.id)
                 .map((m) => (
                   <option key={m.id} value={m.id} className="bg-sn-black">
-                    {m.first_name} {m.last_name}
+                    {formatBigLabel(m)}
                   </option>
                 ))}
             </select>
+            {/* Show resolved name when big_id points to a stub not in the dropdown */}
+            {form.big_id !== "" &&
+              !allMembers.some((m) => m.id === form.big_id) &&
+              resolvedBigName !== null &&
+              resolvedBigName !== undefined && (
+                <p className="text-white/50 text-xs mt-1">
+                  Currently linked to:{" "}
+                  <span className="text-white/70">{resolvedBigName}</span>
+                </p>
+            )}
           </Field>
         </div>
 
@@ -297,6 +310,13 @@ export function AdminMemberEditForm({
       </section>
     </div>
   );
+}
+
+function formatBigLabel(m: { first_name: string; last_name: string; pin_number: string | null; pledge_class: string | null; status: string }): string {
+  const pin = m.pin_number !== null ? ` — ΜΞ ${String(m.pin_number).padStart(3, "0")}` : "";
+  const pc  = m.pledge_class !== null ? ` · ${m.pledge_class}` : "";
+  const tag = m.status === "stub" ? " (unclaimed)" : "";
+  return `${m.first_name} ${m.last_name}${pin}${pc}${tag}`;
 }
 
 function Field({

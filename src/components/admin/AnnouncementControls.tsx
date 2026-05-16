@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toggleAnnouncement, deleteAnnouncement } from "@/lib/admin/announcement-actions";
+import { toggleAnnouncement, deleteAnnouncement, pinAnnouncement } from "@/lib/admin/announcement-actions";
 import { toastSuccess, toastError } from "@/lib/toast";
+import { Pin, PinOff } from "lucide-react";
 
 interface Props {
   announcementId: string;
   isActive: boolean;
+  isPinned: boolean;
 }
 
-export function AnnouncementControls({ announcementId, isActive }: Props) {
+export function AnnouncementControls({ announcementId, isActive, isPinned }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading]       = useState(false);
 
@@ -22,6 +24,17 @@ export function AnnouncementControls({ announcementId, isActive }: Props) {
       toastError(result.error);
     } else {
       toastSuccess(isActive ? "Announcement deactivated." : "Announcement activated.");
+    }
+  }
+
+  async function handlePin() {
+    setLoading(true);
+    const result = await pinAnnouncement(announcementId, !isPinned);
+    setLoading(false);
+    if ("error" in result) {
+      toastError(result.error);
+    } else {
+      toastSuccess(isPinned ? "Announcement unpinned." : "Announcement pinned.");
     }
   }
 
@@ -40,6 +53,17 @@ export function AnnouncementControls({ announcementId, isActive }: Props) {
 
   return (
     <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => void handlePin()}
+        disabled={loading}
+        title={isPinned ? "Unpin" : "Pin to top"}
+        className={`transition-colors ${
+          isPinned ? "text-sn-gold hover:text-sn-gold-light" : "text-white/30 hover:text-white/70"
+        }`}
+      >
+        {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+      </button>
       <Button
         type="button"
         size="sm"

@@ -73,7 +73,7 @@ export async function adminUpdateMember(
     home_address?: string | null;
     linkedin_url?: string | null;
     pin_number?: string | null;
-    status?: string;
+    status?: "pending" | "member" | "admin" | "stub";
     big_id?: string | null;
   }
 ): Promise<{ error: string } | { success: true }> {
@@ -93,7 +93,7 @@ export async function adminUpdateMember(
   // Validate status if provided
   if (
     data.status !== undefined &&
-    !["pending", "member", "admin"].includes(data.status)
+    !["pending", "member", "admin", "stub"].includes(data.status)
   ) {
     return { error: "Invalid status." };
   }
@@ -160,6 +160,196 @@ export async function cancelReferral(
   return { success: true };
 }
 
+// ── Hard delete a referral ────────────────────────────────────────────────────
+export async function deleteReferral(
+  referralId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Completed referrals represent membership history — block deletion.
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("status")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+  if (referral.status === "completed") {
+    return { error: "Cannot delete a completed referral." };
+  }
+
+  const { error } = await admin
+    .from("referrals")
+    .delete()
+    .eq("id", referralId);
+
+  if (error !== null) return { error: "Failed to delete referral." };
+
+  revalidatePath("/admin/referrals");
+  return { success: true };
+}
+
+// ── Hard delete a member ──────────────────────────────────────────────────────
+export async function deleteMember(
+  memberId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (memberId === guard.id) {
+    return { error: "You cannot delete your own account." };
+  }
+
+  const adminDb = createAdminClient();
+
+  // Deleting from auth.users cascades to public.members via FK + trigger.
+  const { error } = await adminDb.auth.admin.deleteUser(memberId);
+
+  if (error !== null) {
+    console.error("[deleteMember] auth.admin.deleteUser failed:", error.message);
+    return { error: "Failed to delete member." };
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// ── Reject (hard delete) a pending member ─────────────────────────────────────
+export async function rejectMember(
+  memberId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (memberId === guard.id) {
+    return { error: "You cannot reject your own account." };
+  }
+
+  const adminDb = createAdminClient();
+
+  // Deleting from auth.users cascades to public.members via FK + trigger.
+  const { error } = await adminDb.auth.admin.deleteUser(memberId);
+
+  if (error !== null) {
+    console.error("[rejectMember] auth.admin.deleteUser failed:", error.message);
+    return { error: "Failed to reject member." };
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath("/admin");
+  return { success: true };
+}
+
+// ── Merge a stub record into an existing member ───────────────────────────────
+export async function adminMergeStub(
+  realMemberId: string,
+  stubId: string
+): Promise<{ success: true } | { error: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // Fetch both rows in parallel
+  const [{ data: real }, { data: stub }] = await Promise.all([
+    admin
+      .from("members")
+      .select("id, pledge_class, pin_number, big_id, nickname, status")
+      .eq("id", realMemberId)
+      .single(),
+    admin
+      .from("members")
+      .select("id, pledge_class, pin_number, big_id, nickname, status")
+      .eq("id", stubId)
+      .single(),
+  ]);
+
+  if (real === null)              return { error: "Member not found." };
+  if (stub === null)              return { error: "Stub not found." };
+  if (stub.status !== "stub")     return { error: "Target record is not a stub." };
+
+  // Only overwrite fields that are currently null on the real row
+  const updates: Record<string, string | null> = {};
+  if (real.pledge_class === null && stub.pledge_class !== null)
+    updates.pledge_class = stub.pledge_class;
+  if (real.pin_number === null && stub.pin_number !== null)
+    updates.pin_number = stub.pin_number;
+  if (real.big_id === null && stub.big_id !== null)
+    updates.big_id = stub.big_id;
+  if (real.nickname === null && stub.nickname !== null)
+    updates.nickname = stub.nickname;
+
+  if (Object.keys(updates).length > 0) {
+    // If we're copying pin_number, null it on the stub first to avoid the unique
+    // constraint being violated while both rows briefly hold the same value.
+    if (updates.pin_number !== undefined) {
+      await admin.from("members").update({ pin_number: null }).eq("id", stubId);
+    }
+
+    const { error: updateError } = await admin
+      .from("members")
+      .update(updates)
+      .eq("id", realMemberId);
+    if (updateError !== null) return { error: "Failed to update member." };
+  }
+
+  // Re-point any little brothers that referenced the stub
+  const { error: repointError } = await admin
+    .from("members")
+    .update({ big_id: realMemberId })
+    .eq("big_id", stubId);
+  if (repointError !== null) {
+    console.error("[adminMergeStub] big_id re-point failed:", repointError.message);
+  }
+
+  // Delete stub only if no registrations reference it
+  const { count } = await admin
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("member_id", stubId);
+
+  if ((count ?? 0) === 0) {
+    const { error: deleteError } = await admin.from("members").delete().eq("id", stubId);
+    if (deleteError !== null) {
+      console.error("[adminMergeStub] stub delete failed:", deleteError.message);
+    }
+  }
+
+  revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${realMemberId}`);
+  revalidatePath("/family-tree");
+  return { success: true };
+}
+
+// ── Delete a registration ────────────────────────────────────────────────────
+export async function deleteRegistration(
+  registrationId: string
+): Promise<{ success: true } | { error: string }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  // registration_guests, event_field_responses, and registration_payments
+  // cascade-delete automatically via FK ON DELETE CASCADE constraints.
+  const { error } = await admin
+    .from("registrations")
+    .delete()
+    .eq("id", registrationId);
+
+  if (error !== null) {
+    console.error("[deleteRegistration] failed:", error.message);
+    return { error: "Failed to delete registration." };
+  }
+
+  revalidatePath("/admin/registrations");
+  return { success: true };
+}
+
 // ── Remove a badge ─────────────────────────────────────────────────────────────
 export async function removeBadge(
   badgeId: string,
@@ -177,5 +367,29 @@ export async function removeBadge(
   if (error !== null) return { error: "Failed to remove badge." };
 
   revalidatePath(`/admin/members/${memberId}`);
+  return { success: true };
+}
+
+// ── Mark a registration as refunded ───────────────────────────────────────────
+export async function markRegistrationRefunded(
+  registrationId: string
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("registrations")
+    .update({ payment_status: "refunded" })
+    .eq("id", registrationId)
+    .eq("payment_status", "paid");
+
+  if (error !== null) {
+    console.error("[markRegistrationRefunded] failed:", error.message);
+    return { error: "Failed to mark registration as refunded." };
+  }
+
+  revalidatePath(`/admin/registrations/${registrationId}`);
+  revalidatePath("/admin/registrations");
   return { success: true };
 }

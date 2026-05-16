@@ -145,6 +145,68 @@ export async function updateBigBrother(
 
   revalidatePath("/profile");
   revalidatePath("/profile/edit");
+
+  // Fire-and-forget admin notification
+  const { data: currentMember } = await supabase
+    .from("members")
+    .select("first_name, last_name, email")
+    .eq("id", user.id)
+    .single();
+
+  let bigFirstName:    string | null = null;
+  let bigLastName:     string | null = null;
+  let bigMemberStatus: string | null = null;
+
+  if (bigId !== null) {
+    const adminDb = createAdminClient();
+    const { data: bigMember } = await adminDb
+      .from("members")
+      .select("first_name, last_name, status")
+      .eq("id", bigId)
+      .single();
+    bigFirstName      = bigMember?.first_name ?? null;
+    bigLastName       = bigMember?.last_name  ?? null;
+    bigMemberStatus   = bigMember?.status     ?? null;
+  }
+
+  if (currentMember !== null) {
+    void import("@/lib/email").then(({ sendBigBrotherSetNotification }) =>
+      sendBigBrotherSetNotification({
+        memberFirstName: currentMember.first_name,
+        memberLastName:  currentMember.last_name,
+        memberEmail:     currentMember.email,
+        bigFirstName,
+        bigLastName,
+      })
+    );
+  }
+
+  // Notify the big directly — only when setting (not clearing) and only for active members
+  if (
+    bigId !== null &&
+    (bigMemberStatus === "member" || bigMemberStatus === "admin") &&
+    bigFirstName !== null &&
+    currentMember !== null
+  ) {
+    const adminDb = createAdminClient();
+    const { data: bigEmailRow } = await adminDb
+      .from("members")
+      .select("email")
+      .eq("id", bigId)
+      .single();
+
+    if (bigEmailRow !== null) {
+      void import("@/lib/email").then(({ sendLittleBrotherNotification }) =>
+        sendLittleBrotherNotification({
+          to:              bigEmailRow.email,
+          bigFirstName,
+          littleFirstName: currentMember.first_name,
+          littleLastName:  currentMember.last_name,
+        })
+      );
+    }
+  }
+
   return { success: true };
 }
 

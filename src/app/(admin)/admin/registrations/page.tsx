@@ -2,35 +2,57 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ClipboardList } from "lucide-react";
+import { DeleteRegistrationButton } from "@/components/admin/DeleteRegistrationButton";
 
 export const metadata: Metadata = { title: "Registrations — Admin" };
 
 interface Props {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; event_id?: string }>;
 }
 
 export default async function AdminRegistrationsPage({ searchParams }: Props) {
-  const { status: filterStatus } = await searchParams;
+  const { status: filterStatus, q: query, event_id: eventIdFilter } = await searchParams;
   const admin = createAdminClient();
 
-  let dbQuery = admin
-    .from("registrations")
-    .select(
-      "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, events(title, ticket_price), registration_guests(guest_name)"
-    )
-    .order("submitted_at", { ascending: false });
+  const [{ data: registrations }, { data: events }] = await Promise.all([
+    (() => {
+      let dbQuery = admin
+        .from("registrations")
+        .select(
+          "id, registrant_name, email, phone, tshirt_size, guest_count, dietary_restrictions, payment_status, stripe_payment_id, submitted_at, amount_paid, applied_price, event_id, events(title, ticket_price), registration_guests(guest_name)"
+        )
+        .order("submitted_at", { ascending: false });
 
-  if (filterStatus === "paid" || filterStatus === "unpaid" || filterStatus === "refunded") {
-    dbQuery = dbQuery.eq("payment_status", filterStatus);
-  }
+      if (filterStatus === "paid" || filterStatus === "unpaid" || filterStatus === "refunded") {
+        dbQuery = dbQuery.eq("payment_status", filterStatus);
+      }
+      if (eventIdFilter !== undefined && eventIdFilter !== "") {
+        dbQuery = dbQuery.eq("event_id", eventIdFilter);
+      }
+      return dbQuery;
+    })(),
+    admin.from("events").select("id, title").order("event_date", { ascending: false }),
+  ]);
 
-  const { data: registrations } = await dbQuery;
+  const allRows = registrations ?? [];
+  const rows =
+    query !== undefined && query.trim() !== ""
+      ? allRows.filter((r) => {
+          const q = query.toLowerCase();
+          return (
+            r.registrant_name.toLowerCase().includes(q) ||
+            r.email.toLowerCase().includes(q)
+          );
+        })
+      : allRows;
 
-  const rows = registrations ?? [];
-
-  // Totals
+  // Totals (computed from the full filtered result set)
   const paidRows = rows.filter((r) => r.payment_status === "paid");
+  const unpaidRows = rows.filter((r) => r.payment_status === "unpaid");
   const totalRevenue = paidRows.reduce((sum, r) => {
+    if (r.amount_paid !== null && r.amount_paid !== undefined) {
+      return sum + Number(r.amount_paid);
+    }
     const price = Array.isArray(r.events)
       ? (r.events[0]?.ticket_price ?? 0)
       : ((r.events as { ticket_price: number } | null)?.ticket_price ?? 0);
@@ -58,12 +80,57 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           <span className="text-green-400 font-medium">{paidRows.length}</span> paid
         </span>
         <span className="text-sn-gray-text">
+          <span className="text-amber-400 font-medium">{unpaidRows.length}</span> unpaid
+        </span>
+        <span className="text-sn-gray-text">
           Revenue:{" "}
           <span className="text-sn-gold font-medium">
             ${totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2 })}
           </span>
         </span>
       </div>
+
+      {/* Search + event filter */}
+      <form method="GET" className="flex flex-wrap gap-2 items-center">
+        {filterStatus !== undefined && filterStatus !== "" && (
+          <input type="hidden" name="status" value={filterStatus} />
+        )}
+        {eventIdFilter !== undefined && eventIdFilter !== "" && (
+          <input type="hidden" name="event_id" value={eventIdFilter} />
+        )}
+        <input
+          name="q"
+          defaultValue={query}
+          placeholder="Search name or email…"
+          className="h-8 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-64"
+        />
+        <select
+          name="event_id"
+          defaultValue={eventIdFilter ?? ""}
+          className="h-8 rounded-lg border border-white/20 bg-sn-surface px-3 text-sm text-white focus:outline-none focus:border-sn-gold"
+        >
+          <option value="">All events</option>
+          {(events ?? []).map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.title}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="h-8 px-3 rounded-lg border border-white/20 text-white/70 hover:bg-white/10 text-sm transition-colors"
+        >
+          Filter
+        </button>
+        {(query !== undefined && query !== "") || (eventIdFilter !== undefined && eventIdFilter !== "") ? (
+          <Link
+            href={filterStatus !== undefined && filterStatus !== "" ? `/admin/registrations?status=${filterStatus}` : "/admin/registrations"}
+            className="h-8 px-3 rounded-lg text-white/40 hover:text-white text-sm transition-colors flex items-center"
+          >
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       {/* Filter */}
       <div className="flex gap-1">
@@ -72,19 +139,26 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
           { label: "Paid", value: "paid" },
           { label: "Unpaid", value: "unpaid" },
           { label: "Refunded", value: "refunded" },
-        ].map(({ label, value }) => (
-          <Link
-            key={value}
-            href={value === "" ? "/admin/registrations" : `/admin/registrations?status=${value}`}
-            className={`h-8 px-3 rounded-sm text-sm transition-colors flex items-center ${
-              (filterStatus ?? "") === value
-                ? "bg-sn-gold text-sn-black font-semibold"
-                : "border border-white/20 text-white/70 hover:bg-white/10"
-            }`}
-          >
-            {label}
-          </Link>
-        ))}
+        ].map(({ label, value }) => {
+          const params = new URLSearchParams();
+          if (value !== "") params.set("status", value);
+          if (query !== undefined && query !== "") params.set("q", query);
+          if (eventIdFilter !== undefined && eventIdFilter !== "") params.set("event_id", eventIdFilter);
+          const href = params.size > 0 ? `/admin/registrations?${params.toString()}` : "/admin/registrations";
+          return (
+            <Link
+              key={value}
+              href={href}
+              className={`h-8 px-3 rounded-sm text-sm transition-colors flex items-center ${
+                (filterStatus ?? "") === value
+                  ? "bg-sn-gold text-sn-black font-semibold"
+                  : "border border-white/20 text-white/70 hover:bg-white/10"
+              }`}
+            >
+              {label}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Table */}
@@ -99,12 +173,13 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Amount</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium">Status</th>
               <th className="text-left px-4 py-3 text-sn-gray-text font-medium hidden md:table-cell">Submitted</th>
+              <th className="px-4 py-3 text-sn-gray-text font-medium text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="flex flex-col items-center gap-3 py-12 text-center">
                     <ClipboardList className="size-8 text-sn-gray-medium" />
                     <p className="text-sn-gray-text text-sm">No registrations yet.</p>
@@ -119,7 +194,12 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
               const eventTitle = Array.isArray(r.events)
                 ? (r.events[0]?.title ?? "—")
                 : ((r.events as { title: string } | null)?.title ?? "—");
-              const amount = (1 + (r.guest_count ?? 0)) * price;
+              const appliedPrice = r.applied_price !== null && r.applied_price !== undefined ? Number(r.applied_price) : price;
+              const amount = r.amount_paid !== null && r.amount_paid !== undefined
+                ? Number(r.amount_paid)
+                : (1 + (r.guest_count ?? 0)) * appliedPrice;
+              const amountIsEstimate = (r.amount_paid === null || r.amount_paid === undefined) && price > 0;
+              const totalAttendees = 1 + (r.guest_count ?? 0);
               const guests = Array.isArray(r.registration_guests) ? r.registration_guests : [];
 
               return (
@@ -137,9 +217,18 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                   </td>
                   <td className="px-4 py-3 text-sn-gray-text hidden md:table-cell">{r.email}</td>
                   <td className="px-4 py-3 text-sn-gray-text hidden lg:table-cell">{eventTitle}</td>
-                  <td className="px-4 py-3 text-sn-gray-text">{r.guest_count ?? 0}</td>
+                  <td className="px-4 py-3 text-sn-gray-text">
+                    {totalAttendees} attendee{totalAttendees !== 1 ? "s" : ""}
+                    {(r.guest_count ?? 0) > 0 && (
+                      <span className="text-sn-gray-medium text-xs block">
+                        you + {r.guest_count} guest{(r.guest_count ?? 0) !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sn-off-white">
-                    {price > 0 ? `$${amount.toFixed(2)}` : "Free"}
+                    {price > 0
+                      ? `$${amount.toFixed(2)}${amountIsEstimate ? "*" : ""}`
+                      : "Free"}
                   </td>
                   <td className="px-4 py-3">
                     <PaymentBadge status={r.payment_status} />
@@ -150,6 +239,21 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                       day:   "numeric",
                       year:  "numeric",
                     })}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/admin/registrations/${r.id}`}
+                        className="text-sn-gold hover:text-sn-gold-light text-xs transition-colors"
+                      >
+                        View
+                      </Link>
+                      <DeleteRegistrationButton
+                        registrationId={r.id}
+                        registrantName={r.registrant_name}
+                        eventTitle={eventTitle}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

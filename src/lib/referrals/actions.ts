@@ -1,7 +1,38 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendReferralCompleted, sendReferralInvite } from "@/lib/email";
+
+// ── Lightweight token check — called before signUp() in JoinForm ──────────────
+// Returns the invitee's name and email if the token is valid and pending,
+// or an error string if not. Never creates any DB rows.
+export async function checkReferralToken(
+  token: string
+): Promise<{ valid: true; firstName: string; email: string } | { error: string }> {
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("first_name, email, status, expires_at")
+    .eq("token", token)
+    .maybeSingle();
+
+  if (referral === null) {
+    return { error: "This invite link is invalid or has already been used." };
+  }
+
+  if (referral.status === "completed") {
+    return { error: "This invite link has already been used." };
+  }
+
+  if (referral.status === "expired" || new Date(referral.expires_at) < new Date()) {
+    return { error: "This invite link has expired." };
+  }
+
+  return { valid: true, firstName: referral.first_name, email: referral.email };
+}
 
 interface OptionalProfileFields {
   pledge_class?:   string | undefined;
@@ -95,21 +126,121 @@ export async function completeReferral(
     .eq("id", referral.referred_by)
     .single();
 
-  // Fire-and-forget emails.
-  void import("@/lib/email").then(({ sendWelcomeEmail, sendReferralCompleted }) => {
-    // Welcome email to new member (same as admin-approval welcome).
-    void sendWelcomeEmail({ to: user.email ?? "", firstName: referral.first_name });
-
-    // Notify referrer.
+  // Notify referrer that their invitee signed up.
+  try {
     if (referrer !== null) {
-      void sendReferralCompleted({
+      await sendReferralCompleted({
         to:                referrer.email,
         referrerFirstName: referrer.first_name,
         inviteeFirstName:  referral.first_name,
         inviteeLastName:   referral.last_name,
       });
     }
-  });
+  } catch (emailError) {
+    console.error("[completeReferral] email send failed:", emailError);
+  }
 
   return { success: true };
+}
+
+// ── Reactivate an expired referral ───────────────────────────────────────────
+export async function reactivateReferral(
+  referralId: string,
+): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user === null) return { error: "Not authenticated." };
+
+  const { data: callerMember } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  if (callerMember?.status !== "admin") return { error: "Not authorized." };
+
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("id, email, token, status, expires_at, first_name, referred_by")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+
+  const isEffectivelyExpired =
+    referral.status === "expired" ||
+    (referral.status === "pending" && new Date(referral.expires_at) < new Date());
+
+  if (!isEffectivelyExpired) return { error: "Referral is not expired." };
+
+  const newExpiresAt = new Date();
+  newExpiresAt.setDate(newExpiresAt.getDate() + 7);
+
+  const { error: updateError } = await admin
+    .from("referrals")
+    .update({ status: "pending", expires_at: newExpiresAt.toISOString() })
+    .eq("id", referralId);
+
+  if (updateError !== null) return { error: "Failed to reactivate referral." };
+
+  const { data: referrer } = await admin
+    .from("members")
+    .select("first_name, last_name")
+    .eq("id", referral.referred_by)
+    .maybeSingle();
+
+  try {
+    await sendReferralInvite({
+      to:               referral.email,
+      referrerFullName: referrer
+        ? `${referrer.first_name} ${referrer.last_name}`
+        : "A brother",
+      inviteeFirstName: referral.first_name,
+      token:            referral.token,
+    });
+  } catch (error) {
+    console.error("[reactivateReferral] email send failed:", error);
+  }
+
+  revalidatePath("/admin/referrals");
+  return { success: true };
+}
+
+export async function resendReferralInvite(
+  referralId: string,
+): Promise<{ success: true } | { error: string }> {
+  const admin = createAdminClient();
+
+  const { data: referral } = await admin
+    .from("referrals")
+    .select("id, email, token, status, expires_at, first_name, referred_by")
+    .eq("id", referralId)
+    .maybeSingle();
+
+  if (referral === null) return { error: "Referral not found." };
+  if (referral.status !== "pending") return { error: "Referral is no longer pending." };
+  if (new Date(referral.expires_at) < new Date()) return { error: "Referral has expired." };
+
+  const { data: referrer } = await admin
+    .from("members")
+    .select("first_name, last_name")
+    .eq("id", referral.referred_by)
+    .maybeSingle();
+
+  try {
+    await sendReferralInvite({
+      to:               referral.email,
+      referrerFullName: referrer
+        ? `${referrer.first_name} ${referrer.last_name}`
+        : "A brother",
+      inviteeFirstName: referral.first_name,
+      token:            referral.token,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("[resendReferralInvite] failed:", error);
+    return { error: "Failed to send email." };
+  }
 }

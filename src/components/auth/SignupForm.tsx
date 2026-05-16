@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toastError } from "@/lib/toast";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,13 +12,20 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
-import { notifyAdminsNewMember } from "@/lib/email";
+import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
+import { StubClaimStep } from "@/components/auth/StubClaimStep";
+import { BigBrotherSearch } from "@/components/auth/BigBrotherSearch";
 
 type DuplicateState =
   | { type: "none" }
   | { type: "prompt"; email: string }
   | { type: "reset_sent"; email: string };
+
+type StubClaimState =
+  | { type: "none" }
+  | { type: "results"; matches: StubMatch[] };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -27,6 +34,14 @@ export function SignupForm() {
   const [duplicate, setDuplicate]         = useState<DuplicateState>({ type: "none" });
   const [resetLoading, setResetLoading]   = useState(false);
   const [hasPrefill, setHasPrefill]       = useState(false);
+  const [pinEntry, setPinEntry]           = useState("");
+  const [stubClaim, setStubClaim]         = useState<StubClaimState>({ type: "none" });
+  const [bigBrotherId, setBigBrotherId]   = useState<string | null>(null);
+
+  // Ref to carry the selected stub ID into the signUp call without stale closure issues.
+  const selectedStubIdRef  = useRef<string | null>(null);
+  // Carries the big brother ID — set from form UI or inherited from stub claim.
+  const bigBrotherIdRef    = useRef<string | null>(null);
 
   const {
     register,
@@ -61,8 +76,13 @@ export function SignupForm() {
     }
   }, [setValue]);
 
-  async function onSubmit(data: SignupInput) {
+  // ── Core signup — called after stub check resolves ─────────────────────────
+  async function proceedWithSignup(data: SignupInput) {
     const supabase = createClient();
+
+    // Diagnostic: confirm stub_id is being passed to the trigger
+    console.log("[SignupForm] stub_id being passed:", selectedStubIdRef.current);
+    console.log("[SignupForm] submitting with stub_id:", selectedStubIdRef.current);
 
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
@@ -70,7 +90,11 @@ export function SignupForm() {
       options: {
         data: {
           first_name: data.first_name,
-          last_name: data.last_name,
+          last_name:  data.last_name,
+          // stub_id is set when user claimed a stub record
+          ...(selectedStubIdRef.current !== null
+            ? { stub_id: selectedStubIdRef.current }
+            : {}),
         },
       },
     });
@@ -90,27 +114,53 @@ export function SignupForm() {
       return;
     }
 
-    // The handle_new_user trigger only copies first_name and last_name.
-    // Write optional fields directly now that we have a session.
+    // The handle_new_user trigger copies first_name/last_name (and stub fields if claimed).
+    // Write remaining optional fields now that we have a session.
     if (signUpData.user !== null) {
       const update: Record<string, string> = {};
-      if (data.pledge_class !== undefined && data.pledge_class !== "") update.pledge_class   = data.pledge_class;
-      if (data.phone         !== undefined && data.phone         !== "") update.phone         = data.phone;
+      if (data.pledge_class   !== undefined && data.pledge_class   !== "") update.pledge_class   = data.pledge_class;
+      if (data.phone          !== undefined && data.phone          !== "") update.phone          = data.phone;
       if (data.street_address !== undefined && data.street_address !== "") update.street_address = data.street_address;
-      if (data.city          !== undefined && data.city          !== "") update.city          = data.city;
-      if (data.state         !== undefined && data.state         !== "") update.state         = data.state;
-      if (data.zip           !== undefined && data.zip           !== "") update.zip           = data.zip;
-      if (data.country       !== undefined && data.country       !== "") update.country       = data.country;
-      if (data.birthday      !== undefined && data.birthday      !== "") update.birthday      = data.birthday;
+      if (data.city           !== undefined && data.city           !== "") update.city           = data.city;
+      if (data.state          !== undefined && data.state          !== "") update.state          = data.state;
+      if (data.zip            !== undefined && data.zip            !== "") update.zip            = data.zip;
+      if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
+      if (data.birthday       !== undefined && data.birthday       !== "" && data.birthday !== null) update.birthday = data.birthday;
+      // big_id: use explicit form selection, or fall back to stub's big_id if stub was claimed
+      if (bigBrotherIdRef.current !== null) update.big_id = bigBrotherIdRef.current;
       if (Object.keys(update).length > 0) {
-        await supabase.from("members").update(update).eq("id", signUpData.user.id);
+        const { error: updateError } = await supabase.from("members").update(update).eq("id", signUpData.user.id);
+        if (updateError !== null) {
+          console.error("[SignupForm] profile update failed:", updateError.message);
+          toastError("Account created but some profile data couldn't be saved. You can update it from your profile page.");
+        }
       }
     }
 
-    // Notify admins of the new signup — fire-and-forget, never block redirect.
-    void notifyAdminsNewMember();
-
+    void sendSignupNotifications({ to: data.email, firstName: data.first_name, lastName: data.last_name });
     router.push("/pending-approval");
+  }
+
+  // ── Primary submit — searches for stubs first ─────────────────────────────
+  async function onSubmit(data: SignupInput) {
+    // Only search stubs if we haven't already shown results (prevents infinite loop
+    // when handleSubmit(onSubmit) is called from the "None of these" button path).
+    if (stubClaim.type === "none") {
+      const matches = await findStubMatches({
+        firstName:   data.first_name,
+        lastName:    data.last_name,
+        pledgeClass: data.pledge_class !== "" ? data.pledge_class : undefined,
+        pinNumber:   pinEntry !== "" ? pinEntry : undefined,
+      });
+
+      if (matches.length > 0) {
+        setStubClaim({ type: "results", matches });
+        return; // Pause — show claim UI
+      }
+    }
+
+    // No stubs found (or already dismissed) — proceed with normal signup.
+    await proceedWithSignup(data);
   }
 
   async function sendResetLink(email: string) {
@@ -175,8 +225,36 @@ export function SignupForm() {
   }
   // ───────────────────────────────────────────────────────────────────────────
 
+  // ── Stub claim UI ──────────────────────────────────────────────────────────
+  if (stubClaim.type === "results") {
+    return (
+      <StubClaimStep
+        matches={stubClaim.matches}
+        onClaim={(stubId, stubBigId) => {
+          selectedStubIdRef.current = stubId;
+          // Carry stub's big_id forward if user hasn't explicitly selected one
+          if (stubBigId !== null && bigBrotherIdRef.current === null) {
+            bigBrotherIdRef.current = stubBigId;
+          }
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onDismiss={() => {
+          selectedStubIdRef.current = null;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onBack={() => setStubClaim({ type: "none" })}
+      />
+    );
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
+  // eslint-disable-next-line react-hooks/refs
+  const submitHandler = handleSubmit(onSubmit);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={submitHandler} className="space-y-4" noValidate>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="first_name" className="text-white/80 text-sm">
@@ -275,6 +353,43 @@ export function SignupForm() {
             {...register("phone")}
           />
         </div>
+      </div>
+
+      {/* ── Badge Number (search hint only, not written to DB on fresh signup) ── */}
+      <div className="space-y-1.5">
+        <Label htmlFor="pin_entry" className="text-white/80 text-sm">
+          Badge Number{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="pin_entry"
+          type="text"
+          placeholder="e.g. 42"
+          value={pinEntry}
+          onChange={(e) => setPinEntry(e.target.value)}
+          className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
+        />
+        <p className="text-white/40 text-xs">
+          If known, helps us find your chapter record.
+        </p>
+      </div>
+
+      {/* ── Big Brother ───────────────────────────────────────────── */}
+      <div className="space-y-1.5">
+        <label className="text-white/80 text-sm">
+          Big Brother{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </label>
+        <BigBrotherSearch
+          value={bigBrotherId}
+          onChange={(id) => {
+            setBigBrotherId(id);
+            bigBrotherIdRef.current = id;
+          }}
+        />
+        <p className="text-white/40 text-xs">
+          Start typing a name or badge number to search.
+        </p>
       </div>
 
       {/* ── Birthday ──────────────────────────────────────────────── */}

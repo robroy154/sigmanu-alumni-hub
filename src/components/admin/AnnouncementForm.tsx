@@ -6,15 +6,16 @@ import { createAnnouncement } from "@/lib/admin/announcement-actions";
 import { toastSuccess, toastError } from "@/lib/toast";
 
 export function AnnouncementForm() {
-  const [title, setTitle]     = useState("");
-  const [body, setBody]       = useState("");
-  const [loading, setLoading] = useState(false);
+  const [title,         setTitle]         = useState("");
+  const [body,          setBody]          = useState("");
+  const [notifyMembers, setNotifyMembers] = useState(false);
+  const [loading,       setLoading]       = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const result = await createAnnouncement(title, body);
+    const result = await createAnnouncement(title, body, notifyMembers);
     setLoading(false);
 
     if ("error" in result) {
@@ -22,6 +23,7 @@ export function AnnouncementForm() {
     } else {
       setTitle("");
       setBody("");
+      setNotifyMembers(false);
       toastSuccess("Announcement posted.");
     }
   }
@@ -51,6 +53,18 @@ export function AnnouncementForm() {
           className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-sn-off-white text-sm placeholder:text-sn-gray-medium focus:outline-none focus:ring-1 focus:ring-sn-gold/50 focus:border-sn-gold/50 resize-none"
         />
       </div>
+
+      <label className="flex items-center gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={notifyMembers}
+          onChange={(e) => setNotifyMembers(e.target.checked)}
+          className="w-4 h-4 rounded border-white/20 bg-white/10 accent-sn-gold"
+        />
+        <span className="text-sn-gray-text text-sm">
+          Notify all members by email
+        </span>
+      </label>
 
       <Button
         type="submit"

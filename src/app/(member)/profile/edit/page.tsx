@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 import { AvatarUpload } from "@/components/profile/AvatarUpload";
 import { SetPinForm } from "@/components/profile/SetPinForm";
@@ -26,11 +27,12 @@ export default async function ProfileEditPage() {
       )
       .eq("id", user.id)
       .single(),
-    // All approved members except self — for the Big Brother selector.
-    supabase
+    // All approved members + stubs except self — for the Big Brother selector.
+    // Uses admin client so stub rows (restricted by RLS) are visible.
+    createAdminClient()
       .from("members")
-      .select("id, first_name, last_name, pledge_class")
-      .in("status", ["member", "admin"])
+      .select("id, first_name, last_name, pledge_class, pin_number, status")
+      .in("status", ["member", "admin", "stub"])
       .neq("id", user.id)
       .order("last_name"),
   ]);
@@ -51,7 +53,9 @@ export default async function ProfileEditPage() {
   if (member.big_id !== null) {
     const bigMember = (allMembers ?? []).find((m) => m.id === member.big_id);
     if (bigMember !== undefined) {
-      currentBigName = `${bigMember.first_name} ${bigMember.last_name}`;
+      currentBigName = bigMember.status === "stub"
+        ? `${bigMember.first_name} ${bigMember.last_name} (unclaimed)`
+        : `${bigMember.first_name} ${bigMember.last_name}`;
     }
   }
 

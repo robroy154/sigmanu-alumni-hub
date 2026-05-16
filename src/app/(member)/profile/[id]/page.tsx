@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,6 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function MemberProfilePage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
+  const admin = createAdminClient();
 
   const {
     data: { user },
@@ -40,22 +42,14 @@ export default async function MemberProfilePage({ params }: Props) {
 
   const isAdmin = viewer?.status === "admin";
 
-  const [{ data: member }, { data: littles }] = await Promise.all([
-    supabase
-      .from("members")
-      .select(
-        "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
-      )
-      .eq("id", id)
-      .in("status", ["member", "admin"])
-      .single(),
-    supabase
-      .from("members")
-      .select("id, first_name, last_name, nickname")
-      .eq("big_id", id)
-      .in("status", ["member", "admin"])
-      .order("last_name"),
-  ]);
+  const { data: member } = await supabase
+    .from("members")
+    .select(
+      "first_name, last_name, nickname, pledge_class, pin_number, phone, city, state, linkedin_url, profile_photo_url, status, big_id, street_address, zip, country, birthday, show_address, show_birthday, show_phone"
+    )
+    .eq("id", id)
+    .in("status", ["member", "admin"])
+    .single();
 
   if (member === null) notFound();
 
@@ -64,7 +58,7 @@ export default async function MemberProfilePage({ params }: Props) {
   const showAddress  = isAdmin || member.show_address;
   const showBirthday = isAdmin || member.show_birthday;
 
-  // Resolve signed photo URL.
+  // Resolve signed photo URL for the viewed member.
   let photoUrl: string | null = null;
   if (member.profile_photo_url !== null && member.profile_photo_url !== "") {
     const { data: signed } = await supabase.storage
@@ -73,23 +67,59 @@ export default async function MemberProfilePage({ params }: Props) {
     photoUrl = signed?.signedUrl ?? null;
   }
 
-  const [{ data: badges }, { data: bigMember }] = await Promise.all([
-    supabase.from("badges").select("id, badge_type").eq("member_id", id),
-    member.big_id !== null
-      ? supabase
-          .from("members")
-          .select("id, first_name, last_name")
-          .eq("id", member.big_id)
-          .in("status", ["member", "admin"])
-          .single()
-      : Promise.resolve({ data: null }),
-  ]);
+  // Fetch badges and lineage in parallel.
+  // Lineage uses admin client so stubs are included.
+  const [{ data: badges }, { data: bigMember }, { data: littles }] =
+    await Promise.all([
+      supabase.from("badges").select("id, badge_type").eq("member_id", id),
+      member.big_id !== null
+        ? admin
+            .from("members")
+            .select("id, first_name, last_name, pledge_class, status, profile_photo_url")
+            .eq("id", member.big_id)
+            .single()
+        : Promise.resolve({ data: null }),
+      admin
+        .from("members")
+        .select("id, first_name, last_name, pledge_class, status, profile_photo_url")
+        .eq("big_id", id)
+        .order("last_name"),
+    ]);
+
+  // Resolve signed URLs for big and little brother photos.
+  const lineagePhotoPaths = [
+    ...(bigMember?.profile_photo_url !== null && bigMember?.profile_photo_url !== undefined && bigMember.profile_photo_url !== ""
+      ? [bigMember.profile_photo_url]
+      : []),
+    ...(littles ?? [])
+      .map((l) => l.profile_photo_url)
+      .filter((p): p is string => p !== null && p !== ""),
+  ];
+
+  const lineagePhotoMap: Record<string, string> = {};
+  if (lineagePhotoPaths.length > 0) {
+    const { data: signed } = await admin.storage
+      .from("profile-photos")
+      .createSignedUrls(lineagePhotoPaths, 3600);
+    signed?.forEach(({ path, signedUrl, error }) => {
+      if (error === null && path !== null && path !== undefined) {
+        lineagePhotoMap[path] = signedUrl;
+      }
+    });
+  }
 
   const fullName = [member.first_name, member.last_name].join(" ");
   const location =
     member.city !== null && member.state !== null
       ? `${member.city}, ${member.state}`
       : (member.city ?? member.state ?? null);
+
+  const pinDisplay =
+    member.pin_number !== null && member.pin_number !== ""
+      ? `ΜΞ ${String(member.pin_number).padStart(3, "0")}`
+      : null;
+
+  const hasLineage = bigMember !== null || (littles !== null && littles.length > 0);
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -145,6 +175,48 @@ export default async function MemberProfilePage({ params }: Props) {
         </div>
       </div>
 
+      {/* Family line — between header and contact */}
+      {hasLineage && (
+        <div className="bg-sn-surface rounded-xl p-6 space-y-5">
+          <h2 className="text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
+            Family Line
+          </h2>
+
+          {bigMember !== null && (
+            <div>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
+                Big Brother
+              </p>
+              <LineagePerson
+                person={bigMember}
+                photoUrl={bigMember.profile_photo_url !== null && bigMember.profile_photo_url !== ""
+                  ? (lineagePhotoMap[bigMember.profile_photo_url] ?? null)
+                  : null}
+              />
+            </div>
+          )}
+
+          {littles !== null && littles.length > 0 && (
+            <div>
+              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
+                Little Brother{littles.length !== 1 ? "s" : ""}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {littles.map((l) => (
+                  <LineagePerson
+                    key={l.id}
+                    person={l}
+                    photoUrl={l.profile_photo_url !== null && l.profile_photo_url !== ""
+                      ? (lineagePhotoMap[l.profile_photo_url] ?? null)
+                      : null}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Contact details */}
       <div className="bg-sn-surface rounded-xl p-6 space-y-4">
         <h2 className="text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
@@ -155,11 +227,16 @@ export default async function MemberProfilePage({ params }: Props) {
           {showBirthday && member.birthday !== null && member.birthday !== undefined && (
             <Row
               label="Birthday"
-              value={new Date(member.birthday + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              value={new Date(member.birthday + "T00:00:00").toLocaleDateString(
+                "en-US",
+                isAdmin
+                  ? { month: "long", day: "numeric", year: "numeric" }
+                  : { month: "long", day: "numeric" },
+              )}
             />
           )}
-          <Row label="Pin number" value={member.pin_number} />
-          {showAddress && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
+          <Row label="Badge number" value={pinDisplay} />
+          {showAddress && isAdmin && member.street_address !== null && member.street_address !== undefined && member.street_address !== "" && (
             <div className="flex gap-3">
               <dt className="w-28 shrink-0 text-sn-gray-text text-sm">Address</dt>
               <dd className="text-sn-off-white text-sm">
@@ -175,6 +252,12 @@ export default async function MemberProfilePage({ params }: Props) {
                 )}
               </dd>
             </div>
+          )}
+          {showAddress && !isAdmin && (member.city !== null || member.state !== null) && (
+            <Row
+              label="Location"
+              value={[member.city, member.state].filter(Boolean).join(", ")}
+            />
           )}
           {member.linkedin_url !== null && member.linkedin_url !== "" && (
             <div className="flex gap-3">
@@ -193,52 +276,65 @@ export default async function MemberProfilePage({ params }: Props) {
           )}
         </dl>
       </div>
-
-      {/* Family line */}
-      {(bigMember !== null || (littles !== null && littles.length > 0)) && (
-        <div className="bg-sn-surface rounded-xl p-6 space-y-4">
-          <h2 className="text-sn-gray-text text-xs font-semibold uppercase tracking-wider">
-            Family Line
-          </h2>
-
-          {bigMember !== null && (
-            <div>
-              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-1.5">Big Brother</p>
-              <Link
-                href={`/profile/${bigMember.id}`}
-                className="inline-flex items-center gap-2 text-sn-off-white text-sm font-medium hover:text-sn-gold transition-colors"
-              >
-                {bigMember.first_name} {bigMember.last_name}
-                <span className="text-sn-gray-medium">→</span>
-              </Link>
-            </div>
-          )}
-
-          {littles !== null && littles.length > 0 && (
-            <div>
-              <p className="text-sn-gray-text text-xs uppercase tracking-wider mb-2">
-                Little Brother{littles.length !== 1 ? "s" : ""}
-              </p>
-              <div className="space-y-1.5">
-                {littles.map((l) => (
-                  <Link
-                    key={l.id}
-                    href={`/profile/${l.id}`}
-                    className="flex items-center gap-2 text-sn-off-white text-sm hover:text-sn-gold transition-colors"
-                  >
-                    {l.first_name} {l.last_name}
-                    {l.nickname !== null && l.nickname !== "" && (
-                      <span className="text-sn-gray-medium text-xs">&ldquo;{l.nickname}&rdquo;</span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Shared sub-components
+// ---------------------------------------------------------------------------
+
+interface LineagePersonProps {
+  person: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    pledge_class: string | null;
+    status: "pending" | "member" | "admin" | "stub";
+  };
+  photoUrl: string | null;
+}
+
+function LineagePerson({ person, photoUrl }: LineagePersonProps) {
+  const initials = (person.first_name[0] ?? "") + (person.last_name[0] ?? "");
+  const isReal = person.status === "member" || person.status === "admin";
+
+  const inner = (
+    <div className="flex items-center gap-2.5">
+      <div className="w-9 h-9 rounded-full overflow-hidden bg-sn-black-secondary border border-sn-gold/30 flex items-center justify-center shrink-0 select-none">
+        {photoUrl !== null ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photoUrl} alt={`${person.first_name} ${person.last_name}`} className="w-full h-full object-cover" />
+        ) : (
+          <span className="text-sn-gold text-xs font-bold">{initials}</span>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className={[
+          "text-sm font-medium leading-tight",
+          isReal ? "text-sn-off-white" : "text-sn-off-white/60",
+        ].join(" ")}>
+          {person.first_name} {person.last_name}
+        </p>
+        {person.pledge_class !== null && (
+          <p className="text-sn-gray-text text-xs mt-0.5">{person.pledge_class} Class</p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isReal) {
+    return (
+      <Link
+        href={`/profile/${person.id}`}
+        className="inline-block hover:opacity-80 transition-opacity"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div>{inner}</div>;
 }
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {

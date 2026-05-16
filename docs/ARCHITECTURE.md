@@ -408,7 +408,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | **6 — Admin panel** | Registration management, member management, account approvals, badge assignment, CSV export |
 | **7 — Directory** | Member directory page (authenticated only), search and filter by name/pledge class |
 | **8 — Family tree** | Big/little relationship management on profiles, React Flow visualization, minimap, search-to-fly |
-| **9 — Email notifications** | Admin announcement sending, registration confirmation emails |
+| **9 — Email notifications** | Admin announcement sending, registration confirmation emails, big brother update alerts, little brother claim notifications |
 | **10 — Polish** | Sigma Nu visual theming, mobile cleanup, performance review, final QA |
 
 **Why this order:**
@@ -429,7 +429,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | File storage | Supabase Storage — 1GB free, sufficient for profile photos at this scale |
 | Domain | Purchase separately (Namecheap, Porkbun, etc.) — connect to Vercel via DNS settings |
 | SSL | Automatic via Vercel — no configuration required |
-| Email (transactional) | Resend or Postmark — decide in Phase 9, both have free tiers |
+| Email (transactional) | Brevo (v5 SDK) — integrated via `src/lib/email/index.ts`; `BREVO_API_KEY` required, `BREVO_FROM_EMAIL` required (verified sender in Brevo account) |
 | Payments | Stripe — no hosting, SaaS, pay per transaction only |
 
 ### 8.2 Monthly Cost Estimate at Launch
@@ -527,11 +527,11 @@ A chronological record of every locked decision.
 | 32 | Invited person's email is set by the referrer and is read-only on the join form | Prevents email substitution attacks; referrer vouches for the specific person they're inviting |
 | 33 | `referred_by` on members is admin-only visibility, enforced via `REVOKE SELECT (referred_by) ON members FROM authenticated` | Column-level revoke is the correct PostgreSQL mechanism for per-column access control; service role bypasses it |
 | 34 | Token expiry maintenance via pg_cron nightly job — setup documented in migration file comments | pg_cron runs inside Postgres, no external scheduler needed; SQL and dashboard steps are in `20260405000005_referrals.sql` |
-| 35 | No SMS — email only via Resend for all referral notifications (invite, confirmation to referrer, joined notification) | Resend is already integrated; SMS adds cost, complexity, and a phone number requirement for invitees |
+| 35 | No SMS — email only via Brevo for all transactional notifications; SMS via Brevo is planned for Phase 24 | Resend replaced by Brevo v5 SDK in Phase 23; Brevo's built-in SMS channel eliminates the need for a separate provider when SMS is added |
 | 36 | Admin can cancel pending referrals at `/admin/referrals` — sets status to `expired`, no hard delete | Preserves audit trail; expired tokens show "already expired" on the invite link rather than "invalid" |
 | 37 | Authenticated homepage lives at `/home`; post-login redirect updated from `/` to `/home` in proxy.ts | Landing page (`/`) remains public for event info; `/home` is the member dashboard with events, birthdays, announcements, and quick links |
 | 38 | `announcements` table managed by admins only (service role writes); members read active rows via RLS policy `is_active = true` | No extra admin write policy needed since admin client uses service role which bypasses RLS |
-| 39 | Birthdays this month on `/home` fetched via admin client (bypasses show_birthday RLS to get all consenting members), then month-filtered client-side | Admin client required since show_birthday=true members need to be cross-checked; client-side month filter avoids raw SQL substring on birthday text column |
+| 39 | Birthdays this month on `/home` fetched via admin client (bypasses show_birthday RLS to get all consenting members), then month-filtered client-side, then sorted ascending by day within the month | Admin client required since show_birthday=true members need to be cross-checked; client-side month filter avoids raw SQL substring on birthday text column; day sort uses `parseInt` so day 9 sorts before day 10 (numeric, not lexicographic) |
 | 40 | react-day-picker v9 used for My Events calendar; styled via CSS custom properties + scoped `<style>` tag in EventsCalendar client component | Avoids global CSS contamination; dark theme achieved by overriding `--rdp-accent-color` with sn-gold token |
 | 41 | Social links (NEXT_PUBLIC_ALUMNI_FB_URL, NEXT_PUBLIC_ACTIVE_CHAPTER_FB_URL) are optional env vars; links hidden on /home if unset | Keeps the homepage useful even before FB groups exist; external links open in new tab with rel="noopener noreferrer" |
 | 42 | Guest registration at `/events/[id]/register/guest` — public route, no auth, `member_id = null`, admin client for all DB writes | Allows non-alumni to register for events without creating an account; service role bypasses RLS that blocks anon inserts |
@@ -548,6 +548,11 @@ A chronological record of every locked decision.
 | 53 | `ManageRegistration` is a single shared client component used on confirmation, my-events, and home | Single source of truth for edit/add-guest logic; each mount point passes registration+guests as props from its own server fetch |
 | 54 | Home page upcoming event cards extracted into `HomeEventsSection` client component | Cards need toggle state (expand/collapse manage panel) which requires `useState`; extracted to keep the server page itself as a pure async server component |
 | 55 | `manageActions.ts` uses session client for ownership check, then admin client for writes | Session client verifies `member_id = user.id`; admin client bypasses RLS for the subsequent update/insert operations that the authenticated role may not have explicit write policies for |
+| 56 | Landing page (`/`) has three sections: hero, upcoming events, platform features | Hero shows featured event card (next published by date) and optional background image via `NEXT_PUBLIC_HERO_IMAGE_URL`; upcoming events section lists all published events where `event_date >= now`; all published events are treated as publicly visible until an `event_type` column is added in a future phase to distinguish internal vs external events |
+| 57 | `rejectMember` server action uses `auth.admin.deleteUser` identical to `deleteMember` | Rejection is a hard delete — the pending user never completed any paid transactions, so no financial history is lost. If rejected in error they must sign up again. Guards against self-rejection. |
+| 58 | `scripts/cleanup-test-data.ts` is dry-run by default; requires `--execute` flag to delete | Prevents accidental data loss; protected set = admins + members with any paid registration + event with most total registrations |
+| 59 | `sendBigBrotherSetNotification()` in `src/lib/email/index.ts` fires after every successful `updateBigBrother()` call in `src/lib/profile/actions.ts`; sends to all admins; covers both set and clear cases | Admins need visibility into lineage changes for family tree integrity; fire-and-forget via `void import("@/lib/email").then(...)` so email failure never surfaces to the member; current member fetched via session client, big fetched via admin client so stubs are included |
+| 60 | `sendLittleBrotherNotification()` fires after `sendBigBrotherSetNotification()` in `updateBigBrother()`; sent directly to the big's email; skipped when `bigId` is null (clear) or big's status is `stub` | Big brothers who are stubs have no verified email address to notify; the email address is passed into the function directly so no admin client is needed inside it; status reused from the existing bigMember fetch (select extended to include `status`); email fetched via a separate single-column admin query |
 
 ---
 

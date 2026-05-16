@@ -16,83 +16,42 @@ export type Database = {
     Tables: {
       announcements: {
         Row: {
-          id:         string
-          title:      string
-          body:       string
-          is_active:  boolean
-          created_by: string
+          body: string
           created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          is_pinned: boolean
+          notify_members: boolean
+          title: string
           updated_at: string
         }
         Insert: {
-          id?:        string
-          title:      string
-          body:       string
-          is_active?: boolean
-          created_by: string
+          body: string
           created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          is_pinned?: boolean
+          notify_members?: boolean
+          title: string
           updated_at?: string
         }
         Update: {
-          id?:         string
-          title?:      string
-          body?:       string
-          is_active?:  boolean
-          created_by?: string
+          body?: string
           created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          is_pinned?: boolean
+          notify_members?: boolean
+          title?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "announcements_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "members"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      referrals: {
-        Row: {
-          id:           string
-          referred_by:  string
-          first_name:   string
-          last_name:    string
-          email:        string
-          token:        string
-          status:       "pending" | "completed" | "expired"
-          created_at:   string
-          completed_at: string | null
-          expires_at:   string
-        }
-        Insert: {
-          id?:          string
-          referred_by:  string
-          first_name:   string
-          last_name:    string
-          email:        string
-          token?:       string
-          status?:      "pending" | "completed" | "expired"
-          created_at?:  string
-          completed_at?: string | null
-          expires_at?:  string
-        }
-        Update: {
-          id?:          string
-          referred_by?: string
-          first_name?:  string
-          last_name?:   string
-          email?:       string
-          token?:       string
-          status?:      "pending" | "completed" | "expired"
-          created_at?:  string
-          completed_at?: string | null
-          expires_at?:  string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referrals_referred_by_fkey"
-            columns: ["referred_by"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
@@ -138,42 +97,149 @@ export type Database = {
           },
         ]
       }
+      event_field_responses: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          registration_id: string
+          response_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          registration_id: string
+          response_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          registration_id?: string
+          response_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_field_responses_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "event_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_field_responses_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_fields: {
+        Row: {
+          created_at: string
+          display_order: number
+          event_id: string
+          field_label: string
+          field_options: Json | null
+          field_type: string
+          id: string
+          required: boolean
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          event_id: string
+          field_label: string
+          field_options?: Json | null
+          field_type: string
+          id?: string
+          required?: boolean
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          event_id?: string
+          field_label?: string
+          field_options?: Json | null
+          field_type?: string
+          id?: string
+          required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_fields_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
+          banner_image_url: string | null
           capacity: number | null
+          capacity_mode: string
           created_at: string
           description: string | null
+          early_bird_ends_at: string | null
+          early_bird_price: number | null
           event_date: string
+          event_type: string
+          flyer_url: string | null
           id: string
           location: string | null
+          registration_closes_at: string | null
           registration_open: boolean
-          status: "draft" | "published" | "archived"
+          rich_description: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["event_status"]
           ticket_price: number
           title: string
           updated_at: string
         }
         Insert: {
+          banner_image_url?: string | null
           capacity?: number | null
+          capacity_mode?: string
           created_at?: string
           description?: string | null
+          early_bird_ends_at?: string | null
+          early_bird_price?: number | null
           event_date: string
+          event_type?: string
+          flyer_url?: string | null
           id?: string
           location?: string | null
+          registration_closes_at?: string | null
           registration_open?: boolean
-          status?: "draft" | "published" | "archived"
+          rich_description?: string | null
+          slug?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
           ticket_price?: number
           title: string
           updated_at?: string
         }
         Update: {
+          banner_image_url?: string | null
           capacity?: number | null
+          capacity_mode?: string
           created_at?: string
           description?: string | null
+          early_bird_ends_at?: string | null
+          early_bird_price?: number | null
           event_date?: string
+          event_type?: string
+          flyer_url?: string | null
           id?: string
           location?: string | null
+          registration_closes_at?: string | null
           registration_open?: boolean
-          status?: "draft" | "published" | "archived"
+          rich_description?: string | null
+          slug?: string | null
+          status?: Database["public"]["Enums"]["event_status"]
           ticket_price?: number
           title?: string
           updated_at?: string
@@ -192,18 +258,19 @@ export type Database = {
           home_address: string | null
           id: string
           last_name: string
-          referred_by: string | null
           linkedin_url: string | null
           nickname: string | null
           phone: string | null
           pin_number: string | null
           pledge_class: string | null
           profile_photo_url: string | null
+          referred_by: string | null
           show_address: boolean
           show_birthday: boolean
           show_phone: boolean
           state: string | null
-          status: string
+          // Manually patched: CHECK constraint values not captured by CLI codegen
+          status: "pending" | "member" | "admin" | "stub"
           street_address: string | null
           updated_at: string
           zip: string | null
@@ -217,20 +284,21 @@ export type Database = {
           email: string
           first_name: string
           home_address?: string | null
-          id: string
+          id?: string
           last_name: string
-          referred_by?: string | null
           linkedin_url?: string | null
           nickname?: string | null
           phone?: string | null
           pin_number?: string | null
           pledge_class?: string | null
           profile_photo_url?: string | null
+          referred_by?: string | null
           show_address?: boolean
           show_birthday?: boolean
           show_phone?: boolean
           state?: string | null
-          status?: string
+          // Manually patched: CHECK constraint values not captured by CLI codegen
+          status?: "pending" | "member" | "admin" | "stub"
           street_address?: string | null
           updated_at?: string
           zip?: string | null
@@ -246,18 +314,19 @@ export type Database = {
           home_address?: string | null
           id?: string
           last_name?: string
-          referred_by?: string | null
           linkedin_url?: string | null
           nickname?: string | null
           phone?: string | null
           pin_number?: string | null
           pledge_class?: string | null
           profile_photo_url?: string | null
+          referred_by?: string | null
           show_address?: boolean
           show_birthday?: boolean
           show_phone?: boolean
           state?: string | null
-          status?: string
+          // Manually patched: CHECK constraint values not captured by CLI codegen
+          status?: "pending" | "member" | "admin" | "stub"
           street_address?: string | null
           updated_at?: string
           zip?: string | null
@@ -266,6 +335,60 @@ export type Database = {
           {
             foreignKeyName: "members_big_id_fkey"
             columns: ["big_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "members_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          first_name: string
+          id: string
+          last_name: string
+          referred_by: string
+          status: Database["public"]["Enums"]["referral_status"]
+          token: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          referred_by: string
+          status?: Database["public"]["Enums"]["referral_status"]
+          token?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          referred_by?: string
+          status?: Database["public"]["Enums"]["referral_status"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_by_fkey"
+            columns: ["referred_by"]
             isOneToOne: false
             referencedRelation: "members"
             referencedColumns: ["id"]
@@ -300,27 +423,27 @@ export type Database = {
       }
       registration_payments: {
         Row: {
-          amount:            number
-          created_at:        string
+          amount: number
+          created_at: string
           guest_count_delta: number
-          id:                string
-          registration_id:   string
+          id: string
+          registration_id: string
           stripe_payment_id: string
         }
         Insert: {
-          amount:            number
-          created_at?:       string
+          amount: number
+          created_at?: string
           guest_count_delta: number
-          id?:               string
-          registration_id:   string
+          id?: string
+          registration_id: string
           stripe_payment_id: string
         }
         Update: {
-          amount?:            number
-          created_at?:        string
+          amount?: number
+          created_at?: string
           guest_count_delta?: number
-          id?:                string
-          registration_id?:   string
+          id?: string
+          registration_id?: string
           stripe_payment_id?: string
         }
         Relationships: [
@@ -335,6 +458,8 @@ export type Database = {
       }
       registrations: {
         Row: {
+          amount_paid: number | null
+          applied_price: number | null
           dietary_restrictions: string | null
           email: string
           event_id: string
@@ -350,6 +475,8 @@ export type Database = {
           tshirt_size: string | null
         }
         Insert: {
+          amount_paid?: number | null
+          applied_price?: number | null
           dietary_restrictions?: string | null
           email: string
           event_id: string
@@ -365,6 +492,8 @@ export type Database = {
           tshirt_size?: string | null
         }
         Update: {
+          amount_paid?: number | null
+          applied_price?: number | null
           dietary_restrictions?: string | null
           email?: string
           event_id?: string
@@ -396,15 +525,86 @@ export type Database = {
           },
         ]
       }
+      waitlist: {
+        Row: {
+          created_at: string
+          event_id: string
+          guest_email: string | null
+          guest_name: string | null
+          id: string
+          member_id: string | null
+          notified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          notified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          id?: string
+          member_id?: string | null
+          notified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waitlist_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       current_member_status: { Args: never; Returns: string }
+      find_member_by_name: {
+        Args: { search_name: string }
+        Returns: {
+          id: string
+          similarity: number
+        }[]
+      }
+      search_stubs: {
+        Args: {
+          search_name: string
+          search_pin?: string
+          search_pledge_class?: string
+        }
+        Returns: {
+          first_name: string
+          id: string
+          last_name: string
+          nickname: string
+          pin_number: string
+          pledge_class: string
+          similarity: number
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
-      [_ in never]: never
+      event_status: "draft" | "published" | "archived"
+      referral_status: "pending" | "completed" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -531,6 +731,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      event_status: ["draft", "published", "archived"],
+      referral_status: ["pending", "completed", "expired"],
+    },
   },
 } as const

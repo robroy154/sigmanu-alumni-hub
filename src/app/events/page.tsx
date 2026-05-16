@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { MapPin, Ticket, CalendarOff } from "lucide-react";
+import { eventHref } from "@/lib/events/slug";
 
 export const metadata: Metadata = { title: "Events — Sigma Nu Mu Xi Alumni" };
 
@@ -12,7 +13,7 @@ export default async function EventsPage() {
 
   const { data: allEvents } = await admin
     .from("events")
-    .select("id, title, event_date, location, ticket_price, description")
+    .select("id, title, slug, event_date, location, ticket_price, description")
     .eq("status", "published")
     .order("event_date", { ascending: true });
 
@@ -115,6 +116,7 @@ export default async function EventsPage() {
 interface EventCardProps {
   event: {
     id:           string;
+    slug:         string | null;
     title:        string;
     event_date:   string;
     location:     string | null;
@@ -129,7 +131,7 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
   const eventDate = new Date(event.event_date);
 
   return (
-    <div className={`bg-sn-surface rounded-sm border-t-2 ${past ? "border-t-sn-gray-dark" : "border-t-sn-gold"} px-5 py-5`}>
+    <Link href={eventHref(event)} className={`block bg-sn-surface rounded-sm border-t-2 ${past ? "border-t-sn-gray-dark hover:border-t-sn-gray-medium" : "border-t-sn-gold hover:bg-sn-surface/80"} px-5 py-5 transition-colors`}>
       <div className="flex items-start gap-4">
         {/* Date badge */}
         <div className={`shrink-0 text-center rounded-sm px-3 py-2 min-w-[52px] border ${
@@ -138,13 +140,13 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
             : "bg-sn-gold/10 border-sn-gold/20"
         }`}>
           <p className={`text-xs font-medium uppercase ${past ? "text-sn-gray-medium" : "text-sn-gold"}`}>
-            {eventDate.toLocaleDateString("en-US", { month: "short" })}
+            {eventDate.toLocaleDateString("en-US", { month: "short", timeZone: "America/New_York" })}
           </p>
           <p className={`font-bold text-xl leading-tight ${past ? "text-sn-gray-medium" : "text-sn-off-white"}`}>
-            {eventDate.getDate()}
+            {eventDate.toLocaleDateString("en-US", { day: "numeric", timeZone: "America/New_York" })}
           </p>
           <p className={`text-xs ${past ? "text-sn-gray-medium/60" : "text-sn-gray-text"}`}>
-            {eventDate.getFullYear()}
+            {eventDate.toLocaleDateString("en-US", { year: "numeric", timeZone: "America/New_York" })}
           </p>
         </div>
 
@@ -157,9 +159,10 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             <p className="text-sn-gray-text text-xs">
               {eventDate.toLocaleDateString("en-US", {
-                weekday: "long",
-                hour:    "numeric",
-                minute:  "2-digit",
+                weekday:  "long",
+                hour:     "numeric",
+                minute:   "2-digit",
+                timeZone: "America/New_York",
               })}
             </p>
             {event.location !== null && (
@@ -184,14 +187,12 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
         {/* CTA */}
         {!past && (
           <div className="shrink-0">
-            <Link href={`/events/${event.id}`}>
-              <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold whitespace-nowrap">
-                {isLoggedIn ? "Register" : "Learn more"}
-              </Button>
-            </Link>
+            <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold whitespace-nowrap">
+              {isLoggedIn ? "Register" : "Learn more"}
+            </Button>
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

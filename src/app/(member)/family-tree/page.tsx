@@ -17,12 +17,22 @@ export default async function FamilyTreePage() {
   } = await supabase.auth.getUser();
   if (user === null) redirect("/login");
 
+  // Fetch viewer's own status (for "Invite to claim" button on stub panels)
+  const { data: viewer } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  const viewerStatus: "member" | "admin" =
+    viewer?.status === "admin" ? "admin" : "member";
+
   const { data: rows } = await supabase
     .from("members")
     .select(
-      "id, first_name, last_name, nickname, pledge_class, profile_photo_url, big_id"
+      "id, first_name, last_name, nickname, pledge_class, pin_number, profile_photo_url, big_id, status"
     )
-    .in("status", ["member", "admin"])
+    .in("status", ["member", "admin", "stub"])
     .order("last_name");
 
   const members = rows ?? [];
@@ -52,19 +62,19 @@ export default async function FamilyTreePage() {
     last_name:    m.last_name,
     nickname:     m.nickname,
     pledge_class: m.pledge_class,
+    pin_number:   m.pin_number,
     photo_url:    m.profile_photo_url !== null
       ? (photoUrlMap[m.profile_photo_url] ?? null)
       : null,
     big_id:       m.big_id,
+    is_stub:      m.status === "stub",
+    status:       m.status as "member" | "admin" | "stub",
   }));
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-white text-2xl font-bold">Chapter Family Tree</h1>
-        <span className="text-white/40 text-sm">
-          {treeMembers.length} member{treeMembers.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
       {treeMembers.length === 0 ? (
@@ -73,7 +83,7 @@ export default async function FamilyTreePage() {
           <p className="text-sn-gray-text text-sm">No family tree data yet. Members can add their big brother from their profile.</p>
         </div>
       ) : (
-        <FamilyTreeClient members={treeMembers} />
+        <FamilyTreeClient members={treeMembers} viewerStatus={viewerStatus} />
       )}
     </div>
   );

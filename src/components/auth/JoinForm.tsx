@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -12,8 +12,12 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
-import { completeReferral } from "@/lib/referrals/actions";
+import { checkReferralToken, completeReferral } from "@/lib/referrals/actions";
+import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { toastError } from "@/lib/toast";
+import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
+import { StubClaimStep } from "@/components/auth/StubClaimStep";
+import { BigBrotherSearch } from "@/components/auth/BigBrotherSearch";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -39,6 +43,10 @@ const JoinSchema = z
 
 type JoinInput = z.infer<typeof JoinSchema>;
 
+type StubClaimState =
+  | { type: "none" }
+  | { type: "results"; matches: StubMatch[] };
+
 interface JoinFormProps {
   firstName: string;
   lastName:  string;
@@ -51,6 +59,13 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   const [resetLoading, setResetLoading] = useState(false);
   const [showResetPrompt, setShowResetPrompt] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [stubClaim, setStubClaim] = useState<StubClaimState>({ type: "none" });
+  const [bigBrotherId, setBigBrotherId] = useState<string | null>(null);
+
+  // Carries the selected stub ID into signUp() without stale closure issues.
+  const selectedStubIdRef = useRef<string | null>(null);
+  // Carries the big brother ID — set from form UI or inherited from stub claim.
+  const bigBrotherIdRef   = useRef<string | null>(null);
 
   const {
     register,
@@ -63,14 +78,34 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     defaultValues: { first_name: firstName, last_name: lastName },
   });
 
-  async function onSubmit(data: JoinInput) {
+  // ── Core signup — called after stub check resolves ─────────────────────────
+  async function proceedWithSignup(data: JoinInput) {
     const supabase = createClient();
+
+    // Validate the token is still usable before calling signUp().
+    // Without this guard, a failed signUp() on an expired token creates a
+    // dangling auth.users row that blocks future re-invites to the same email.
+    const tokenCheck = await checkReferralToken(token);
+    if ("error" in tokenCheck) {
+      toastError(tokenCheck.error);
+      return;
+    }
+
+    // Diagnostic: confirm stub_id is being passed to the trigger
+    console.log("[JoinForm] stub_id being passed:", selectedStubIdRef.current);
 
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password: data.password,
       options: {
-        data: { first_name: data.first_name, last_name: data.last_name },
+        data: {
+          first_name: data.first_name,
+          last_name:  data.last_name,
+          // stub_id is set when user claimed a stub record
+          ...(selectedStubIdRef.current !== null
+            ? { stub_id: selectedStubIdRef.current }
+            : {}),
+        },
       },
     });
 
@@ -104,9 +139,45 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
         // Non-blocking: user is signed up — just show a warning and continue.
         console.warn("[JoinForm] completeReferral:", result.error);
       }
+
+      // Update big_id if the user selected a big brother or one was inherited from a stub
+      if (bigBrotherIdRef.current !== null) {
+        const { error: bigError } = await supabase
+          .from("members")
+          .update({ big_id: bigBrotherIdRef.current })
+          .eq("id", signUpData.user.id);
+        if (bigError !== null) {
+          console.error("[JoinForm] big_id update failed:", bigError.message);
+        }
+      }
     }
 
+    // Confirm to the member their account is pending review — fire-and-forget.
+    void sendSignupNotifications({ to: email, firstName: data.first_name, lastName: data.last_name });
+
     router.push("/pending-approval");
+  }
+
+  // ── Primary submit — searches for stubs first ─────────────────────────────
+  async function onSubmit(data: JoinInput) {
+    // Only search stubs when we haven't already shown results (prevents re-searching
+    // when handleSubmit(proceedWithSignup) is triggered from the claim UI buttons).
+    if (stubClaim.type === "none") {
+      const matches = await findStubMatches({
+        firstName:   data.first_name,
+        lastName:    data.last_name,
+        // JoinForm has pledge_class but no badge number field (by design).
+        pledgeClass: data.pledge_class !== "" ? data.pledge_class : undefined,
+      });
+
+      if (matches.length > 0) {
+        setStubClaim({ type: "results", matches });
+        return; // Pause — show claim UI
+      }
+    }
+
+    // No stubs found (or already dismissed) — proceed with normal signup.
+    await proceedWithSignup(data);
   }
 
   async function sendResetLink() {
@@ -117,6 +188,30 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     });
     setResetLoading(false);
     setResetSent(true);
+  }
+
+  // ── Stub claim UI ──────────────────────────────────────────────────────────
+  if (stubClaim.type === "results") {
+    return (
+      <StubClaimStep
+        matches={stubClaim.matches}
+        onClaim={(stubId, stubBigId) => {
+          selectedStubIdRef.current = stubId;
+          // Carry stub's big_id forward if user hasn't explicitly selected one
+          if (stubBigId !== null && bigBrotherIdRef.current === null) {
+            bigBrotherIdRef.current = stubBigId;
+          }
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onDismiss={() => {
+          selectedStubIdRef.current = null;
+          setStubClaim({ type: "none" });
+          void handleSubmit(proceedWithSignup)();
+        }}
+        onBack={() => setStubClaim({ type: "none" })}
+      />
+    );
   }
 
   // ── Duplicate email state ──────────────────────────────────────────────────
@@ -165,8 +260,11 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
   }
 
   // ── Main form ──────────────────────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/refs
+  const submitHandler = handleSubmit(onSubmit);
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={submitHandler} className="space-y-4" noValidate>
 
       {/* Name */}
       <div className="grid grid-cols-2 gap-3">
@@ -228,6 +326,24 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
             {...register("phone")} />
         </div>
+      </div>
+
+      {/* Big Brother */}
+      <div className="space-y-1.5">
+        <label className="text-white/80 text-sm">
+          Big Brother{" "}
+          <span className="text-white/40 font-normal">(optional)</span>
+        </label>
+        <BigBrotherSearch
+          value={bigBrotherId}
+          onChange={(id) => {
+            setBigBrotherId(id);
+            bigBrotherIdRef.current = id;
+          }}
+        />
+        <p className="text-white/40 text-xs">
+          Start typing a name or badge number to search.
+        </p>
       </div>
 
       {/* Birthday */}
