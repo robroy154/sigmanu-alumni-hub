@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toggleAnnouncement, deleteAnnouncement, pinAnnouncement } from "@/lib/admin/announcement-actions";
+import { toggleAnnouncement, deleteAnnouncement, pinAnnouncement, setAnnouncementLoginSplash } from "@/lib/admin/announcement-actions";
 import { toastSuccess, toastError } from "@/lib/toast";
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, Presentation } from "lucide-react";
 
 interface Props {
   announcementId: string;
-  isActive: boolean;
-  isPinned: boolean;
+  isActive:       boolean;
+  isPinned:       boolean;
+  showOnLogin:    boolean;
 }
 
-export function AnnouncementControls({ announcementId, isActive, isPinned }: Props) {
+export function AnnouncementControls({ announcementId, isActive, isPinned, showOnLogin }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading]       = useState(false);
 
@@ -38,6 +39,17 @@ export function AnnouncementControls({ announcementId, isActive, isPinned }: Pro
     }
   }
 
+  async function handleLoginSplash() {
+    setLoading(true);
+    const result = await setAnnouncementLoginSplash(announcementId, !showOnLogin);
+    setLoading(false);
+    if ("error" in result) {
+      toastError(result.error);
+    } else {
+      toastSuccess(showOnLogin ? "Login splash removed." : "Will show as login splash.");
+    }
+  }
+
   async function handleDelete() {
     setLoading(true);
     const result = await deleteAnnouncement(announcementId);
@@ -48,7 +60,6 @@ export function AnnouncementControls({ announcementId, isActive, isPinned }: Pro
     } else {
       toastSuccess("Announcement deleted.");
     }
-    // On success revalidatePath re-renders the page.
   }
 
   return (
@@ -63,6 +74,17 @@ export function AnnouncementControls({ announcementId, isActive, isPinned }: Pro
         }`}
       >
         {isPinned ? <Pin className="w-3.5 h-3.5" /> : <PinOff className="w-3.5 h-3.5" />}
+      </button>
+      <button
+        type="button"
+        onClick={() => void handleLoginSplash()}
+        disabled={loading}
+        title={showOnLogin ? "Remove login splash" : "Show as login splash"}
+        className={`transition-colors ${
+          showOnLogin ? "text-sn-gold hover:text-sn-gold-light" : "text-white/30 hover:text-white/70"
+        }`}
+      >
+        <Presentation className="w-3.5 h-3.5" />
       </button>
       <Button
         type="button"

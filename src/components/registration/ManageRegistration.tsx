@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { updateGuestNames, addGuestsToRegistration } from "@/lib/registration/manageActions";
+import { updateGuestNames, addGuestsToRegistration, cancelRegistration } from "@/lib/registration/manageActions";
+import { useRouter } from "next/navigation";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 interface Guest {
   id:         string;
@@ -28,6 +30,23 @@ export function ManageRegistration({
   eventTicketPrice,
   registrationOpen,
 }: ManageRegistrationProps) {
+  const router = useRouter();
+
+  // ── Cancel registration (unpaid only) ─────────────────────────────────────
+  const [cancelPhase, setCancelPhase] = useState<"idle" | "confirm" | "loading">("idle");
+
+  async function handleCancel() {
+    setCancelPhase("loading");
+    const result = await cancelRegistration(registration.id);
+    if ("error" in result) {
+      toastError(result.error);
+      setCancelPhase("idle");
+    } else {
+      toastSuccess("Registration cancelled.");
+      router.push("/my-events");
+    }
+  }
+
   // ── Edit existing guests ──────────────────────────────────────────────────
   const [editedGuests, setEditedGuests] = useState<Guest[]>(
     guests.map((g) => ({ ...g }))
@@ -250,6 +269,46 @@ export function ManageRegistration({
           <p className={errorClass}>{addError}</p>
         )}
       </div>
+
+      {/* Cancel registration — only for unpaid registrations */}
+      {registration.payment_status !== "paid" && (
+        <>
+          <div className="border-t border-white/10" />
+          <div className="space-y-2">
+            <p className={labelClass}>Cancel Registration</p>
+            {cancelPhase === "idle" && (
+              <button
+                type="button"
+                onClick={() => setCancelPhase("confirm")}
+                className="text-red-400 hover:text-red-300 text-sm transition-colors"
+              >
+                Cancel my registration
+              </button>
+            )}
+            {cancelPhase === "confirm" && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleCancel()}
+                  className="h-8 px-4 rounded-sm bg-red-500/80 hover:bg-red-500 text-white text-xs font-semibold transition-colors"
+                >
+                  Confirm Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCancelPhase("idle")}
+                  className="text-white/40 hover:text-white text-xs transition-colors"
+                >
+                  Keep it
+                </button>
+              </div>
+            )}
+            {cancelPhase === "loading" && (
+              <span className="text-white/40 text-sm">Cancelling…</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

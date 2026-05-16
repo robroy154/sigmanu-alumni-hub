@@ -156,3 +156,24 @@ export async function deleteAnnouncement(
   revalidatePath("/home");
   return { success: true };
 }
+
+// ── Toggle show_on_login ──────────────────────────────────────────────────────
+export async function setAnnouncementLoginSplash(
+  announcementId: string,
+  show: boolean
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("announcements")
+    .update({ show_on_login: show })
+    .eq("id", announcementId);
+
+  if (error !== null) return { error: "Failed to update announcement." };
+
+  revalidatePath("/admin/announcements");
+  revalidatePath("/home");
+  return { success: true };
+}

@@ -18,6 +18,7 @@
 | `New` | Recently identified, not yet scoped in detail |
 | `Concept` | Idea only — no schema, design, or scope |
 | `Future` | Deferred — not needed for initial launch |
+| `Done` | Fully implemented and deployed |
 
 ---
 
@@ -32,76 +33,64 @@ Schema partially decided: 8-char token, nullable email/phone on referrals, `deli
 ## Compliance and Legal
 
 ### Newsletter Opt-Out
-**Status:** Compliance
-Add `newsletter_opt_out boolean default false` to `members` table. Required for CAN-SPAM compliance. No migration or UI exists yet. Low effort — must be in place before any bulk email sends go out.
+**Status:** Done
+`newsletter_opt_out boolean default false` added to `members` table (migration 20260516000000). ProfileEditForm "Email Preferences" section with PrivacyToggle. updateProfile action includes it.
 
 ### Privacy Policy Page — `/privacy`
-**Status:** New
-Render the drafted Privacy Policy as a public-facing page. Must be publicly accessible (no auth required). Link from site footer and signup flow. Content is drafted and ready in `docs/privacy-policy.md`.
+**Status:** Done
+Public-facing `/privacy` page rendering all 13 sections from `docs/privacy-policy.md`. No auth required. Added to PUBLIC_ROUTES in proxy.ts. Linked from all footers.
 
 ### Terms of Service Page — `/terms`
-**Status:** New
-Render the drafted Terms of Service as a public-facing page. Must be publicly accessible. Link from site footer, signup flow, and Stripe checkout page (Stripe requires a ToS link). Content is drafted and ready in `docs/terms-of-service.md`.
+**Status:** Done
+Public-facing `/terms` page rendering all 15 sections from `docs/terms-of-service.md`. No auth required. Added to PUBLIC_ROUTES in proxy.ts. Linked from all footers.
 
 ### Site Footer
-**Status:** New
-No footer currently exists on the public layout. Needs to be added with links to `/privacy` and `/terms` at minimum. Also appropriate for a contact email (`info@csusigmanu.com`) and a copyright line. Required before launch to support the legal pages.
+**Status:** Done
+Footer added to member layout with copyright year, Privacy Policy, Terms of Service, and contact email links. Also added to landing page (`/`) footer.
 
 ---
 
-## Scoped, Not Started
+## Scoped / Recently Completed
 
 ### Rich Text Announcements
-**Status:** Scoped
-Swap admin announcements form to use Tiptap (already installed and used for event descriptions). Add `announcement-images` Supabase Storage bucket for image uploads. Change `announcements.body` column from plain text to HTML. Update `AnnouncementCard` to render via `RichTextContent` with DOMPurify sanitization.
+**Status:** Done
+Admin announcement create and edit forms use RichTextEditor (Tiptap). AnnouncementCard renders via RichTextContent with CSS max-h-24 collapse (no JS truncation on HTML). "Read more" toggles max-h-none. XSS-safe via existing RichTextContent sanitizer.
 
-### Settings System
-**Status:** Scoped
-Full admin and member settings UI broken into named sections. Two-tier notification preference model: admin sets global toggles, members can adjust within admin-defined limits. Deliberately deferred as a future phase — touches many surfaces. No schema work started.
-
----
-
-## New — Recently Identified
+### Settings System — Email & Password Change
+**Status:** Done
+`/settings` page with ChangeEmailForm (requires current password, sends confirmation to new email) and ChangePasswordForm (requires current password, 8+ chars). settings-actions.ts uses signInWithPassword to verify then updateUser. Navbar Settings link added to desktop dropdown and mobile drawer.
 
 ### First Login Onboarding Modal
-**Status:** New
-A checklist popup shown on every login until the member explicitly dismisses it with "don't show again." Covers what to do first and how to navigate the hub. Store dismissal state as `onboarding_dismissed boolean default false` on the `members` row.
+**Status:** Done
+`members.onboarding_dismissed boolean` migration (20260516000001). OnboardingModal with 6 checklist items (profile photo, pledge class, big, badge number, family tree, directory), progress bar, dismiss action. Mounted in (member)/layout.tsx.
 
 ### Announcement Login Splash
-**Status:** New
-Admin can toggle per-announcement whether it appears as a full splash modal on login. Members can dismiss individual splashes with "don't show again." Requires a `dismissed_announcements` junction table (`member_id`, `announcement_id`, `dismissed_at`) to track per-member dismissal state. The same table drives the notification bell's unread announcement count.
+**Status:** Done
+`dismissed_announcements` table migration (20260516000002) with RLS. `show_on_login` boolean on announcements. Admin Presentation icon toggle in AnnouncementControls. dismissAnnouncement server action. AnnouncementSplash full-screen overlay shown on home page for first undismissed splash announcement.
 
 ### Notification Bell — Computed Badge
-**Status:** New
-Bell icon in the navbar with a badge count derived entirely from existing data — no separate notifications table needed. Badge sources:
-- **All members:** Incomplete profile fields (pledge class, phone, city, big_id null)
-- **All members:** Unread announcements (published announcements not in `dismissed_announcements`)
-- **All members:** Birthday this month (already computed on `/home`)
-- **All members:** Upcoming registered event within 7 days
-- **All members:** New little brother claimed you (lightweight — store `new_little_since_last_login` timestamp on `members` row, or lean on the existing email)
-- **Admins only:** Pending member approvals count
-
-Dropdown lists active nudges with actionable links. Badge clears when the underlying condition is resolved or the item is dismissed.
+**Status:** Partially done
+AnnouncementSplash effectively surfaces important announcements. Full bell badge (with count and dropdown) is deferred — not needed for initial launch. The dismissed_announcements table exists and is ready to drive it if needed in the future.
 
 ### Email and Password Change
-**Status:** New
-Members can update their email address or password from their account settings. Both require the member to enter their current password first. Implementation: `supabase.auth.reauthenticate()` to verify current credentials, then `supabase.auth.updateUser()` to apply the change. Entirely separate from the forgot password / reset flow.
+**Status:** Done
+See Settings System above.
 
 ---
 
 ## Data Layer Exists — UI Missing
 
 ### Waitlist Admin Management
-**Status:** Incomplete
-The `waitlist` table exists and `WaitlistForm` is implemented for members to join. Missing entirely: admin UI to view the waitlist per event, promote members off the waitlist when capacity opens, and trigger an email notification when a spot becomes available. Highest-priority incomplete feature relative to what was built around it.
+**Status:** Done
+`/admin/events/[id]/waitlist` page with table (position, name/email, joined date). `promoteFromWaitlist` server action creates a registration, deletes the waitlist row, and sends a notification email. PromoteWaitlistButton uses two-step confirm. Admin events list shows "Waitlist (X)" link for waitlist-mode events.
 
 ### Stripe Refund Automation
-**Status:** Partial
-`markRegistrationRefunded` server action exists and updates `payment_status` to `refunded` in the database. However it does not call `stripe.refunds.create()` — the actual Stripe refund still has to be issued manually in the Stripe dashboard. The two steps (Stripe refund + DB status update) should be unified into a single admin action.
+**Status:** Done
+`markRegistrationRefunded` now calls `stripe.refunds.create({ payment_intent })` before updating DB. Null payment_intent (free events) skips Stripe. Stripe error blocks DB update and surfaces to admin UI.
 
 ### Member-Initiated Cancellation
-**Status:** Partial
-No self-serve cancel or withdraw flow exists for members. Members can manage guests and view registrations but cannot cancel. Whether self-serve cancellation is desirable for a paid event is a product decision. Currently requires admin intervention to cancel a registration.
+**Status:** Done
+`cancelRegistration` server action (ownership check, blocks paid registrations, checks registration_open). ManageRegistration renders two-step cancel button for unpaid registrations when event is still open. Paid cancellations require admin intervention — error message directs member to contact us.
 
 ---
 
@@ -121,4 +110,4 @@ No Playwright or Cypress tests exist anywhere in the project. The payment and St
 
 ---
 
-*Last updated: May 15, 2026*
+*Last updated: May 16, 2026*

@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 
 export interface DirectoryMember {
   id:               string;
@@ -21,19 +21,17 @@ interface DirectoryClientProps {
   pledgeClasses: string[]; // sorted list of classes present in DB
 }
 
+type SortKey = "last-name" | "first-name" | "pledge-class";
+
 export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps) {
-  const [query, setQuery]         = useState("");
-  const [classFilter, setClass]   = useState("");
+  const [query, setQuery]       = useState("");
+  const [classFilter, setClass] = useState("");
+  const [sort, setSort]         = useState<SortKey>("last-name");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return members.filter((m) => {
-      if (
-        classFilter !== "" &&
-        (m.pledge_class ?? "") !== classFilter
-      ) {
-        return false;
-      }
+    const results = members.filter((m) => {
+      if (classFilter !== "" && (m.pledge_class ?? "") !== classFilter) return false;
       if (q === "") return true;
       return (
         m.first_name.toLowerCase().includes(q) ||
@@ -42,19 +40,49 @@ export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps
         (m.pin_number ?? "").toLowerCase().includes(q)
       );
     });
-  }, [members, query, classFilter]);
+
+    results.sort((a, b) => {
+      if (sort === "first-name") {
+        return a.first_name.localeCompare(b.first_name) || a.last_name.localeCompare(b.last_name);
+      }
+      if (sort === "pledge-class") {
+        const ai = pledgeClasses.indexOf(a.pledge_class ?? "");
+        const bi = pledgeClasses.indexOf(b.pledge_class ?? "");
+        const diff = (ai === -1 ? 9999 : ai) - (bi === -1 ? 9999 : bi);
+        return diff !== 0 ? diff : a.last_name.localeCompare(b.last_name);
+      }
+      // default: last-name
+      return a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name);
+    });
+
+    return results;
+  }, [members, query, classFilter, sort, pledgeClasses]);
 
   return (
     <div className="space-y-5">
       {/* Controls */}
       <div className="flex flex-wrap gap-2 items-center">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search brothers…"
-          className="h-9 rounded-lg border border-white/20 bg-white/10 px-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
-        />
+        {/* Search with clear button */}
+        <div className="relative">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search brothers…"
+            className="h-9 rounded-lg border border-white/20 bg-white/10 px-3 pr-8 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-sn-gold w-52"
+          />
+          {query !== "" && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
         <select
           value={classFilter}
           onChange={(e) => setClass(e.target.value)}
@@ -65,6 +93,17 @@ export function DirectoryClient({ members, pledgeClasses }: DirectoryClientProps
             <option key={pc} value={pc}>{pc}</option>
           ))}
         </select>
+
+        <select
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          className="h-9 rounded-lg border border-white/20 bg-sn-black px-3 text-sm text-white focus:outline-none focus:border-sn-gold"
+        >
+          <option value="last-name">Last name A–Z</option>
+          <option value="first-name">First name A–Z</option>
+          <option value="pledge-class">Pledge class</option>
+        </select>
+
         <span className="text-white/40 text-sm ml-auto">
           {filtered.length} brother{filtered.length !== 1 ? "s" : ""}
         </span>

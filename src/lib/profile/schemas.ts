@@ -22,9 +22,11 @@ export const ProfileUpdateSchema = z.object({
       { message: "Must be a LinkedIn URL" }
     ),
   // Privacy toggles — only on profile edit, not signup
-  show_address:  z.boolean().optional(),
-  show_birthday: z.boolean().optional(),
-  show_phone:    z.boolean().optional(),
+  show_address:       z.boolean().optional(),
+  show_birthday:      z.boolean().optional(),
+  show_phone:         z.boolean().optional(),
+  // CAN-SPAM compliance
+  newsletter_opt_out: z.boolean().optional(),
 });
 
 // Separate schema for the one-time pin number set.

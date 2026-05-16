@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { createAnnouncement } from "@/lib/admin/announcement-actions";
 import { toastSuccess, toastError } from "@/lib/toast";
 
@@ -44,13 +45,10 @@ export function AnnouncementForm() {
 
       <div>
         <label className="block text-sn-gray-text text-sm mb-1.5">Body</label>
-        <textarea
+        <RichTextEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={setBody}
           placeholder="Announcement content"
-          required
-          rows={4}
-          className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-sn-off-white text-sm placeholder:text-sn-gray-medium focus:outline-none focus:ring-1 focus:ring-sn-gold/50 focus:border-sn-gold/50 resize-none"
         />
       </div>
 

@@ -44,3 +44,32 @@ export async function completeProfile(
 
   redirect("/pending-approval");
 }
+
+// ── Dismiss onboarding modal ───────────────────────────────────────────────────
+export async function dismissOnboarding(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user === null) return;
+
+  await supabase
+    .from("members")
+    .update({ onboarding_dismissed: true })
+    .eq("id", user.id);
+}
+
+// ── Dismiss an announcement splash ────────────────────────────────────────────
+export async function dismissAnnouncement(announcementId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user === null) return;
+
+  // Upsert — safe to call multiple times, duplicate key is ignored.
+  await supabase
+    .from("dismissed_announcements")
+    .upsert({ member_id: user.id, announcement_id: announcementId })
+    .eq("member_id", user.id);
+}

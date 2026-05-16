@@ -36,9 +36,10 @@ export async function updateProfile(
       birthday:       data.birthday ?? null,
       linkedin_url:   data.linkedin_url ?? null,
       // Privacy toggles — undefined means "not submitted", preserve current value.
-      ...(data.show_address  !== undefined && { show_address:  data.show_address }),
-      ...(data.show_birthday !== undefined && { show_birthday: data.show_birthday }),
-      ...(data.show_phone    !== undefined && { show_phone:    data.show_phone }),
+      ...(data.show_address       !== undefined && { show_address:       data.show_address }),
+      ...(data.show_birthday      !== undefined && { show_birthday:      data.show_birthday }),
+      ...(data.show_phone         !== undefined && { show_phone:         data.show_phone }),
+      ...(data.newsletter_opt_out !== undefined && { newsletter_opt_out: data.newsletter_opt_out }),
     })
     .eq("id", user.id);
 

@@ -10,7 +10,7 @@ import { RichTextContent } from "@/components/ui/RichTextContent";
 import { ICalButton } from "@/components/events/ICalButton";
 import { WaitlistForm } from "@/components/events/WaitlistForm";
 import { eventLookupFilter } from "@/lib/events/slug";
-import { CalendarDays, MapPin, Ticket, ExternalLink } from "lucide-react";
+import { CalendarDays, ChevronLeft, MapPin, Ticket, ExternalLink } from "lucide-react";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -173,6 +173,17 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       </header>
 
+      {/* Breadcrumb */}
+      <div className="max-w-4xl mx-auto w-full px-6 pt-6">
+        <Link
+          href="/events"
+          className="inline-flex items-center gap-1 text-sn-gray-medium hover:text-sn-gold text-sm transition-colors"
+        >
+          <ChevronLeft size={14} />
+          All Events
+        </Link>
+      </div>
+
       {/* Banner image */}
       {event.banner_image_url !== null && (
         <div
@@ -258,12 +269,23 @@ export default async function EventDetailPage({ params }: Props) {
 
           {/* Capacity notice */}
           {event.capacity !== null && (
-            <p className="text-white/40 text-sm">
-              {event.capacity} capacity
-              {paidCount !== null && paidCount > 0
-                ? ` · ${event.capacity - paidCount} spots remaining`
-                : ""}
-            </p>
+            <div className="space-y-1">
+              <p className="text-white/40 text-sm">
+                {event.capacity} capacity
+                {paidCount !== null && paidCount > 0
+                  ? ` · ${event.capacity - paidCount} spots remaining`
+                  : ""}
+              </p>
+              {!isFull &&
+                event.capacity_mode === "capped" &&
+                paidCount !== null &&
+                paidCount > 0 &&
+                (event.capacity - paidCount) / event.capacity < 0.2 && (
+                  <p className="text-amber-400 text-sm font-medium">
+                    Spots filling fast!
+                  </p>
+                )}
+            </div>
           )}
         </div>
 

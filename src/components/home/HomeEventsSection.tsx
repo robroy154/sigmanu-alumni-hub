@@ -83,6 +83,9 @@ export function HomeEventsSection({
                   <p className="text-sn-off-white font-bold text-lg leading-tight">
                     {eventDate.getDate()}
                   </p>
+                  <p className="text-sn-gray-medium text-[10px] leading-tight mt-0.5">
+                    {eventDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </p>
                 </div>
                 {/* Details */}
                 <div className="flex-1 min-w-0">

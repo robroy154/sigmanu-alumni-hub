@@ -23,6 +23,7 @@ export type Database = {
           is_active: boolean
           is_pinned: boolean
           notify_members: boolean
+          show_on_login: boolean
           title: string
           updated_at: string
         }
@@ -34,6 +35,7 @@ export type Database = {
           is_active?: boolean
           is_pinned?: boolean
           notify_members?: boolean
+          show_on_login?: boolean
           title: string
           updated_at?: string
         }
@@ -45,6 +47,7 @@ export type Database = {
           is_active?: boolean
           is_pinned?: boolean
           notify_members?: boolean
+          show_on_login?: boolean
           title?: string
           updated_at?: string
         }
@@ -57,6 +60,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dismissed_announcements: {
+        Row: {
+          announcement_id: string
+          dismissed_at: string
+          member_id: string
+        }
+        Insert: {
+          announcement_id: string
+          dismissed_at?: string
+          member_id: string
+        }
+        Update: {
+          announcement_id?: string
+          dismissed_at?: string
+          member_id?: string
+        }
+        Relationships: []
       }
       badges: {
         Row: {
@@ -265,6 +286,8 @@ export type Database = {
           pledge_class: string | null
           profile_photo_url: string | null
           referred_by: string | null
+          newsletter_opt_out: boolean
+          onboarding_dismissed: boolean
           show_address: boolean
           show_birthday: boolean
           show_phone: boolean
@@ -293,6 +316,8 @@ export type Database = {
           pledge_class?: string | null
           profile_photo_url?: string | null
           referred_by?: string | null
+          newsletter_opt_out?: boolean
+          onboarding_dismissed?: boolean
           show_address?: boolean
           show_birthday?: boolean
           show_phone?: boolean
@@ -321,6 +346,8 @@ export type Database = {
           pledge_class?: string | null
           profile_photo_url?: string | null
           referred_by?: string | null
+          newsletter_opt_out?: boolean
+          onboarding_dismissed?: boolean
           show_address?: boolean
           show_birthday?: boolean
           show_phone?: boolean

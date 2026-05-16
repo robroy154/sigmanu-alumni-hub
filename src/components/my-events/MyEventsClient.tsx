@@ -32,6 +32,14 @@ interface MyEventsClientProps {
   guests:      GuestRow[];
 }
 
+function daysUntil(dateStr: string): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  return Math.round((d.getTime() - now.getTime()) / 86400000);
+}
+
 export function MyEventsClient({ initialRows, userId, guests }: MyEventsClientProps) {
   const [rows, setRows] = useState<RegistrationRow[]>(initialRows);
 
@@ -79,6 +87,11 @@ export function MyEventsClient({ initialRows, userId, guests }: MyEventsClientPr
     (r) => r.events !== null && new Date(r.events.event_date) < now
   );
 
+  const totalSpent = rows.reduce((sum, r) => {
+    if (r.payment_status !== "paid" || r.events === null) return sum;
+    return sum + r.events.ticket_price * (1 + r.guest_count);
+  }, 0);
+
   return (
     <div className="lg:col-span-2 space-y-8">
       {/* Upcoming */}
@@ -114,6 +127,13 @@ export function MyEventsClient({ initialRows, userId, guests }: MyEventsClientPr
           </div>
         </section>
       )}
+
+      {/* Total spent */}
+      {totalSpent > 0 && (
+        <p className="text-sn-gray-medium text-xs text-right">
+          Total spent across all events: ${totalSpent.toFixed(2)}
+        </p>
+      )}
     </div>
   );
 }
@@ -132,9 +152,17 @@ function EventRow({
   const event = registration.events;
   if (event === null) return null;
 
-  const myGuests    = guests.filter((g) => g.registration_id === registration.id);
-  const eventDate   = new Date(event.event_date);
-  const total       = event.ticket_price * (1 + registration.guest_count);
+  const myGuests  = guests.filter((g) => g.registration_id === registration.id);
+  const eventDate = new Date(event.event_date);
+  const total     = event.ticket_price * (1 + registration.guest_count);
+
+  const days = past ? null : daysUntil(event.event_date);
+  const countdownLabel =
+    days === null ? null :
+    days === 0    ? { text: "Today",     className: "text-sn-gold" } :
+    days === 1    ? { text: "Tomorrow",  className: "text-sn-gold" } :
+    days <= 7     ? { text: `In ${days} days`, className: "text-amber-400" } :
+    null;
 
   return (
     <div>
@@ -149,29 +177,27 @@ function EventRow({
               past ? "bg-white/5 border-white/10" : "bg-sn-gold/10 border-sn-gold/20"
             }`}
           >
-            <p
-              className={`text-xs font-medium uppercase ${
-                past ? "text-sn-gray-medium" : "text-sn-gold"
-              }`}
-            >
+            <p className={`text-xs font-medium uppercase ${past ? "text-sn-gray-medium" : "text-sn-gold"}`}>
               {eventDate.toLocaleDateString("en-US", { month: "short" })}
             </p>
-            <p
-              className={`font-bold text-lg leading-tight ${
-                past ? "text-sn-gray-medium" : "text-sn-off-white"
-              }`}
-            >
+            <p className={`font-bold text-lg leading-tight ${past ? "text-sn-gray-medium" : "text-sn-off-white"}`}>
               {eventDate.getDate()}
             </p>
+            <p className={`text-[10px] leading-tight mt-0.5 ${past ? "text-sn-gray-medium/60" : "text-sn-gray-medium"}`}>
+              {eventDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+            </p>
+            {countdownLabel !== null && (
+              <p className={`text-[10px] font-medium leading-tight mt-0.5 ${countdownLabel.className}`}>
+                {countdownLabel.text}
+              </p>
+            )}
           </div>
 
           {/* Details */}
           <div className="flex-1 min-w-0">
             <p
               className={`font-medium text-sm transition-colors ${
-                past
-                  ? "text-sn-gray-text"
-                  : "text-sn-off-white group-hover:text-sn-gold-light"
+                past ? "text-sn-gray-text" : "text-sn-off-white group-hover:text-sn-gold-light"
               }`}
             >
               {event.title}
