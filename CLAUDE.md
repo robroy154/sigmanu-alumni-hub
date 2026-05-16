@@ -250,6 +250,8 @@ Key runtime decisions:
 - Events list search: q param filters by title.toLowerCase().includes(query) client-side after server fetch
 - Members completeness dot: amber 1.5px dot on member/admin rows where pin_number IS NULL OR pledge_class IS NULL; rendered as a span with title="Profile incomplete..."
 
+Feature backlog tracked in docs/BACKLOG.md — read this file at the start of any planning or build session.
+
 ---
 
 ## Full Reference
