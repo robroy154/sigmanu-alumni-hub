@@ -64,9 +64,12 @@ export function SetPinForm() {
           <Input
             id="pin_number"
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             placeholder="e.g. 1042"
             className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
             {...register("pin_number")}
+            onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, ""); }}
             aria-invalid={errors.pin_number !== undefined}
           />
           {errors.pin_number !== undefined && (

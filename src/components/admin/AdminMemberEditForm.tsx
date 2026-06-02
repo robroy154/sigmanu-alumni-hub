@@ -154,7 +154,7 @@ export function AdminMemberEditForm({
             <Input className={inputClass} placeholder="—" value={form.nickname} onChange={set("nickname")} />
           </Field>
           <Field label="Pin number" labelClass={labelClass}>
-            <Input className={inputClass} placeholder="—" value={form.pin_number} onChange={set("pin_number")} />
+            <Input className={inputClass} placeholder="—" inputMode="numeric" pattern="[0-9]*" value={form.pin_number} onChange={(e) => setForm((prev) => ({ ...prev, pin_number: e.target.value.replace(/\D/g, "") }))} />
           </Field>
         </div>
 
