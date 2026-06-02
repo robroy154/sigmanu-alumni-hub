@@ -14,6 +14,7 @@ export default async function AdminPage() {
     { count: totalReg },
     { count: paidCount },
     { data: revenueRows },
+    { data: allGuestRows },
     { data: upcomingEvents },
     { data: recentRegs },
   ] = await Promise.all([
@@ -23,6 +24,7 @@ export default async function AdminPage() {
     admin.from("registrations").select("*", { count: "exact", head: true }),
     admin.from("registrations").select("*", { count: "exact", head: true }).eq("payment_status", "paid"),
     admin.from("registrations").select("guest_count, events(ticket_price)").eq("payment_status", "paid"),
+    admin.from("registrations").select("guest_count"),
     admin
       .from("events")
       .select("id, title, slug, event_date, registration_open")
@@ -63,6 +65,8 @@ export default async function AdminPage() {
       return sum + (1 + (row.guest_count ?? 0)) * price;
     }, 0) ?? 0;
 
+  const totalGuests = (allGuestRows ?? []).reduce((sum, r) => sum + (r.guest_count ?? 0), 0);
+
   return (
     <div className="space-y-8">
       <h1 className="text-sn-off-white text-2xl font-bold">Dashboard</h1>
@@ -89,7 +93,7 @@ export default async function AdminPage() {
           label="Registrations"
           value={totalReg ?? 0}
           href="/admin/registrations"
-          sub={`${paidCount ?? 0} paid`}
+          sub={`${paidCount ?? 0} paid · ${totalGuests} guest${totalGuests !== 1 ? "s" : ""}`}
         />
         <StatCard
           label="Revenue"
