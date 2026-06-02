@@ -65,7 +65,7 @@ export default async function AdminPage() {
       return sum + (1 + (row.guest_count ?? 0)) * price;
     }, 0) ?? 0;
 
-  const totalGuests = (allGuestRows ?? []).reduce((sum, r) => sum + (r.guest_count ?? 0), 0);
+  const totalAttendees = (totalReg ?? 0) + (allGuestRows ?? []).reduce((sum, r) => sum + (r.guest_count ?? 0), 0);
 
   return (
     <div className="space-y-8">
@@ -93,7 +93,7 @@ export default async function AdminPage() {
           label="Registrations"
           value={totalReg ?? 0}
           href="/admin/registrations"
-          sub={`${paidCount ?? 0} paid · ${totalGuests} guest${totalGuests !== 1 ? "s" : ""}`}
+          sub={`${paidCount ?? 0} paid · ${totalAttendees} attendee${totalAttendees !== 1 ? "s" : ""}`}
         />
         <StatCard
           label="Revenue"
