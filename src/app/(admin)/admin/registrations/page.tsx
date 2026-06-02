@@ -49,6 +49,7 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
   // Totals (computed from the full filtered result set)
   const paidRows = rows.filter((r) => r.payment_status === "paid");
   const unpaidRows = rows.filter((r) => r.payment_status === "unpaid");
+  const totalGuests = rows.reduce((sum, r) => sum + (r.guest_count ?? 0), 0);
   const totalRevenue = paidRows.reduce((sum, r) => {
     if (r.amount_paid !== null && r.amount_paid !== undefined) {
       return sum + Number(r.amount_paid);
@@ -81,6 +82,9 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
         </span>
         <span className="text-sn-gray-text">
           <span className="text-amber-400 font-medium">{unpaidRows.length}</span> unpaid
+        </span>
+        <span className="text-sn-gray-text">
+          <span className="text-sn-off-white font-medium">{totalGuests}</span> guest{totalGuests !== 1 ? "s" : ""}
         </span>
         <span className="text-sn-gray-text">
           Revenue:{" "}
