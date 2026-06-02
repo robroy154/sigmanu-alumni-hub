@@ -364,9 +364,11 @@ export function SignupForm() {
         <Input
           id="pin_entry"
           type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           placeholder="e.g. 42"
           value={pinEntry}
-          onChange={(e) => setPinEntry(e.target.value)}
+          onChange={(e) => setPinEntry(e.target.value.replace(/\D/g, ""))}
           className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
         />
         <p className="text-white/40 text-xs">
