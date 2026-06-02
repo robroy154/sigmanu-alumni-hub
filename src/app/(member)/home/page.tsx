@@ -98,8 +98,9 @@ export default async function HomePage() {
   const birthdays = allBirthdays.filter((m) => {
     if (m.birthday === null || m.birthday === undefined) return false;
     const parts = m.birthday.split("-");
+    if (parts.length < 3) return false;
     const monthPart = parts[1];
-    if (parts.length < 2 || monthPart === undefined) return false;
+    if (monthPart === undefined) return false;
     return parseInt(monthPart, 10) === nowMonth;
   }).sort((a, b) => {
     const dayA = parseInt((a.birthday ?? "").split("-")[2] ?? "0", 10);
