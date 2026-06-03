@@ -429,7 +429,7 @@ Build in this sequence. Each phase produces something functional before moving t
 | File storage | Supabase Storage — 1GB free, sufficient for profile photos at this scale |
 | Domain | Purchase separately (Namecheap, Porkbun, etc.) — connect to Vercel via DNS settings |
 | SSL | Automatic via Vercel — no configuration required |
-| Email (transactional) | Brevo (v5 SDK) — integrated via `src/lib/email/index.ts`; `BREVO_API_KEY` required, `BREVO_FROM_EMAIL` required (verified sender in Brevo account) |
+| Email (transactional) | Resend SDK — integrated via `src/lib/email/index.ts`; `RESEND_API_KEY` required, `RESEND_FROM_EMAIL` required (verified sender on a Resend domain); also used as Supabase SMTP relay (`smtp.resend.com:465`) so auth emails (password reset, confirm) share the same provider |
 | Payments | Stripe — no hosting, SaaS, pay per transaction only |
 
 ### 8.2 Monthly Cost Estimate at Launch
@@ -527,7 +527,7 @@ A chronological record of every locked decision.
 | 32 | Invited person's email is set by the referrer and is read-only on the join form | Prevents email substitution attacks; referrer vouches for the specific person they're inviting |
 | 33 | `referred_by` on members is admin-only visibility, enforced via `REVOKE SELECT (referred_by) ON members FROM authenticated` | Column-level revoke is the correct PostgreSQL mechanism for per-column access control; service role bypasses it |
 | 34 | Token expiry maintenance via pg_cron nightly job — setup documented in migration file comments | pg_cron runs inside Postgres, no external scheduler needed; SQL and dashboard steps are in `20260405000005_referrals.sql` |
-| 35 | No SMS — email only via Brevo for all transactional notifications; SMS via Brevo is planned for Phase 24 | Resend replaced by Brevo v5 SDK in Phase 23; Brevo's built-in SMS channel eliminates the need for a separate provider when SMS is added |
+| 35 | No SMS — email only via Resend for all transactional notifications | Resend SDK (Phase 9) → replaced by Brevo v5 SDK (Phase 23) → migrated back to Resend (Phase 25); Resend does not rewrite links, which is required for Supabase auth email links (password reset, confirm) to work correctly via SMTP relay |
 | 36 | Admin can cancel pending referrals at `/admin/referrals` — sets status to `expired`, no hard delete | Preserves audit trail; expired tokens show "already expired" on the invite link rather than "invalid" |
 | 37 | Authenticated homepage lives at `/home`; post-login redirect updated from `/` to `/home` in proxy.ts | Landing page (`/`) remains public for event info; `/home` is the member dashboard with events, birthdays, announcements, and quick links |
 | 38 | `announcements` table managed by admins only (service role writes); members read active rows via RLS policy `is_active = true` | No extra admin write policy needed since admin client uses service role which bypasses RLS |
