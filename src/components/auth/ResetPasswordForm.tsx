@@ -1,46 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-type FormState = "loading" | "ready" | "submitting" | "success" | "invalid_token";
+type FormState = "ready" | "submitting" | "success";
 
 export function ResetPasswordForm() {
   const router  = useRouter();
-  const [state, setState]               = useState<FormState>("loading");
+  const [state, setState]               = useState<FormState>("ready");
   const [password, setPassword]         = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError]               = useState<string | null>(null);
 
-  // Supabase embeds the recovery token in the URL hash.
-  // onAuthStateChange fires with event="PASSWORD_RECOVERY" once the client
-  // picks up the hash and exchanges it for a session.
-  useEffect(() => {
-    const supabase = createClient();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setState("ready");
-      }
-    });
-
-    // If the hash is missing or already expired Supabase won't fire the event.
-    // Give it 3 seconds then assume the token is invalid.
-    const timeout = setTimeout(() => {
-      setState((current) => current === "loading" ? "invalid_token" : current);
-    }, 3000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, []);
-
+  // By the time the user lands here via /auth/callback?next=/auth/reset-password,
+  // exchangeCodeForSession has already run and their session is established.
+  // No token polling needed — just update the password directly.
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -66,32 +44,6 @@ export function ResetPasswordForm() {
 
     setState("success");
     setTimeout(() => router.push("/login?reset=1"), 1500);
-  }
-
-  if (state === "loading") {
-    return (
-      <p className="text-white/50 text-sm text-center py-6 animate-pulse">
-        Verifying reset link…
-      </p>
-    );
-  }
-
-  if (state === "invalid_token") {
-    return (
-      <div className="space-y-4 text-center py-2">
-        <div className="text-red-400 text-3xl">✕</div>
-        <p className="text-white/70 text-sm leading-relaxed">
-          This reset link is invalid or has expired. Reset links are valid for
-          one hour.
-        </p>
-        <Link
-          href="/auth/forgot-password"
-          className="inline-block text-sn-gold hover:text-sn-gold-light text-sm underline"
-        >
-          Request a new reset link
-        </Link>
-      </div>
-    );
   }
 
   if (state === "success") {

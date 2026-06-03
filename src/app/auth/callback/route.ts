@@ -7,7 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/home";
+  // Guard against open redirect: next must be a relative path.
+  const rawNext = searchParams.get("next") ?? "/home";
+  const next = rawNext.startsWith("/") ? rawNext : "/home";
 
   if (code === null) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
@@ -18,6 +20,12 @@ export async function GET(request: NextRequest) {
 
   if (exchangeError !== null) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+  }
+
+  // For auth-flow continuations (e.g. password reset), skip member status checks
+  // and redirect immediately — the destination page handles its own requirements.
+  if (next.startsWith("/auth/")) {
+    return NextResponse.redirect(`${origin}${next}`);
   }
 
   const {
