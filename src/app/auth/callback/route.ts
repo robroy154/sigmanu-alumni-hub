@@ -2,28 +2,50 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// OAuth callback — exchanges the one-time code for a session.
-// Supabase redirects here after the user completes the OAuth provider flow.
+// Auth callback — handles two flows:
+//   1. token_hash + type=recovery  → password reset via verifyOtp (SSR-safe)
+//   2. code                        → OAuth / PKCE code exchange
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
+  const code       = searchParams.get("code");
+  const token_hash = searchParams.get("token_hash");
+  const type       = searchParams.get("type");
   // Guard against open redirect: next must be a relative path.
   const rawNext = searchParams.get("next") ?? "/home";
   const next = rawNext.startsWith("/") ? rawNext : "/home";
 
+  const supabase = await createClient();
+
+  // ── Password reset (verifyOtp) ─────────────────────────────────────────────
+  // exchangeCodeForSession requires a PKCE code verifier stored in the browser,
+  // which is unavailable in a server Route Handler. verifyOtp with token_hash is
+  // the SSR-safe solution for password reset in Next.js App Router.
+  //
+  // Supabase "Reset Password" email template must be set to:
+  //   {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/auth/reset-password
+  if (token_hash !== null && type === "recovery") {
+    const { error } = await supabase.auth.verifyOtp({ token_hash, type: "recovery" });
+    if (error !== null) {
+      return NextResponse.redirect(`${origin}/login?error=auth_failed`);
+    }
+    // Session is now established — redirect straight to the reset form.
+    // Skips member status checks: a pending user must still be able to reset their password.
+    return NextResponse.redirect(`${origin}${next}`);
+  }
+
+  // ── OAuth / PKCE code exchange ─────────────────────────────────────────────
   if (code === null) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }
 
-  const supabase = await createClient();
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError !== null) {
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
-  // For auth-flow continuations (e.g. password reset), skip member status checks
-  // and redirect immediately — the destination page handles its own requirements.
+  // For auth-flow continuations (e.g. any future PKCE-based reset path), skip
+  // member status checks and redirect immediately.
   if (next.startsWith("/auth/")) {
     return NextResponse.redirect(`${origin}${next}`);
   }
