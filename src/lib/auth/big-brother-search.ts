@@ -68,16 +68,40 @@ export async function searchBigBrotherCandidates(
     return (data ?? []).map(mapRow);
   }
 
-  // Name fragment search — escape LIKE special chars
-  const safe = q.replace(/[%_]/g, "\\$&");
-  const { data } = await admin
-    .from("members")
-    .select("id, first_name, last_name, pin_number, pledge_class, status")
-    .in("status", ["member", "admin", "stub"])
-    .or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%`)
-    .order("pin_number", { ascending: true })
-    .limit(10);
-  return (data ?? []).map(mapRow);
+  // Name fragment search — escape LIKE wildcards and backslash, then run two
+  // separate typed queries (no .or() string interpolation) and merge by ID.
+  const safe    = q.replace(/[\\%_]/g, "\\$&");
+  const pattern = `%${safe}%`;
+
+  const [{ data: byFirst }, { data: byLast }] = await Promise.all([
+    admin
+      .from("members")
+      .select("id, first_name, last_name, pin_number, pledge_class, status")
+      .in("status", ["member", "admin", "stub"])
+      .ilike("first_name", pattern)
+      .order("pin_number", { ascending: true })
+      .limit(10),
+    admin
+      .from("members")
+      .select("id, first_name, last_name, pin_number, pledge_class, status")
+      .in("status", ["member", "admin", "stub"])
+      .ilike("last_name", pattern)
+      .order("pin_number", { ascending: true })
+      .limit(10),
+  ]);
+
+  const seen   = new Set<string>();
+  const merged: MemberRow[] = [];
+  for (const row of [...(byFirst ?? []), ...(byLast ?? [])]) {
+    if (!seen.has(row.id)) {
+      seen.add(row.id);
+      merged.push(row as MemberRow);
+    }
+  }
+  return merged
+    .sort((a, b) => (a.pin_number ?? "").localeCompare(b.pin_number ?? ""))
+    .slice(0, 10)
+    .map(mapRow);
 }
 
 // Resolves a single member by ID — used to populate display name for a

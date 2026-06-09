@@ -21,6 +21,11 @@ function centerAspectCrop(width: number, height: number): Crop {
   );
 }
 
+// Only allow blob: (local file preview) scheme; rawSrc always comes from URL.createObjectURL
+function isSafeBlobUrl(url: string): boolean {
+  return url.startsWith("blob:");
+}
+
 export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const imgRef        = useRef<HTMLImageElement>(null);
@@ -132,7 +137,7 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
   }
 
   // ── Crop modal ────────────────────────────────────────────────────────────
-  if (rawSrc !== null) {
+  if (rawSrc !== null && isSafeBlobUrl(rawSrc)) {
     return (
       <div className="flex flex-col items-center gap-4 w-full">
         <p className="text-white/70 text-sm">Drag to adjust crop</p>

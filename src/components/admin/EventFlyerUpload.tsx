@@ -7,6 +7,11 @@ import { getEventImageUploadUrl } from "@/lib/admin/upload-event-banner";
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
+// Only allow blob: (local file preview) and https: (Supabase public URL) schemes
+function isSafeImageUrl(url: string): boolean {
+  return url.startsWith("blob:") || /^https:\/\//i.test(url);
+}
+
 interface Props {
   eventId:     string | null;
   currentUrl?: string | null;
@@ -91,7 +96,7 @@ export function EventFlyerUpload({ eventId, currentUrl, onUpload }: Props) {
 
   return (
     <div className="space-y-2">
-      {preview !== null && preview !== "" ? (
+      {preview !== null && preview !== "" && isSafeImageUrl(preview) ? (
         <div className="relative rounded-lg overflow-hidden border border-white/10 group bg-sn-gray-dark/30 flex justify-center p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
