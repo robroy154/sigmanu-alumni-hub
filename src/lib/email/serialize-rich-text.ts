@@ -19,26 +19,41 @@ const STYLES = {
   bq_border:  `width:3px;background:#C6A75E;`,
   bq_text:    `color:rgba(255,255,255,0.6);font-size:15px;line-height:1.7;padding:2px 0 2px 12px;font-style:italic;font-family:Arial,sans-serif;`,
   span_base:  `color:rgba(255,255,255,0.85);font-family:Arial,sans-serif;`,
+  td_base:    `border:1px solid rgba(255,255,255,0.2);padding:6px 10px;font-size:14px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.85);`,
+  th_base:    `border:1px solid rgba(255,255,255,0.2);padding:6px 10px;font-size:14px;font-family:Arial,sans-serif;color:#C6A75E;font-weight:700;background:rgba(198,167,94,0.1);`,
+  yt_btn:     `display:inline-block;background:#C6A75E;color:#0B0B0C;font-family:Arial,sans-serif;font-size:14px;font-weight:bold;padding:10px 24px;border-radius:8px;text-decoration:none;`,
 };
+
+// ---------------------------------------------------------------------------
+// Extract a specific CSS property value from an inline style string
+// ---------------------------------------------------------------------------
+function getStyleProp(style: string, prop: string): string | null {
+  const re = new RegExp(`${prop}:\\s*([^;]+)`, "i");
+  return re.exec(style)?.[1]?.trim() ?? null;
+}
 
 // ---------------------------------------------------------------------------
 // Serialize a single DOM node to email-safe HTML
 // ---------------------------------------------------------------------------
 function serializeNode(node: HtmlNode): string {
-  // Text nodes — return escaped text
   if (node.nodeType === NodeType.TEXT_NODE) {
     return node.rawText;
   }
 
   if (node.nodeType !== NodeType.ELEMENT_NODE) return "";
 
-  const el = node as ParsedElement;
-  const tag = el.tagName?.toLowerCase() ?? "";
+  const el    = node as ParsedElement;
+  const tag   = el.tagName?.toLowerCase() ?? "";
   const inner = () => el.childNodes.map((c) => serializeNode(c)).join("");
 
   switch (tag) {
-    case "p":
-      return `<p style="${STYLES.p}">${inner()}</p>`;
+    case "p": {
+      // Preserve text-align if present
+      const style     = el.getAttribute("style") ?? "";
+      const textAlign = getStyleProp(style, "text-align");
+      const align     = textAlign !== null ? `text-align:${textAlign};` : "";
+      return `<p style="${STYLES.p}${align}">${inner()}</p>`;
+    }
 
     case "strong":
       return `<strong style="${STYLES.strong}">${inner()}</strong>`;
@@ -52,11 +67,19 @@ function serializeNode(node: HtmlNode): string {
     case "s":
       return `<s style="${STYLES.s}">${inner()}</s>`;
 
-    case "h2":
-      return `<p style="${STYLES.h2}">${inner()}</p>`;
+    case "h2": {
+      const style     = el.getAttribute("style") ?? "";
+      const textAlign = getStyleProp(style, "text-align");
+      const align     = textAlign !== null ? `text-align:${textAlign};` : "";
+      return `<p style="${STYLES.h2}${align}">${inner()}</p>`;
+    }
 
-    case "h3":
-      return `<p style="${STYLES.h3}">${inner()}</p>`;
+    case "h3": {
+      const style     = el.getAttribute("style") ?? "";
+      const textAlign = getStyleProp(style, "text-align");
+      const align     = textAlign !== null ? `text-align:${textAlign};` : "";
+      return `<p style="${STYLES.h3}${align}">${inner()}</p>`;
+    }
 
     case "hr":
       return `<hr style="${STYLES.hr}">`;
@@ -73,13 +96,12 @@ function serializeNode(node: HtmlNode): string {
     case "img": {
       const src = el.getAttribute("src") ?? "";
       if (/^\s*javascript:/i.test(src)) return "";
-      const alt = el.getAttribute("alt") ?? "";
-      // Parse width from inline style or width attribute
-      const inlineStyle = el.getAttribute("style") ?? "";
-      const widthMatch = /width:\s*(\d+px)/i.exec(inlineStyle);
+      const alt          = el.getAttribute("alt") ?? "";
+      const inlineStyle  = el.getAttribute("style") ?? "";
+      const widthMatch   = /width:\s*(\d+)px/i.exec(inlineStyle);
       if (widthMatch?.[1] !== undefined) {
         const w = widthMatch[1];
-        return `<img src="${src}" alt="${alt}" width="${w.replace("px","")}" style="${STYLES.img_base}width:${w};">`;
+        return `<img src="${src}" alt="${alt}" width="${w}" style="${STYLES.img_base}width:${w}px;">`;
       }
       return `<img src="${src}" alt="${alt}" style="${STYLES.img_base}max-width:560px;">`;
     }
@@ -88,8 +110,7 @@ function serializeNode(node: HtmlNode): string {
       const rows = el.childNodes
         .filter((c): c is ParsedElement => c.nodeType === NodeType.ELEMENT_NODE && (c as ParsedElement).tagName?.toLowerCase() === "li")
         .map((li) => {
-          const liEl = li as ParsedElement;
-          const liInner = liEl.childNodes.map((c) => serializeNode(c)).join("");
+          const liInner = li.childNodes.map((c) => serializeNode(c)).join("");
           return `<tr><td style="${STYLES.li_bullet}" valign="top">·</td><td style="${STYLES.li_text}">${liInner}</td></tr>`;
         })
         .join("");
@@ -102,8 +123,7 @@ function serializeNode(node: HtmlNode): string {
         .filter((c): c is ParsedElement => c.nodeType === NodeType.ELEMENT_NODE && (c as ParsedElement).tagName?.toLowerCase() === "li")
         .map((li) => {
           counter++;
-          const liEl = li as ParsedElement;
-          const liInner = liEl.childNodes.map((c) => serializeNode(c)).join("");
+          const liInner = li.childNodes.map((c) => serializeNode(c)).join("");
           return `<tr><td style="${STYLES.li_bullet}" valign="top">${counter}.</td><td style="${STYLES.li_text}">${liInner}</td></tr>`;
         })
         .join("");
@@ -111,36 +131,94 @@ function serializeNode(node: HtmlNode): string {
     }
 
     case "li":
-      // li handled by parent ul/ol — if encountered standalone, just render content
       return inner();
 
     case "blockquote": {
-      const bqInner = inner();
       return `<table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 14px;width:100%;">
   <tr>
     <td style="${STYLES.bq_border}">&nbsp;</td>
-    <td style="${STYLES.bq_text}">${bqInner}</td>
+    <td style="${STYLES.bq_text}">${inner()}</td>
   </tr>
 </table>`;
     }
 
     case "span": {
-      // Pass through font-size spans from TextStyle extension
-      const inlineStyle = el.getAttribute("style") ?? "";
-      const fontSizeMatch = /font-size:\s*(\d+px)/i.exec(inlineStyle);
-      if (fontSizeMatch) {
-        const fontSize = fontSizeMatch[1];
-        return `<span style="${STYLES.span_base}font-size:${fontSize};">${inner()}</span>`;
+      const style         = el.getAttribute("style") ?? "";
+      const fontSizeMatch = /font-size:\s*(\d+px)/i.exec(style);
+      const colorMatch    = /(?:^|;)\s*color:\s*([^;]+)/i.exec(style);
+
+      if (fontSizeMatch !== null) {
+        const fontSize = fontSizeMatch[1] ?? "";
+        const colorPart = (colorMatch !== null && colorMatch[1] !== undefined)
+          ? `color:${colorMatch[1].trim()};`
+          : `color:rgba(255,255,255,0.85);`;
+        return `<span style="${colorPart}font-size:${fontSize};font-family:Arial,sans-serif;">${inner()}</span>`;
+      }
+      if (colorMatch !== null && colorMatch[1] !== undefined) {
+        return `<span style="color:${colorMatch[1].trim()};font-family:Arial,sans-serif;">${inner()}</span>`;
       }
       return inner();
     }
+
+    case "mark": {
+      // Tiptap Highlight — convert to <span> with background-color
+      const style    = el.getAttribute("style") ?? "";
+      const bgMatch  = /background(?:-color)?:\s*([^;]+)/i.exec(style);
+      const bgColor  = bgMatch?.[1]?.trim() ?? "#C6A75E";
+      return `<span style="background-color:${bgColor};color:#0B0B0C;padding:1px 3px;border-radius:2px;">${inner()}</span>`;
+    }
+
+    case "table": {
+      return `<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin:0 0 14px;">${inner()}</table>`;
+    }
+
+    case "thead":
+    case "tbody":
+      return `<${tag}>${inner()}</${tag}>`;
+
+    case "tr":
+      return `<tr>${inner()}</tr>`;
+
+    case "td": {
+      const style     = el.getAttribute("style") ?? "";
+      const textAlign = getStyleProp(style, "text-align");
+      const align     = textAlign !== null ? `text-align:${textAlign};` : "";
+      return `<td style="${STYLES.td_base}${align}">${inner()}</td>`;
+    }
+
+    case "th": {
+      const style     = el.getAttribute("style") ?? "";
+      const textAlign = getStyleProp(style, "text-align");
+      const align     = textAlign !== null ? `text-align:${textAlign};` : "";
+      return `<th style="${STYLES.th_base}${align}">${inner()}</th>`;
+    }
+
+    case "div": {
+      // YouTube embed: <div data-youtube-video><iframe src="..."></iframe></div>
+      if (el.getAttribute("data-youtube-video") !== null) {
+        // Extract the iframe src to derive the original YouTube watch URL
+        const iframeEl = el.querySelector("iframe");
+        const src      = iframeEl?.getAttribute("src") ?? "";
+        // Extract video ID from embed URL (e.g. /embed/dQw4w9WgXcQ?...)
+        const videoIdMatch = /\/embed\/([^?&]+)/i.exec(src);
+        const videoId      = videoIdMatch !== null ? videoIdMatch[1] : "";
+        const watchUrl     = videoId !== ""
+          ? `https://www.youtube.com/watch?v=${videoId}`
+          : "https://www.youtube.com";
+        return `<p style="text-align:center;margin:16px 0;"><a href="${watchUrl}" style="${STYLES.yt_btn}">&#9654; Watch on YouTube &#8594;</a></p>`;
+      }
+      // Generic div — strip tag, keep content
+      return inner();
+    }
+
+    case "figure":
+      return inner();
 
     case "script":
     case "style":
       return "";
 
     default:
-      // Unknown tags: strip the tag, keep content
       return inner();
   }
 }

@@ -1,0 +1,8 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "src/app/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

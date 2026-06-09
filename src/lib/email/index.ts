@@ -235,7 +235,41 @@ export async function sendPendingConfirmation({
 
 // ---------------------------------------------------------------------------
 // 5. Announcement notification — sent to all members when admin posts
+// Uses resend.batch.send() in chunks of 100, with exponential backoff on 429.
 // ---------------------------------------------------------------------------
+
+async function batchSendWithRetry(
+  resend: Resend,
+  batch: { from: string; to: string; subject: string; html: string }[],
+  maxRetries = 3,
+): Promise<void> {
+  let delay = 1000; // ms
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await resend.batch.send(batch);
+      if ("error" in result && result.error !== null) {
+        // Type guard: error object may have a statusCode
+        const status = (result.error as Record<string, unknown>).statusCode as number | undefined;
+        if (status === 429 && attempt < maxRetries - 1) {
+          console.warn(`[email] batch 429 — retrying in ${delay}ms`);
+          await new Promise((r) => setTimeout(r, delay));
+          delay *= 2;
+          continue;
+        }
+        console.error("[email] batch send error:", result.error);
+      }
+      return;
+    } catch (err) {
+      if (attempt < maxRetries - 1) {
+        console.warn(`[email] batch threw (attempt ${attempt + 1}) — retrying in ${delay}ms:`, err);
+        await new Promise((r) => setTimeout(r, delay));
+        delay *= 2;
+      } else {
+        console.error("[email] batch send threw after all retries:", err);
+      }
+    }
+  }
+}
 
 export async function sendAnnouncementNotification({
   title,
@@ -251,7 +285,7 @@ export async function sendAnnouncementNotification({
 
   if (memberEmails.length === 0) return;
 
-  const appUrl        = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl         = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const serializedBody = serializeRichTextToEmail(announcementBody);
 
   let html: string;
@@ -264,22 +298,15 @@ export async function sendAnnouncementNotification({
     return;
   }
 
-  // Process in chunks of 100 — send individually within each chunk.
+  const from    = `${SENDER_NAME} <${SENDER_EMAIL}>`;
+  const subject = `New announcement: ${title}`;
+
+  // Process in chunks of 100 — Resend batch limit per request.
   const CHUNK = 100;
   for (let i = 0; i < memberEmails.length; i += CHUNK) {
     const chunk = memberEmails.slice(i, i + CHUNK);
-    for (const email of chunk) {
-      try {
-        await resend.emails.send({
-          from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
-          to:      email,
-          subject: `New announcement: ${title}`,
-          html,
-        });
-      } catch (err) {
-        console.error(`[email] sendAnnouncementNotification failed for ${email}:`, err);
-      }
-    }
+    const batch = chunk.map((to) => ({ from, to, subject, html }));
+    await batchSendWithRetry(resend, batch);
   }
 }
 

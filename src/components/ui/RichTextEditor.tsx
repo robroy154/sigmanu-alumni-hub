@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
+import type { ReactNode } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Typography from "@tiptap/extension-typography";
@@ -11,6 +12,14 @@ import { TextStyle } from "@tiptap/extension-text-style";
 // Images must be externally hosted URLs (Supabase Storage public URLs, etc.)
 // base64 is disabled to prevent bloated database storage
 import Image from "@tiptap/extension-image";
+import TextAlign from "@tiptap/extension-text-align";
+import { Color } from "@tiptap/extension-color";
+import Highlight from "@tiptap/extension-highlight";
+import { Table } from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import Youtube from "@tiptap/extension-youtube";
 import {
   Bold,
   Italic,
@@ -23,10 +32,15 @@ import {
   Link2,
   RemoveFormatting,
   Image as ImageIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Table as TableIcon,
+  Video as YoutubeIcon,
+  X,
 } from "lucide-react";
 
 // ── Font Size extension ───────────────────────────────────────────────────────
-// Adds setFontSize / unsetFontSize commands via TextStyle mark attributes.
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     fontSize: {
@@ -74,7 +88,6 @@ const FontSize = Extension.create({
 });
 
 // ── Image Resize extension ────────────────────────────────────────────────────
-// Extends the base Image extension to support an inline width style attribute.
 const ImageResize = Image.extend({
   addAttributes() {
     return {
@@ -92,8 +105,22 @@ const ImageResize = Image.extend({
   },
 });
 
-// ── Font size options ─────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32];
+
+// ── Shared toolbar button style ───────────────────────────────────────────────
+function btnClass(active: boolean) {
+  return `p-1.5 rounded transition-colors ${
+    active
+      ? "text-sn-gold bg-white/10"
+      : "text-white/60 hover:text-white hover:bg-white/5"
+  }`;
+}
+
+// ── Toolbar separator ─────────────────────────────────────────────────────────
+function Sep() {
+  return <div className="w-px h-4 bg-white/20 mx-0.5" />;
+}
 
 interface Props {
   value:       string;
@@ -106,6 +133,11 @@ interface Props {
 export function RichTextEditor({ value, onChange, placeholder, maxLength, className = "" }: Props) {
   const [isImageSelected, setIsImageSelected] = useState(false);
   const [imageWidthInput, setImageWidthInput]  = useState("");
+  const [isInTable,       setIsInTable]        = useState(false);
+
+  // Saves the cursor/selection range before native controls (select, color input)
+  // steal focus. Restored in their onChange to preserve the selection.
+  const savedSelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const editor = useEditor({
     extensions: [
@@ -114,9 +146,17 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
       Underline,
       TextStyle,
       FontSize,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({ openOnClick: false, autolink: true }),
       Placeholder.configure({ placeholder: placeholder ?? "Write something…" }),
       ImageResize.configure({ inline: false, allowBase64: false }),
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableCell,
+      TableHeader,
+      Youtube.configure({ nocookie: true, width: 560, height: 315 }),
     ],
     content: value,
     onUpdate: ({ editor: e }) => {
@@ -125,6 +165,7 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
     onSelectionUpdate: ({ editor: e }) => {
       const active = e.isActive("image");
       setIsImageSelected(active);
+      setIsInTable(e.isActive("table"));
       if (active) {
         const w = e.getAttributes("image").width as string | null | undefined;
         setImageWidthInput(w ? w.replace("px", "") : "");
@@ -141,76 +182,120 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
 
   if (editor === null) return null;
 
-  const charCount = editor.storage.characterCount?.characters?.() as number | undefined;
+  const charCount      = editor.storage.characterCount?.characters?.() as number | undefined;
   const currentFontSize =
     (editor.getAttributes("textStyle").fontSize as string | undefined)?.replace("px", "") ?? "16";
+  const currentColor    = editor.getAttributes("textStyle").color as string | undefined;
+  const currentHighlight = editor.getAttributes("highlight").color as string | undefined;
+
+  function saveSelection() {
+    const { from, to } = editor.state.selection;
+    savedSelectionRef.current = { from, to };
+  }
 
   function insertImage() {
     const url = window.prompt("Image URL:");
     if (url === null || url.trim() === "") return;
-    editor?.chain().focus().setImage({ src: url.trim() }).run();
+    editor.chain().focus().setImage({ src: url.trim() }).run();
   }
 
   function setLink() {
-    const prev = editor?.getAttributes("link").href as string | undefined;
+    const prev = editor.getAttributes("link").href as string | undefined;
     const url  = window.prompt("Enter URL", prev ?? "https://");
     if (url === null) return;
     if (url === "") {
-      editor?.chain().focus().extendMarkRange("link").unsetLink().run();
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return;
     }
-    editor?.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   }
 
   function applyImageWidth(px: string) {
     const n = parseInt(px, 10);
     if (!isNaN(n) && n >= 100 && n <= 800) {
-      editor?.chain().focus().updateAttributes("image", { width: `${n}px` }).run();
+      editor.chain().focus().updateAttributes("image", { width: `${n}px` }).run();
     }
   }
 
   function resetImageWidth() {
-    editor?.chain().focus().updateAttributes("image", { width: null }).run();
+    editor.chain().focus().updateAttributes("image", { width: null }).run();
     setImageWidthInput("");
   }
 
-  type ToolbarItem =
-    | { type: "button"; label: string; icon: React.ReactNode; action: () => void; active: boolean }
-    | { type: "sep" };
+  function insertYouTube() {
+    const url = window.prompt("YouTube URL:");
+    if (url === null || url.trim() === "") return;
+    editor.chain().focus().setYoutubeVideo({ src: url.trim() }).run();
+  }
 
-  const toolbar: ToolbarItem[] = [
-    { type: "button", label: "Bold",          icon: <Bold size={14} />,           action: () => editor.chain().focus().toggleBold().run(),          active: editor.isActive("bold") },
-    { type: "button", label: "Italic",        icon: <Italic size={14} />,         action: () => editor.chain().focus().toggleItalic().run(),        active: editor.isActive("italic") },
-    { type: "button", label: "Underline",     icon: <UnderlineIcon size={14} />,  action: () => editor.chain().focus().toggleUnderline().run(),     active: editor.isActive("underline") },
-    { type: "button", label: "Strikethrough", icon: <Strikethrough size={14} />,  action: () => editor.chain().focus().toggleStrike().run(),        active: editor.isActive("strike") },
-    { type: "sep" },
-    { type: "button", label: "Bullet List",   icon: <List size={14} />,           action: () => editor.chain().focus().toggleBulletList().run(),   active: editor.isActive("bulletList") },
-    { type: "button", label: "Ordered List",  icon: <ListOrdered size={14} />,    action: () => editor.chain().focus().toggleOrderedList().run(),  active: editor.isActive("orderedList") },
-    { type: "button", label: "Blockquote",    icon: <Quote size={14} />,          action: () => editor.chain().focus().toggleBlockquote().run(),   active: editor.isActive("blockquote") },
-    { type: "button", label: "Divider",       icon: <Minus size={14} />,          action: () => editor.chain().focus().setHorizontalRule().run(),  active: false },
-    { type: "sep" },
-    { type: "button", label: "Link",          icon: <Link2 size={14} />,          action: setLink,                                                  active: editor.isActive("link") },
-    { type: "button", label: "Clear Format",  icon: <RemoveFormatting size={14} />, action: () => editor.chain().focus().clearNodes().unsetAllMarks().run(), active: false },
-    { type: "sep" },
-    { type: "button", label: "Insert Image",  icon: <ImageIcon size={14} />,        action: insertImage,                                                    active: false },
+  // Applies a command after restoring the saved selection.
+  // Used for native controls (font-size select, color inputs) that steal focus.
+  function withRestoredSelection(apply: () => void) {
+    const saved = savedSelectionRef.current;
+    savedSelectionRef.current = null;
+    if (saved !== null) {
+      editor.chain().focus().setTextSelection(saved).run();
+    }
+    apply();
+  }
+
+  // ── Simple toolbar button array (format controls) ─────────────────────────
+  type ToolbarButton = { label: string; icon: ReactNode; action: () => void; active: boolean };
+
+  const formatButtons: ToolbarButton[] = [
+    { label: "Bold",          icon: <Bold size={14} />,            action: () => editor.chain().focus().toggleBold().run(),          active: editor.isActive("bold") },
+    { label: "Italic",        icon: <Italic size={14} />,          action: () => editor.chain().focus().toggleItalic().run(),        active: editor.isActive("italic") },
+    { label: "Underline",     icon: <UnderlineIcon size={14} />,   action: () => editor.chain().focus().toggleUnderline().run(),     active: editor.isActive("underline") },
+    { label: "Strikethrough", icon: <Strikethrough size={14} />,   action: () => editor.chain().focus().toggleStrike().run(),        active: editor.isActive("strike") },
   ];
+
+  const listButtons: ToolbarButton[] = [
+    { label: "Bullet List",  icon: <List size={14} />,          action: () => editor.chain().focus().toggleBulletList().run(),   active: editor.isActive("bulletList") },
+    { label: "Ordered List", icon: <ListOrdered size={14} />,   action: () => editor.chain().focus().toggleOrderedList().run(),  active: editor.isActive("orderedList") },
+    { label: "Blockquote",   icon: <Quote size={14} />,         action: () => editor.chain().focus().toggleBlockquote().run(),   active: editor.isActive("blockquote") },
+    { label: "Divider",      icon: <Minus size={14} />,         action: () => editor.chain().focus().setHorizontalRule().run(),  active: false },
+  ];
+
+  const utilButtons: ToolbarButton[] = [
+    { label: "Link",         icon: <Link2 size={14} />,             action: setLink,                                                            active: editor.isActive("link") },
+    { label: "Clear Format", icon: <RemoveFormatting size={14} />,  action: () => editor.chain().focus().clearNodes().unsetAllMarks().run(),   active: false },
+  ];
+
+  function renderButtons(buttons: ToolbarButton[]) {
+    return buttons.map((btn) => (
+      <button
+        key={btn.label}
+        type="button"
+        title={btn.label}
+        onMouseDown={(e) => { e.preventDefault(); btn.action(); }}
+        className={btnClass(btn.active)}
+      >
+        {btn.icon}
+      </button>
+    ));
+  }
 
   return (
     <div className={`rounded-lg bg-sn-surface border border-white/10 overflow-hidden ${className}`}>
-      {/* Toolbar */}
+
+      {/* ── Main toolbar ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-white/10 bg-sn-gray-dark/50">
-        {/* Font size dropdown */}
+
+        {/* Font size — uses saveSelection / withRestoredSelection pattern to
+            preserve the editor selection while the native dropdown is open   */}
         <select
           value={currentFontSize}
+          onMouseDown={saveSelection}
           onChange={(e) => {
             const size = e.target.value;
-            if (size === "16") {
-              editor.chain().focus().unsetFontSize().run();
-            } else {
-              editor.chain().focus().setFontSize(`${size}px`).run();
-            }
+            withRestoredSelection(() => {
+              if (size === "16") {
+                editor.chain().focus().unsetFontSize().run();
+              } else {
+                editor.chain().focus().setFontSize(`${size}px`).run();
+              }
+            });
           }}
-          onMouseDown={(e) => e.preventDefault()}
           className={`h-7 px-1.5 rounded text-xs bg-transparent border border-white/20 cursor-pointer transition-colors ${
             currentFontSize !== "16" ? "text-sn-gold border-sn-gold/40" : "text-white/60"
           } hover:text-white hover:border-white/40`}
@@ -222,34 +307,139 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
           ))}
         </select>
 
-        <div className="w-px h-4 bg-white/20 mx-0.5" />
+        <Sep />
 
-        {toolbar.map((item, i) => {
-          if (item.type === "sep") {
-            return <div key={i} className="w-px h-4 bg-white/20 mx-0.5" />;
-          }
-          return (
-            <button
-              key={item.label}
-              type="button"
-              title={item.label}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                item.action();
-              }}
-              className={`p-1.5 rounded transition-colors ${
-                item.active
-                  ? "text-sn-gold bg-white/10"
-                  : "text-white/60 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {item.icon}
-            </button>
-          );
-        })}
+        {/* Formatting */}
+        {renderButtons(formatButtons)}
+
+        <Sep />
+
+        {/* Text alignment */}
+        <button type="button" title="Align left"   onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign("left").run(); }}   className={btnClass(editor.isActive({ textAlign: "left" }))}><AlignLeft size={14} /></button>
+        <button type="button" title="Align center" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign("center").run(); }} className={btnClass(editor.isActive({ textAlign: "center" }))}><AlignCenter size={14} /></button>
+        <button type="button" title="Align right"  onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setTextAlign("right").run(); }}  className={btnClass(editor.isActive({ textAlign: "right" }))}><AlignRight size={14} /></button>
+
+        <Sep />
+
+        {/* Text color */}
+        <div className="flex items-center gap-0.5" title="Text color">
+          <input
+            type="color"
+            value={currentColor ?? "#ffffff"}
+            onMouseDown={saveSelection}
+            onChange={(e) => {
+              const color = e.target.value;
+              withRestoredSelection(() => {
+                editor.chain().focus().setColor(color).run();
+              });
+            }}
+            className="w-6 h-6 rounded cursor-pointer p-0.5 bg-transparent border border-white/20 hover:border-white/40"
+            title="Text color"
+          />
+          <button
+            type="button"
+            title="Remove text color"
+            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetColor().run(); }}
+            className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <X size={10} />
+          </button>
+        </div>
+
+        {/* Highlight color */}
+        <div className="flex items-center gap-0.5" title="Highlight">
+          <input
+            type="color"
+            value={currentHighlight ?? "#C6A75E"}
+            onMouseDown={saveSelection}
+            onChange={(e) => {
+              const color = e.target.value;
+              withRestoredSelection(() => {
+                editor.chain().focus().setHighlight({ color }).run();
+              });
+            }}
+            className="w-6 h-6 rounded cursor-pointer p-0.5 bg-transparent border border-amber-400/30 hover:border-amber-400/60"
+            style={{ accentColor: "#C6A75E" }}
+            title="Highlight color"
+          />
+          <button
+            type="button"
+            title="Remove highlight"
+            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetHighlight().run(); }}
+            className="p-1 rounded text-white/40 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <X size={10} />
+          </button>
+        </div>
+
+        <Sep />
+
+        {/* Lists / structure */}
+        {renderButtons(listButtons)}
+
+        <Sep />
+
+        {/* Utilities */}
+        {renderButtons(utilButtons)}
+
+        <Sep />
+
+        {/* Insert image */}
+        <button
+          type="button"
+          title="Insert image"
+          onMouseDown={(e) => { e.preventDefault(); insertImage(); }}
+          className={btnClass(false)}
+        >
+          <ImageIcon size={14} />
+        </button>
+
+        {/* Insert table */}
+        <button
+          type="button"
+          title="Insert table (3×3)"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+          }}
+          className={btnClass(editor.isActive("table"))}
+        >
+          <TableIcon size={14} />
+        </button>
+
+        {/* YouTube — amber label always visible directly below the button */}
+        <div className="flex flex-col items-center gap-0">
+          <button
+            type="button"
+            title="Insert YouTube video"
+            onMouseDown={(e) => { e.preventDefault(); insertYouTube(); }}
+            className={btnClass(editor.isActive("youtube"))}
+          >
+            <YoutubeIcon size={14} />
+          </button>
+          <span className="text-amber-400 whitespace-nowrap leading-none" style={{ fontSize: "8px" }}>
+            email: link
+          </span>
+        </div>
       </div>
 
-      {/* Image resize control — visible only when an image node is selected */}
+      {/* ── Table context toolbar — visible when cursor is inside a table ─── */}
+      {isInTable && (
+        <div className="flex flex-wrap items-center gap-0.5 p-1.5 border-b border-white/10 bg-amber-950/20">
+          <span className="text-amber-400/70 text-xs mr-1.5 font-medium">Table:</span>
+          <button type="button" title="Add row above"    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowBefore().run(); }}    className="h-6 px-2 rounded text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">+ Row ↑</button>
+          <button type="button" title="Add row below"    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addRowAfter().run(); }}     className="h-6 px-2 rounded text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">+ Row ↓</button>
+          <button type="button" title="Delete row"       onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteRow().run(); }}       className="h-6 px-2 rounded text-xs text-red-400/70 hover:text-red-400 hover:bg-white/5 transition-colors">− Row</button>
+          <div className="w-px h-4 bg-white/15 mx-0.5" />
+          <button type="button" title="Add column left"  onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnBefore().run(); }} className="h-6 px-2 rounded text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">+ Col ←</button>
+          <button type="button" title="Add column right" onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().addColumnAfter().run(); }}  className="h-6 px-2 rounded text-xs text-white/60 hover:text-white hover:bg-white/5 transition-colors">+ Col →</button>
+          <button type="button" title="Delete column"    onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteColumn().run(); }}    className="h-6 px-2 rounded text-xs text-red-400/70 hover:text-red-400 hover:bg-white/5 transition-colors">− Col</button>
+          <div className="w-px h-4 bg-white/15 mx-0.5" />
+          <button type="button" title="Delete table"     onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().deleteTable().run(); }}     className="h-6 px-2 rounded text-xs text-red-400/70 hover:text-red-400 hover:bg-white/5 transition-colors">Delete table</button>
+        </div>
+      )}
+
+      {/* ── Image resize control — visible only when an image node is selected */}
       {isImageSelected && (
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-white/10 bg-sn-gray-dark/30">
           <span className="text-xs text-sn-gray-medium">Image width:</span>
@@ -284,10 +474,10 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
         </div>
       )}
 
-      {/* Editor area */}
+      {/* ── Editor area ───────────────────────────────────────────────────── */}
       <EditorContent editor={editor} />
 
-      {/* Character count */}
+      {/* ── Character count ───────────────────────────────────────────────── */}
       {maxLength !== undefined && (
         <div className="flex justify-end px-3 py-1 border-t border-white/5">
           <span className="text-xs text-sn-gray-medium">
