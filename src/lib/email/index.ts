@@ -12,6 +12,7 @@
  */
 
 import { Resend } from "resend";
+import { serializeRichTextToEmail } from "./serialize-rich-text";
 
 // ---------------------------------------------------------------------------
 // Client
@@ -39,7 +40,7 @@ const SENDER_EMAIL =
 function baseTemplate(bodyHtml: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>:root { color-scheme: dark; }</style></head>
 <body style="margin:0;padding:32px 16px;background:#0B0B0C;font-family:Georgia,'Times New Roman',serif;">
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
     <tr><td align="center">
@@ -400,9 +401,11 @@ export async function sendAnnouncementNotification({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+  const serializedBody = serializeRichTextToEmail(announcementBody);
+
   const emailHtml = baseTemplate(`
     <h1 style="${h1}">${title}</h1>
-    <p style="${p}">${announcementBody}</p>
+    ${serializedBody}
     <hr style="${divider}">
     <p style="text-align:center;margin:28px 0;">
       <a href="${appUrl}/home" style="${btn}">Visit the Hub →</a>

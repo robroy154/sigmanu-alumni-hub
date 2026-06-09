@@ -7,11 +7,13 @@
 const ALLOWED_TAGS = new Set([
   "p", "strong", "em", "u", "s", "h2", "h3",
   "ul", "ol", "li", "blockquote", "hr", "a", "br", "img",
+  "span", // for Tiptap TextStyle font-size marks (<span style="font-size:Xpx">)
 ]);
 
 const ALLOWED_ATTRS: Record<string, string[]> = {
-  a:   ["href", "target", "rel"],
-  img: ["src", "alt", "width", "height"],
+  a:    ["href", "target", "rel"],
+  img:  ["src", "alt", "width", "height", "style"], // style carries inline width from image resize
+  span: ["style"], // carries font-size from TextStyle/FontSize extension
 };
 
 /**

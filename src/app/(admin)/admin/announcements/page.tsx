@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { AnnouncementForm } from "@/components/admin/AnnouncementForm";
 import { AnnouncementControls } from "@/components/admin/AnnouncementControls";
 import { EditAnnouncementForm } from "@/components/admin/EditAnnouncementForm";
@@ -8,6 +9,10 @@ import { Megaphone } from "lucide-react";
 export const metadata: Metadata = { title: "Announcements — Admin" };
 
 export default async function AdminAnnouncementsPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = user?.email ?? "";
+
   const admin = createAdminClient();
 
   const { data: announcements } = await admin
@@ -34,7 +39,7 @@ export default async function AdminAnnouncementsPage() {
       {/* Create form */}
       <div className="bg-sn-surface rounded-xl px-6 py-5">
         <h2 className="text-sn-off-white font-semibold mb-4">New Announcement</h2>
-        <AnnouncementForm />
+        <AnnouncementForm adminEmail={adminEmail} />
       </div>
 
       {/* List */}

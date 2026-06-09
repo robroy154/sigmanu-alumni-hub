@@ -185,6 +185,7 @@
   height: auto;
   border-radius: 0.5rem;
   margin: 1rem 0;
+  /* an inline style="width:Xpx" from the image resize control overrides max-width naturally */
 }
 
 /* Tiptap editor placeholder */

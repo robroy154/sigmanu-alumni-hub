@@ -157,6 +157,33 @@ export async function deleteAnnouncement(
   return { success: true };
 }
 
+// ── Send test announcement email ──────────────────────────────────────────────
+export async function sendTestAnnouncement(
+  title: string,
+  body: string,
+  recipientEmail: string,
+): Promise<{ error: string } | { success: true }> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  if (title.trim() === "")         return { error: "Title is required." };
+  if (body.trim() === "")          return { error: "Body is required." };
+  if (recipientEmail.trim() === "") return { error: "Recipient email is required." };
+
+  try {
+    const { sendAnnouncementNotification } = await import("@/lib/email");
+    await sendAnnouncementNotification({
+      title:        title.trim(),
+      body:         body.trim(),
+      memberEmails: [recipientEmail.trim()],
+    });
+    return { success: true };
+  } catch (err) {
+    console.error("[sendTestAnnouncement] failed:", err);
+    return { error: "Failed to send test email." };
+  }
+}
+
 // ── Toggle show_on_login ──────────────────────────────────────────────────────
 export async function setAnnouncementLoginSplash(
   announcementId: string,
