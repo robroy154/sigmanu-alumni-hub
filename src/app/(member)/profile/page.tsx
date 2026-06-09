@@ -80,7 +80,7 @@ export default async function ProfilePage() {
       .from("profile-photos")
       .createSignedUrls(lineagePhotoPaths, 3600);
     signed?.forEach(({ path, signedUrl, error }) => {
-      if (error === null && path !== null && path !== undefined) {
+      if (error === null && path !== null && path !== undefined && signedUrl !== null) {
         lineagePhotoMap[path] = signedUrl;
       }
     });

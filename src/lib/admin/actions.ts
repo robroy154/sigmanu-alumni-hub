@@ -274,7 +274,7 @@ export async function adminMergeStub(
   if (stub.status !== "stub")     return { error: "Target record is not a stub." };
 
   // Only overwrite fields that are currently null on the real row
-  const updates: Record<string, string | null> = {};
+  const updates: { pledge_class?: string | null; pin_number?: string | null; big_id?: string | null; nickname?: string | null } = {};
   if (real.pledge_class === null && stub.pledge_class !== null)
     updates.pledge_class = stub.pledge_class;
   if (real.pin_number === null && stub.pin_number !== null)

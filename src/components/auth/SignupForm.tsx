@@ -117,7 +117,11 @@ export function SignupForm() {
     // The handle_new_user trigger copies first_name/last_name (and stub fields if claimed).
     // Write remaining optional fields now that we have a session.
     if (signUpData.user !== null) {
-      const update: Record<string, string> = {};
+      const update: {
+        pledge_class?: string; phone?: string; street_address?: string;
+        city?: string; state?: string; zip?: string; country?: string;
+        birthday?: string; big_id?: string | null;
+      } = {};
       if (data.pledge_class   !== undefined && data.pledge_class   !== "") update.pledge_class   = data.pledge_class;
       if (data.phone          !== undefined && data.phone          !== "") update.phone          = data.phone;
       if (data.street_address !== undefined && data.street_address !== "") update.street_address = data.street_address;

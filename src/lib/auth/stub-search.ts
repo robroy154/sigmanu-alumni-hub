@@ -94,7 +94,7 @@ export async function claimStubForExistingUser(
   if (realMember === null) return { error: "Member record not found." };
 
   // Only overwrite fields that are currently null on the real row
-  const updates: Record<string, string | null> = {};
+  const updates: { pledge_class?: string | null; pin_number?: string | null; big_id?: string | null; nickname?: string | null } = {};
   if (realMember.pledge_class === null && stub.pledge_class !== null)
     updates.pledge_class = stub.pledge_class;
   if (realMember.pin_number === null && stub.pin_number !== null)

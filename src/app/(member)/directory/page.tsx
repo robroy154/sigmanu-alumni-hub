@@ -41,7 +41,7 @@ export default async function DirectoryPage() {
       .createSignedUrls(photoPaths, 3600);
 
     signed?.forEach(({ path, signedUrl, error }) => {
-      if (error === null && path !== null && path !== undefined) {
+      if (error === null && path !== null && path !== undefined && signedUrl !== null) {
         photoUrlMap[path] = signedUrl;
       }
     });
