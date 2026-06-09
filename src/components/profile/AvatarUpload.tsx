@@ -21,9 +21,16 @@ function centerAspectCrop(width: number, height: number): Crop {
   );
 }
 
-// Only allow blob: (local file preview) scheme; rawSrc always comes from URL.createObjectURL
-function isSafeBlobUrl(url: string): boolean {
-  return url.startsWith("blob:");
+// Returns the URL's canonicalized href only when the scheme is blob:.
+function safeBlobSrc(url: string | null): string | null {
+  if (url === null) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "blob:") return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
@@ -137,7 +144,8 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
   }
 
   // ── Crop modal ────────────────────────────────────────────────────────────
-  if (rawSrc !== null && isSafeBlobUrl(rawSrc)) {
+  const safeCropSrc = safeBlobSrc(rawSrc);
+  if (safeCropSrc !== null) {
     return (
       <div className="flex flex-col items-center gap-4 w-full">
         <p className="text-white/70 text-sm">Drag to adjust crop</p>
@@ -152,7 +160,7 @@ export function AvatarUpload({ userId, currentPhotoUrl }: AvatarUploadProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imgRef}
-              src={rawSrc}
+              src={safeCropSrc}
               alt="Crop preview"
               onLoad={onImageLoad}
               className="max-h-72 w-full object-contain"

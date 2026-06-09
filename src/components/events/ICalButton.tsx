@@ -15,9 +15,13 @@ interface Props {
   event: EventData;
 }
 
-/** Strips HTML tags to get plain text for the iCal DESCRIPTION field. */
+/** Strips HTML tags to get plain text for the iCal DESCRIPTION field.
+ *  Uses the browser DOM parser (textContent) — handles all tag edge cases
+ *  and is safe: setting innerHTML on a detached element never executes scripts. */
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return (tmp.textContent ?? "").replace(/\s+/g, " ").trim();
 }
 
 /** Formats a JS Date as iCal DTSTART/DTEND format: YYYYMMDDTHHmmssZ */

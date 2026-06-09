@@ -7,9 +7,16 @@ import { getEventImageUploadUrl } from "@/lib/admin/upload-event-banner";
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
-// Only allow blob: (local file preview) and https: (Supabase public URL) schemes
-function isSafeImageUrl(url: string): boolean {
-  return url.startsWith("blob:") || /^https:\/\//i.test(url);
+// Returns the URL's canonicalized href only when the scheme is blob: or https:.
+function safeImageSrc(url: string | null): string | null {
+  if (url === null || url === "") return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "blob:" && parsed.protocol !== "https:") return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
 }
 
 interface Props {
@@ -94,13 +101,15 @@ export function EventFlyerUpload({ eventId, currentUrl, onUpload }: Props) {
     if (inputRef.current !== null) inputRef.current.value = "";
   }
 
+  const safeSrc = safeImageSrc(preview);
+
   return (
     <div className="space-y-2">
-      {preview !== null && preview !== "" && isSafeImageUrl(preview) ? (
+      {safeSrc !== null ? (
         <div className="relative rounded-lg overflow-hidden border border-white/10 group bg-sn-gray-dark/30 flex justify-center p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={preview}
+            src={safeSrc}
             alt="Flyer preview"
             className="max-h-48 w-auto object-contain rounded"
           />
