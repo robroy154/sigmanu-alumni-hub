@@ -48,3 +48,4 @@ supabase/.temp
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+logs/xvba_debug.log
