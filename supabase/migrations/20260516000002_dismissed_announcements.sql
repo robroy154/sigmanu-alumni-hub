@@ -9,11 +9,13 @@ CREATE TABLE IF NOT EXISTS dismissed_announcements (
 -- RLS: members can read and insert their own dismissed announcements
 ALTER TABLE dismissed_announcements ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Members can read own dismissed announcements" ON dismissed_announcements;
 CREATE POLICY "Members can read own dismissed announcements"
   ON dismissed_announcements FOR SELECT
   TO authenticated
   USING (member_id = auth.uid());
 
+DROP POLICY IF EXISTS "Members can insert own dismissed announcements" ON dismissed_announcements;
 CREATE POLICY "Members can insert own dismissed announcements"
   ON dismissed_announcements FOR INSERT
   TO authenticated
