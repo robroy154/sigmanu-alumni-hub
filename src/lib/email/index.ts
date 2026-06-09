@@ -2,6 +2,8 @@
 
 /**
  * Email sending module — wraps Resend.
+ * Templates are built with React Email (@react-email/components).
+ * render() is called with React.createElement() so this file can stay .ts.
  *
  * Required env vars:
  *   RESEND_API_KEY       — from resend.com dashboard
@@ -11,11 +13,28 @@
  * so a failed email never blocks the primary operation.
  */
 
+import * as React from "react";
 import { Resend } from "resend";
+// Explicit top-level import — three versions of @react-email/render exist in the
+// dep tree (v2.0.8, v2.0.6, v1.1.2). Always resolve from the top-level package.
+import { render } from "@react-email/render";
 import { serializeRichTextToEmail } from "./serialize-rich-text";
 
+// Template components
+import { WelcomeEmail } from "./templates/WelcomeEmail";
+import { RegistrationConfirmationEmail } from "./templates/RegistrationConfirmationEmail";
+import { AdminNewMemberAlert } from "./templates/AdminNewMemberAlert";
+import { PendingConfirmationEmail } from "./templates/PendingConfirmationEmail";
+import { AnnouncementEmail } from "./templates/AnnouncementEmail";
+import { ReferralInviteEmail } from "./templates/ReferralInviteEmail";
+import { ReferralSentEmail } from "./templates/ReferralSentEmail";
+import { ReferralCompletedEmail } from "./templates/ReferralCompletedEmail";
+import { BigBrotherNotificationEmail } from "./templates/BigBrotherNotificationEmail";
+import { LittleBrotherNotificationEmail } from "./templates/LittleBrotherNotificationEmail";
+import { WaitlistPromotionEmail } from "./templates/WaitlistPromotionEmail";
+
 // ---------------------------------------------------------------------------
-// Client
+// Resend client
 // ---------------------------------------------------------------------------
 
 function getResend(): Resend | null {
@@ -34,68 +53,6 @@ const SENDER_EMAIL =
     : "onboarding@resend.dev";
 
 // ---------------------------------------------------------------------------
-// Base HTML template
-// ---------------------------------------------------------------------------
-
-function baseTemplate(bodyHtml: string): string {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><style>:root { color-scheme: dark; }</style></head>
-<body style="margin:0;padding:32px 16px;background:#0B0B0C;font-family:Georgia,'Times New Roman',serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" role="presentation"
-             style="background:#121214;border-radius:12px;overflow:hidden;border:1px solid rgba(198,167,94,0.25);">
-
-        <!-- Header -->
-        <tr>
-          <td style="background:#121214;border-bottom:2px solid #C6A75E;padding:24px 32px;text-align:center;">
-            <div style="display:inline-block;width:44px;height:44px;border-radius:50%;background:#C6A75E;
-                        line-height:44px;text-align:center;font-size:18px;font-weight:bold;color:#0B0B0C;">ΣΝ</div>
-            <p style="margin:8px 0 0;color:#C6A75E;font-size:11px;letter-spacing:3px;
-                      text-transform:uppercase;font-family:Arial,sans-serif;">
-              Sigma Nu · Mu Xi Chapter
-            </p>
-          </td>
-        </tr>
-
-        <!-- Body -->
-        <tr>
-          <td style="padding:32px 36px;">
-            ${bodyHtml}
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="border-top:1px solid rgba(198,167,94,0.15);padding:20px 32px;text-align:center;">
-            <p style="margin:0;color:rgba(255,255,255,0.35);font-size:11px;font-family:Arial,sans-serif;
-                      line-height:1.6;">
-              Sigma Nu Fraternity · Mu Xi Chapter · Columbus State University<br>
-              This is an automated message — please do not reply directly.
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-}
-
-// Shared inline styles used in templates
-const h1      = `color:#ffffff;font-size:22px;font-weight:bold;margin:0 0 12px;line-height:1.3;`;
-const p       = `color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;margin:0 0 14px;font-family:Arial,sans-serif;`;
-const btn     = `display:inline-block;background:#C6A75E;color:#0B0B0C;font-family:Arial,sans-serif;
-             font-size:14px;font-weight:bold;padding:12px 28px;border-radius:8px;
-             text-decoration:none;letter-spacing:0.5px;`;
-const label   = `color:#C6A75E;font-size:11px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;
-               font-family:Arial,sans-serif;`;
-const value   = `color:#ffffff;font-size:15px;font-family:Arial,sans-serif;`;
-const divider = `border:none;border-top:1px solid rgba(198,167,94,0.2);margin:20px 0;`;
-
-// ---------------------------------------------------------------------------
 // 1. Welcome email — sent when admin approves a member
 // ---------------------------------------------------------------------------
 
@@ -111,46 +68,13 @@ export async function sendWelcomeEmail({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const body = `
-    <h1 style="${h1}">Welcome to the Brotherhood, ${firstName}!</h1>
-    <p style="${p}">
-      Your account has been approved by a chapter administrator. You now have
-      full access to the Mu Xi Alumni Hub.
-    </p>
-    <p style="${p}">Here's what you can do:</p>
-    <table cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px;">
-      <tr>
-        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
-          &bull;&nbsp; Browse the <strong style="color:#ffffff;">Brother Directory</strong>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
-          &bull;&nbsp; Explore the <strong style="color:#ffffff;">Chapter Family Tree</strong>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
-          &bull;&nbsp; Complete your <strong style="color:#ffffff;">member profile</strong>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:6px 0;color:rgba(255,255,255,0.7);font-family:Arial,sans-serif;font-size:14px;">
-          &bull;&nbsp; Register for upcoming <strong style="color:#ffffff;">events</strong>
-        </td>
-      </tr>
-    </table>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/directory" style="${btn}">Go to the Hub →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(React.createElement(WelcomeEmail, { firstName, appUrl }));
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: "You're approved — Welcome to the Mu Xi Alumni Hub",
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendWelcomeEmail threw:", err);
@@ -173,65 +97,33 @@ export async function sendRegistrationConfirmation({
   to:            string;
   name:          string;
   eventTitle:    string;
-  eventDate:     string; // pre-formatted
+  eventDate:     string;
   eventLocation: string | null;
   guestCount:    number;
-  totalPaid:     number; // dollars
+  totalPaid:     number;
 }): Promise<void> {
   const resend = getResend();
   if (resend === null) return;
 
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const guestLine =
-    guestCount === 0
-      ? "No additional guests."
-      : `${guestCount} additional guest${guestCount !== 1 ? "s" : ""} included.`;
-
-  const body = `
-    <h1 style="${h1}">You&rsquo;re registered!</h1>
-    <p style="${p}">
-      Hi ${name}, your registration for <strong style="color:#C6A75E;">${eventTitle}</strong>
-      is confirmed. See you there!
-    </p>
-    <hr style="${divider}">
-    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;width:100%;">
-      <tr>
-        <td style="${label}">Event</td>
-        <td style="${value}">${eventTitle}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Date</td>
-        <td style="${value}">${eventDate}</td>
-      </tr>
-      ${eventLocation !== null ? `
-      <tr>
-        <td style="${label}">Location</td>
-        <td style="${value}">${eventLocation}</td>
-      </tr>` : ""}
-      <tr>
-        <td style="${label}">Guests</td>
-        <td style="${value}">${guestLine}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Total paid</td>
-        <td style="${value};color:#C6A75E;">$${totalPaid.toFixed(2)}</td>
-      </tr>
-    </table>
-    <hr style="${divider}">
-    <p style="${p}">
-      Questions? Reach out to a chapter administrator through the alumni hub.
-    </p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}" style="${btn}">Visit the Hub →</a>
-    </p>
-  `;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   try {
+    const html = await render(
+      React.createElement(RegistrationConfirmationEmail, {
+        name,
+        eventTitle,
+        eventDate,
+        eventLocation,
+        guestCount,
+        totalPaid,
+        appUrl,
+      }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: `Registration confirmed — ${eventTitle}`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendRegistrationConfirmation threw:", err);
@@ -250,22 +142,17 @@ export async function notifyAdminsNewMember(member?: {
   const resend = getResend();
   if (resend === null) return;
 
-  // Import here to avoid circular deps — this file is "use server"
   const { createAdminClient } = await import("@/lib/supabase/admin");
 
   let resolvedMember: { first_name: string; last_name: string; email: string };
 
   if (member !== undefined) {
-    // Caller supplied member data directly — skip session lookup.
-    // This is the reliable path when called immediately after signUp(),
-    // where the session cookie may not yet be available on the server.
     resolvedMember = {
       first_name: member.firstName,
       last_name:  member.lastName,
       email:      member.email,
     };
   } else {
-    // Fallback: derive member from the active session.
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const {
@@ -283,9 +170,7 @@ export async function notifyAdminsNewMember(member?: {
     resolvedMember = fetched;
   }
 
-  const adminDb = createAdminClient();
-
-  // Fetch all admin email addresses
+  const adminDb   = createAdminClient();
   const { data: admins } = await adminDb
     .from("members")
     .select("email")
@@ -300,34 +185,19 @@ export async function notifyAdminsNewMember(member?: {
   const appUrl   = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const fullName = `${resolvedMember.first_name} ${resolvedMember.last_name}`;
 
-  const body = `
-    <h1 style="${h1}">New member signup</h1>
-    <p style="${p}">
-      A new member has created an account and is waiting for approval.
-    </p>
-    <hr style="${divider}">
-    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;">
-      <tr>
-        <td style="${label}">Name</td>
-        <td style="${value}">${fullName}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Email</td>
-        <td style="${value}">${resolvedMember.email}</td>
-      </tr>
-    </table>
-    <hr style="${divider}">
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/admin/members" style="${btn}">Review in Admin Panel →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(AdminNewMemberAlert, {
+        fullName,
+        email: resolvedMember.email,
+        appUrl,
+      }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to:      adminEmails,
       subject: `New member signup — ${fullName}`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] notifyAdminsNewMember threw:", err);
@@ -350,31 +220,13 @@ export async function sendPendingConfirmation({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const body = `
-    <h1 style="${h1}">Thanks for signing up, ${firstName}!</h1>
-    <p style="${p}">
-      Your account for the <strong style="color:#C6A75E;">Sigma Nu Mu Xi Chapter Alumni Hub</strong>
-      has been received and is pending review by a chapter administrator.
-    </p>
-    <p style="${p}">
-      You will receive an email as soon as your account is approved. This typically
-      happens within a day or two.
-    </p>
-    <p style="${p}">
-      In the meantime, you can return to sign in at any time — you'll be held at
-      the pending approval page until an admin activates your account.
-    </p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/login" style="${btn}">Sign In →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(React.createElement(PendingConfirmationEmail, { firstName, appUrl }));
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: "Your Sigma Nu Mu Xi account is pending approval",
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendPendingConfirmation threw:", err);
@@ -399,18 +251,18 @@ export async function sendAnnouncementNotification({
 
   if (memberEmails.length === 0) return;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
+  const appUrl        = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const serializedBody = serializeRichTextToEmail(announcementBody);
 
-  const emailHtml = baseTemplate(`
-    <h1 style="${h1}">${title}</h1>
-    ${serializedBody}
-    <hr style="${divider}">
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/home" style="${btn}">Visit the Hub →</a>
-    </p>
-  `);
+  let html: string;
+  try {
+    html = await render(
+      React.createElement(AnnouncementEmail, { title, serializedBody, appUrl }),
+    );
+  } catch (err) {
+    console.error("[email] sendAnnouncementNotification render threw:", err);
+    return;
+  }
 
   // Process in chunks of 100 — send individually within each chunk.
   const CHUNK = 100;
@@ -422,7 +274,7 @@ export async function sendAnnouncementNotification({
           from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
           to:      email,
           subject: `New announcement: ${title}`,
-          html:    emailHtml,
+          html,
         });
       } catch (err) {
         console.error(`[email] sendAnnouncementNotification failed for ${email}:`, err);
@@ -452,32 +304,15 @@ export async function sendReferralInvite({
   const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const inviteUrl = `${appUrl}/join?token=${token}`;
 
-  const body = `
-    <h1 style="${h1}">You've been invited, ${inviteeFirstName}!</h1>
-    <p style="${p}">
-      <strong style="color:#ffffff;">${referrerFullName}</strong> has invited you to join
-      the <strong style="color:#C6A75E;">Sigma Nu Mu Xi Chapter Alumni Hub</strong> —
-      the private platform for Mu Xi Chapter brothers.
-    </p>
-    <p style="${p}">
-      Use the link below to create your account. This invitation expires in
-      <strong style="color:#ffffff;">7 days</strong>.
-    </p>
-    <p style="text-align:center;margin:32px 0;">
-      <a href="${inviteUrl}" style="${btn}">Create My Account →</a>
-    </p>
-    <hr style="${divider}">
-    <p style="color:rgba(255,255,255,0.4);font-size:12px;font-family:Arial,sans-serif;text-align:center;margin:0;">
-      If you weren&rsquo;t expecting this invite, you can safely ignore this email.
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(ReferralInviteEmail, { inviteeFirstName, referrerFullName, inviteUrl }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: "You're invited to join the Sigma Nu Mu Xi Alumni Hub",
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendReferralInvite threw:", err);
@@ -502,27 +337,15 @@ export async function sendReferralSentConfirmation({
   const resend = getResend();
   if (resend === null) return;
 
-  const body = `
-    <h1 style="${h1}">Your invite has been sent!</h1>
-    <p style="${p}">
-      Hi ${referrerFirstName}, your invitation to
-      <strong style="color:#ffffff;">${inviteeFirstName} ${inviteeLastName}</strong>
-      has been sent. You&rsquo;ll receive a notification here as soon as they create
-      their account.
-    </p>
-    <hr style="${divider}">
-    <p style="${p}">
-      Invite links are valid for 7 days. If ${inviteeFirstName} doesn&rsquo;t sign up
-      in time, you can send a new invite from your profile page.
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(ReferralSentEmail, { referrerFirstName, inviteeFirstName, inviteeLastName }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: `Your invite to ${inviteeFirstName} has been sent`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendReferralSentConfirmation threw:", err);
@@ -549,24 +372,20 @@ export async function sendReferralCompleted({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const body = `
-    <h1 style="${h1}">${inviteeFirstName} ${inviteeLastName} just joined!</h1>
-    <p style="${p}">
-      Hi ${referrerFirstName},
-      <strong style="color:#ffffff;">${inviteeFirstName} ${inviteeLastName}</strong>
-      just created their account using your invite link. Welcome them to the hub!
-    </p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/directory" style="${btn}">View the Directory →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(ReferralCompletedEmail, {
+        referrerFirstName,
+        inviteeFirstName,
+        inviteeLastName,
+        appUrl,
+      }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: `${inviteeFirstName} ${inviteeLastName} just joined!`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendReferralCompleted threw:", err);
@@ -607,50 +426,29 @@ export async function sendBigBrotherSetNotification({
     return;
   }
 
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const fullName  = `${memberFirstName} ${memberLastName}`;
-  const bigLine   =
+  const appUrl        = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const memberFullName = `${memberFirstName} ${memberLastName}`;
+  const bigLine       =
     bigFirstName !== null && bigLastName !== null
       ? `${bigFirstName} ${bigLastName}`
       : "Cleared (relationship removed)";
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
 
-  const body = `
-    <h1 style="${h1}">Big brother relationship updated</h1>
-    <p style="${p}">
-      A member has updated their big brother relationship.
-    </p>
-    <hr style="${divider}">
-    <table cellpadding="0" cellspacing="8" role="presentation" style="margin:0 0 24px;">
-      <tr>
-        <td style="${label}">Member</td>
-        <td style="${value}">${fullName}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Email</td>
-        <td style="${value}">${memberEmail}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Big brother</td>
-        <td style="${value}">${bigLine}</td>
-      </tr>
-      <tr>
-        <td style="${label}">Updated</td>
-        <td style="${value}">${timestamp} ET</td>
-      </tr>
-    </table>
-    <hr style="${divider}">
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/admin/members" style="${btn}">Review in Admin Panel →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(BigBrotherNotificationEmail, {
+        memberFullName,
+        memberEmail,
+        bigLine,
+        timestamp,
+        appUrl,
+      }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to:      adminEmails,
-      subject: `Big brother updated — ${fullName}`,
-      html:    baseTemplate(body),
+      subject: `Big brother updated — ${memberFullName}`,
+      html,
     });
   } catch (err) {
     console.error("[email] sendBigBrotherSetNotification threw:", err);
@@ -677,34 +475,30 @@ export async function sendLittleBrotherNotification({
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  const body = `
-    <h1 style="${h1}">You have a new Little Brother!</h1>
-    <p style="${p}">
-      Hi ${bigFirstName},
-      <strong style="color:#ffffff;">${littleFirstName} ${littleLastName}</strong>
-      has added you as their Big Brother in the Mu Xi Alumni Hub.
-    </p>
-    <p style="${p}">
-      You can see your full lineage on the family tree.
-    </p>
-    <p style="text-align:center;margin:28px 0;">
-      <a href="${appUrl}/family-tree" style="${btn}">View Family Tree →</a>
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(LittleBrotherNotificationEmail, {
+        bigFirstName,
+        littleFirstName,
+        littleLastName,
+        appUrl,
+      }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: `${littleFirstName} ${littleLastName} claimed you as their Big Brother`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendLittleBrotherNotification threw:", err);
   }
 }
 
-// ── Waitlist promotion notification ──────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// 11. Waitlist promotion notification
+// ---------------------------------------------------------------------------
+
 export async function sendWaitlistPromotionNotification({
   to,
   firstName,
@@ -719,26 +513,15 @@ export async function sendWaitlistPromotionNotification({
   const resend = getResend();
   if (resend === null) return;
 
-  const waitlistBtn = "display:inline-block;padding:10px 20px;background:#C6A75E;color:#0B0B0C;text-decoration:none;border-radius:4px;font-weight:600;";
-
-  const body = `
-    <p>Hi ${firstName},</p>
-    <p>Good news — a spot has opened up for <strong>${eventTitle}</strong>!</p>
-    <p>You were on the waitlist and now have a chance to register. Complete your registration soon, as spots are limited.</p>
-    <p style="margin-top:24px;">
-      <a href="${registrationUrl}" style="${waitlistBtn}">Complete Registration →</a>
-    </p>
-    <p style="margin-top:16px;color:#6B6B73;font-size:13px;">
-      If you're no longer interested, you can simply ignore this email.
-    </p>
-  `;
-
   try {
+    const html = await render(
+      React.createElement(WaitlistPromotionEmail, { firstName, eventTitle, registrationUrl }),
+    );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to,
       subject: `A spot opened up for ${eventTitle}`,
-      html:    baseTemplate(body),
+      html,
     });
   } catch (err) {
     console.error("[email] sendWaitlistPromotionNotification threw:", err);

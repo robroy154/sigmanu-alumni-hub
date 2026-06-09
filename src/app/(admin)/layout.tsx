@@ -44,6 +44,7 @@ export default async function AdminLayout({
             <AdminNavLink href="/admin/referrals">Referrals</AdminNavLink>
             <AdminNavLink href="/admin/announcements">Announcements</AdminNavLink>
             <AdminNavLink href="/admin/stubs">Stubs</AdminNavLink>
+            <AdminNavLink href="/admin/email-preview">Emails</AdminNavLink>
             <AdminNavLink href="/directory">← Site</AdminNavLink>
           </nav>
 
