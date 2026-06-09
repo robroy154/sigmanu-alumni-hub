@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import type { ReactNode } from "react";
+import { Dialog } from "@base-ui/react/dialog";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Typography from "@tiptap/extension-typography";
@@ -38,6 +39,7 @@ import {
   Table as TableIcon,
   Video as YoutubeIcon,
   X,
+  HelpCircle,
 } from "lucide-react";
 
 // ── Font Size extension ───────────────────────────────────────────────────────
@@ -421,6 +423,57 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
             email: link
           </span>
         </div>
+
+        {/* Spacer — pushes the help button to the far right */}
+        <div className="flex-1" />
+
+        {/* Keyboard shortcut reference */}
+        <Dialog.Root>
+          <Dialog.Trigger
+            title="Keyboard shortcuts"
+            className="p-1.5 rounded text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors"
+          >
+            <HelpCircle size={14} />
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Backdrop className="fixed inset-0 bg-black/70 z-50" />
+            <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg max-h-[80vh] overflow-y-auto bg-sn-surface border border-white/10 rounded-xl p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-5">
+                <Dialog.Title className="text-sn-off-white font-semibold text-base">Editor Shortcuts</Dialog.Title>
+                <Dialog.Close className="text-sn-gray-medium hover:text-sn-off-white transition-colors text-lg leading-none">✕</Dialog.Close>
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5">
+                {[
+                  ["Cmd+B",           "Bold"],
+                  ["Cmd+I",           "Italic"],
+                  ["Cmd+U",           "Underline"],
+                  ["Cmd+Shift+X",     "Strikethrough"],
+                  ["Cmd+Shift+H",     "Highlight"],
+                  ["Cmd+K",           "Set link"],
+                  ["Cmd+Z",           "Undo"],
+                  ["Cmd+Shift+Z",     "Redo"],
+                  ["Enter",           "New paragraph"],
+                  ["Shift+Enter",     "Line break (no extra spacing)"],
+                  ["Tab",             "Next table cell"],
+                  ["Shift+Tab",       "Previous table cell"],
+                  ["- + Space",       "Start bullet list"],
+                  ["1. + Space",      "Start numbered list"],
+                  ["## + Space",      "Heading 2"],
+                  ["### + Space",     "Heading 3"],
+                  ["> + Space",       "Blockquote"],
+                  ["--- + Enter",     "Horizontal rule"],
+                ].map(([shortcut, action]) => (
+                  <>
+                    <code key={`key-${shortcut}`} className="bg-white/10 px-1.5 py-0.5 rounded text-xs font-mono text-white/80 whitespace-nowrap self-center">
+                      {shortcut}
+                    </code>
+                    <span key={`desc-${shortcut}`} className="text-sn-gray-text text-sm self-center">{action}</span>
+                  </>
+                ))}
+              </div>
+            </Dialog.Popup>
+          </Dialog.Portal>
+        </Dialog.Root>
       </div>
 
       {/* ── Table context toolbar — visible when cursor is inside a table ─── */}
@@ -476,6 +529,11 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
 
       {/* ── Editor area ───────────────────────────────────────────────────── */}
       <EditorContent editor={editor} />
+
+      {/* ── Shift+Enter hint ─────────────────────────────────────────────── */}
+      <div className="text-xs text-white/30 px-3 py-1.5">
+        Tip: Use Shift+Enter for a line break · Enter for a new paragraph
+      </div>
 
       {/* ── Character count ───────────────────────────────────────────────── */}
       {maxLength !== undefined && (
