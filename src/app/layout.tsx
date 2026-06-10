@@ -24,8 +24,11 @@ export const metadata: Metadata = {
   description:
     "The official alumni platform for Sigma Nu Fraternity, Mu Xi Chapter — Columbus State University.",
   icons: {
-    icon:     "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.ico",
     apple:    "/favicon.svg",
   },
 };
