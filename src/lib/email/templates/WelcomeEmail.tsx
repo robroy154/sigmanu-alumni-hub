@@ -22,13 +22,18 @@ export function WelcomeEmail({ firstName, appUrl }: WelcomeEmailProps) {
       <table cellPadding={0} cellSpacing={4} role="presentation" style={{ margin: "0 0 24px" }}>
         <tbody>
           {[
-            "Browse the Brother Directory",
-            "Explore the Chapter Family Tree",
-            "Complete your member profile",
-            "Register for upcoming events",
-          ].map((item) => (
-            <tr key={item}>
-              <td style={S.bulletRow}>&bull;&nbsp; <strong style={S.white}>{item}</strong></td>
+            { label: "Browse the Brother Directory",    href: `${appUrl}/directory`    },
+            { label: "Explore the Chapter Family Tree", href: `${appUrl}/family-tree`  },
+            { label: "Complete your member profile",    href: `${appUrl}/profile`      },
+            { label: "Register for upcoming events",    href: `${appUrl}/events`       },
+          ].map(({ label, href }) => (
+            <tr key={label}>
+              <td style={S.bulletRow}>
+                &bull;&nbsp;{" "}
+                <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "#C6A75E", textDecoration: "none", fontWeight: "bold" }}>
+                  {label}
+                </a>
+              </td>
             </tr>
           ))}
         </tbody>
