@@ -49,3 +49,4 @@ supabase/.temp
 *.tsbuildinfo
 next-env.d.ts
 logs/xvba_debug.log
+logs/xvba_debug.log
