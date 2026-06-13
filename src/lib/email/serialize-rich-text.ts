@@ -94,6 +94,9 @@ function serializeNode(node: HtmlNode): string {
     }
 
     case "img": {
+      // Images uploaded via the rich text editor use the CDN URL pattern
+      // (/cdn/rich-text-images/...) which resolves correctly in email clients
+      // since it maps to the production domain via Next.js rewrite.
       const src = el.getAttribute("src") ?? "";
       if (/^\s*javascript:/i.test(src)) return "";
       const alt          = el.getAttribute("alt") ?? "";

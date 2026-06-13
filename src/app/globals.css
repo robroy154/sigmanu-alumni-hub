@@ -180,6 +180,7 @@
 }
 .rich-text-content a:hover { color: #e0c97f; }
 .rich-text-content strong { font-weight: 600; }
+/* GIFs animate natively — no CSS change needed. max-width + height:auto prevent overflow. */
 .rich-text-content img {
   max-width: 100%;
   height: auto;

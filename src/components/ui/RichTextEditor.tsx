@@ -33,6 +33,7 @@ import {
   Link2,
   RemoveFormatting,
   Image as ImageIcon,
+  Link as LinkIcon,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -41,6 +42,8 @@ import {
   X,
   HelpCircle,
 } from "lucide-react";
+import { toastError } from "@/lib/toast";
+import { getRichTextImageUploadUrl } from "@/lib/admin/upload-rich-text-image";
 
 // ── Font Size extension ───────────────────────────────────────────────────────
 declare module "@tiptap/core" {
@@ -136,10 +139,12 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
   const [isImageSelected, setIsImageSelected] = useState(false);
   const [imageWidthInput, setImageWidthInput]  = useState("");
   const [isInTable,       setIsInTable]        = useState(false);
+  const [uploading,       setUploading]        = useState(false);
 
   // Saves the cursor/selection range before native controls (select, color input)
   // steal focus. Restored in their onChange to preserve the selection.
   const savedSelectionRef = useRef<{ from: number; to: number } | null>(null);
+  const fileInputRef      = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -195,7 +200,37 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
     savedSelectionRef.current = { from, to };
   }
 
-  function insertImage() {
+  async function handleImageFile(file: File) {
+    const mimeType = file.type;
+    const extMap: Record<string, string> = {
+      "image/jpeg": "jpg", "image/png": "png",
+      "image/gif":  "gif", "image/webp": "webp", "image/svg+xml": "svg",
+    };
+    const ext = extMap[mimeType];
+    if (!ext) { toastError("Unsupported file type."); return; }
+
+    setUploading(true);
+    try {
+      const result = await getRichTextImageUploadUrl(ext, mimeType);
+      if ("error" in result) { toastError(result.error); return; }
+
+      const res = await fetch(result.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": mimeType },
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+
+      editor.chain().focus().setImage({ src: result.publicUrl }).run();
+    } catch (err) {
+      console.error("[RichTextEditor] image upload error:", err);
+      toastError("Image upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function insertImageByUrl() {
     const url = window.prompt("Image URL:");
     if (url === null || url.trim() === "") return;
     editor.chain().focus().setImage({ src: url.trim() }).run();
@@ -386,15 +421,41 @@ export function RichTextEditor({ value, onChange, placeholder, maxLength, classN
 
         <Sep />
 
-        {/* Insert image */}
+        {/* Image upload (file) and URL insertion */}
+        <Sep />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void handleImageFile(file);
+          }}
+        />
         <button
           type="button"
-          title="Insert image"
-          onMouseDown={(e) => { e.preventDefault(); insertImage(); }}
+          title="Upload image"
+          disabled={uploading}
+          onMouseDown={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
+          className={btnClass(false) + (uploading ? " opacity-50 cursor-not-allowed" : "")}
+        >
+          {uploading ? (
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-sn-gold/40 border-t-sn-gold animate-spin inline-block" />
+          ) : (
+            <ImageIcon size={14} />
+          )}
+        </button>
+        <button
+          type="button"
+          title="Insert image by URL"
+          onMouseDown={(e) => { e.preventDefault(); insertImageByUrl(); }}
           className={btnClass(false)}
         >
-          <ImageIcon size={14} />
+          <LinkIcon size={12} />
         </button>
+        <Sep />
 
         {/* Insert table */}
         <button

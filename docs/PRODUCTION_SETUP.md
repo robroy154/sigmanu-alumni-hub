@@ -20,6 +20,7 @@ Set all of the following in Vercel → Project Settings → Environment Variable
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret (`whsec_…`) | Stripe Dashboard → Webhooks → endpoint detail |
 | `RESEND_API_KEY` | Resend API key | Resend Dashboard → API Keys |
 | `NEXT_PUBLIC_APP_URL` | Production URL, no trailing slash | e.g. `https://alumni.csusigmanu.com` |
+| `NEXT_PUBLIC_CDN_URL` | CDN prefix for rich text images — maps to Supabase Storage via Next.js rewrite. Set to `https://csusigmanu.com/cdn` in production. | Set manually |
 
 ### Recommended
 

@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/cdn/:path*",
+        destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/:path*`,
+      },
+    ];
+  },
   experimental: {
     // Increase server action body size limit for base64 image uploads (default 1MB)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
