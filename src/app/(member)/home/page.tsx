@@ -45,7 +45,7 @@ export default async function HomePage() {
 
     supabase
       .from("announcements")
-      .select("id, title, body, created_at, is_pinned, show_on_login")
+      .select("id, title, body, slug, created_at, is_pinned, show_on_login")
       .eq("is_active", true)
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false })
@@ -162,6 +162,8 @@ export default async function HomePage() {
                 {announcements.map((a) => (
                   <AnnouncementCard
                     key={a.id}
+                    id={a.id}
+                    slug={a.slug ?? null}
                     title={a.title}
                     body={a.body}
                     date={a.created_at}

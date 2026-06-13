@@ -24,6 +24,7 @@ export type Database = {
           is_pinned: boolean
           notify_members: boolean
           show_on_login: boolean
+          slug: string | null
           title: string
           updated_at: string
         }
@@ -36,6 +37,7 @@ export type Database = {
           is_pinned?: boolean
           notify_members?: boolean
           show_on_login?: boolean
+          slug?: string | null
           title: string
           updated_at?: string
         }
@@ -48,6 +50,7 @@ export type Database = {
           is_pinned?: boolean
           notify_members?: boolean
           show_on_login?: boolean
+          slug?: string | null
           title?: string
           updated_at?: string
         }

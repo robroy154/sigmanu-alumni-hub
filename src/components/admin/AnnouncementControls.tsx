@@ -4,18 +4,29 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toggleAnnouncement, deleteAnnouncement, pinAnnouncement, setAnnouncementLoginSplash } from "@/lib/admin/announcement-actions";
 import { toastSuccess, toastError } from "@/lib/toast";
-import { Pin, PinOff, Presentation } from "lucide-react";
+import { Pin, PinOff, Presentation, Copy } from "lucide-react";
 
 interface Props {
   announcementId: string;
+  slug:           string | null;
   isActive:       boolean;
   isPinned:       boolean;
   showOnLogin:    boolean;
 }
 
-export function AnnouncementControls({ announcementId, isActive, isPinned, showOnLogin }: Props) {
+export function AnnouncementControls({ announcementId, slug, isActive, isPinned, showOnLogin }: Props) {
   const [confirming, setConfirming] = useState(false);
-  const [loading, setLoading]       = useState(false);
+  const [loading,    setLoading]    = useState(false);
+
+  function handleCopyLink() {
+    const idOrSlug = slug ?? announcementId;
+    const url = `${process.env.NEXT_PUBLIC_APP_URL}/announcements/${idOrSlug}`;
+    void navigator.clipboard.writeText(url).then(() => {
+      toastSuccess("Link copied!");
+    }).catch(() => {
+      toastError("Could not copy link.");
+    });
+  }
 
   async function handleToggle() {
     setLoading(true);
@@ -64,6 +75,14 @@ export function AnnouncementControls({ announcementId, isActive, isPinned, showO
 
   return (
     <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={handleCopyLink}
+        title="Copy permalink"
+        className="text-white/30 hover:text-white/70 transition-colors"
+      >
+        <Copy className="w-3.5 h-3.5" />
+      </button>
       <button
         type="button"
         onClick={() => void handlePin()}

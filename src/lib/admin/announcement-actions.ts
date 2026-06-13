@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { titleToSlug } from "@/lib/events/slug";
 
 // ── Guard: verify caller is admin ─────────────────────────────────────────────
 async function requireAdmin(): Promise<{ id: string } | { error: string }> {
@@ -22,11 +23,39 @@ async function requireAdmin(): Promise<{ id: string } | { error: string }> {
   return { id: user.id };
 }
 
+// ── Slug uniqueness check (public server action) ───────────────────────────────
+export async function checkAnnouncementSlugAvailable(
+  slug: string,
+  excludeId?: string,
+): Promise<{ available: boolean }> {
+  const admin = createAdminClient();
+  let query = admin.from("announcements").select("id").eq("slug", slug);
+  if (excludeId !== undefined) {
+    query = query.neq("id", excludeId);
+  }
+  const { data } = await query.maybeSingle();
+  return { available: data === null };
+}
+
+// ── Resolve a unique slug, appending a suffix on collision ────────────────────
+async function resolveUniqueSlug(base: string, excludeId?: string): Promise<string> {
+  const admin = createAdminClient();
+  let slug = base;
+  let query = admin.from("announcements").select("id").eq("slug", slug);
+  if (excludeId !== undefined) query = query.neq("id", excludeId);
+  const { data: existing } = await query.maybeSingle();
+  if (existing !== null) {
+    slug = `${base}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+  return slug;
+}
+
 // ── Create announcement ───────────────────────────────────────────────────────
 export async function createAnnouncement(
   title: string,
   body: string,
   notifyMembers: boolean,
+  slugOverride?: string,
 ): Promise<{ error: string } | { success: true }> {
   const guard = await requireAdmin();
   if ("error" in guard) return guard;
@@ -34,12 +63,18 @@ export async function createAnnouncement(
   if (title.trim() === "") return { error: "Title is required." };
   if (body.trim() === "") return { error: "Body is required." };
 
+  const base = slugOverride !== undefined && slugOverride.trim() !== ""
+    ? slugOverride.trim()
+    : titleToSlug(title.trim());
+  const slug = await resolveUniqueSlug(base);
+
   const admin = createAdminClient();
   const { error } = await admin.from("announcements").insert({
     title:          title.trim(),
     body:           body.trim(),
     created_by:     guard.id,
     notify_members: notifyMembers,
+    slug,
   });
 
   if (error !== null) return { error: "Failed to create announcement." };
@@ -70,11 +105,12 @@ export async function createAnnouncement(
   return { success: true };
 }
 
-// ── Update announcement title and body ────────────────────────────────────────
+// ── Update announcement title, body, and slug ─────────────────────────────────
 export async function updateAnnouncement(
   announcementId: string,
   title: string,
   body: string,
+  slug?: string,
 ): Promise<{ error: string } | { success: true }> {
   const guard = await requireAdmin();
   if ("error" in guard) return guard;
@@ -83,9 +119,20 @@ export async function updateAnnouncement(
   if (body.trim() === "") return { error: "Body is required." };
 
   const admin = createAdminClient();
+
+  let resolvedSlug: string | undefined;
+  if (slug !== undefined && slug.trim() !== "") {
+    resolvedSlug = await resolveUniqueSlug(slug.trim(), announcementId);
+  }
+
   const { error } = await admin
     .from("announcements")
-    .update({ title: title.trim(), body: body.trim(), updated_at: new Date().toISOString() })
+    .update({
+      title: title.trim(),
+      body:  body.trim(),
+      updated_at: new Date().toISOString(),
+      ...(resolvedSlug !== undefined ? { slug: resolvedSlug } : {}),
+    })
     .eq("id", announcementId);
 
   if (error !== null) return { error: "Failed to update announcement." };

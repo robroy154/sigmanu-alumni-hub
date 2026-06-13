@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { RichTextContent } from "@/components/ui/RichTextContent";
 import { createAnnouncement } from "@/lib/admin/announcement-actions";
-import { sendTestAnnouncement } from "@/lib/admin/announcement-actions";
+import { sendTestAnnouncement, checkAnnouncementSlugAvailable } from "@/lib/admin/announcement-actions";
+import { titleToSlug } from "@/lib/events/slug";
 import { toastSuccess, toastError } from "@/lib/toast";
 
 interface Props {
@@ -19,14 +21,46 @@ export function AnnouncementForm({ adminEmail }: Props) {
   const [loading,       setLoading]       = useState(false);
   const [previewOpen,   setPreviewOpen]   = useState(false);
 
+  const [slug,          setSlug]          = useState("");
+  const [slugEditing,   setSlugEditing]   = useState(false);
+  const [slugValid,     setSlugValid]     = useState<boolean | null>(null);
+  const [slugChecking,  setSlugChecking]  = useState(false);
+
   const [testEmail,    setTestEmail]    = useState(adminEmail);
   const [testSending,  setTestSending]  = useState(false);
+
+  const slugDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const validateSlug = useCallback(async (value: string) => {
+    if (value === "") { setSlugValid(null); return; }
+    const slugPattern = /^[a-z0-9-]+$/;
+    if (!slugPattern.test(value)) { setSlugValid(false); return; }
+    setSlugChecking(true);
+    const { available } = await checkAnnouncementSlugAvailable(value);
+    setSlugChecking(false);
+    setSlugValid(available);
+  }, []);
+
+  // Auto-generate slug from title on create (not while manually editing)
+  useEffect(() => {
+    if (slugEditing) return;
+    if (slugDebounceRef.current !== null) clearTimeout(slugDebounceRef.current);
+    slugDebounceRef.current = setTimeout(() => {
+      const auto = titleToSlug(title);
+      setSlug(auto);
+      if (auto !== "") void validateSlug(auto);
+      else setSlugValid(null);
+    }, 400);
+    return () => {
+      if (slugDebounceRef.current !== null) clearTimeout(slugDebounceRef.current);
+    };
+  }, [title, slugEditing, validateSlug]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
-    const result = await createAnnouncement(title, body, notifyMembers);
+    const result = await createAnnouncement(title, body, notifyMembers, slug !== "" ? slug : undefined);
     setLoading(false);
 
     if ("error" in result) {
@@ -34,6 +68,9 @@ export function AnnouncementForm({ adminEmail }: Props) {
     } else {
       setTitle("");
       setBody("");
+      setSlug("");
+      setSlugEditing(false);
+      setSlugValid(null);
       setNotifyMembers(false);
       toastSuccess("Announcement posted.");
     }
@@ -68,6 +105,45 @@ export function AnnouncementForm({ adminEmail }: Props) {
             required
             className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-sn-off-white text-sm placeholder:text-sn-gray-medium focus:outline-none focus:ring-1 focus:ring-sn-gold/50 focus:border-sn-gold/50"
           />
+        </div>
+
+        {/* Slug */}
+        <div>
+          <label className="block text-sn-gray-text text-sm mb-1.5">Slug (URL)</label>
+          <div className="flex items-center gap-1.5 bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-sm">
+            <span className="text-sn-gray-medium shrink-0">csusigmanu.com/announcements/</span>
+            {slugEditing ? (
+              <input
+                value={slug}
+                onChange={(e) => {
+                  const v = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                  setSlug(v);
+                  if (slugDebounceRef.current !== null) clearTimeout(slugDebounceRef.current);
+                  slugDebounceRef.current = setTimeout(() => void validateSlug(v), 400);
+                }}
+                className="flex-1 bg-transparent text-white outline-none min-w-0"
+                placeholder="my-announcement"
+              />
+            ) : (
+              <span className="text-white flex-1">{slug !== "" ? slug : "—"}</span>
+            )}
+            {slugChecking && (
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-sn-gold/40 border-t-sn-gold animate-spin shrink-0" />
+            )}
+            {!slugChecking && slugValid === true  && <Check size={14} className="text-green-400 shrink-0" />}
+            {!slugChecking && slugValid === false  && <X    size={14} className="text-red-400 shrink-0" />}
+            <button
+              type="button"
+              title={slugEditing ? "Lock slug" : "Edit slug"}
+              onClick={() => setSlugEditing((v) => !v)}
+              className="text-sn-gray-medium hover:text-white transition-colors ml-1 shrink-0"
+            >
+              <Edit2 size={12} />
+            </button>
+          </div>
+          {slugValid === false && (
+            <p className="text-red-400 text-xs mt-1">This slug is already taken or contains invalid characters.</p>
+          )}
         </div>
 
         <div>
