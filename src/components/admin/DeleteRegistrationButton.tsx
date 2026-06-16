@@ -2,35 +2,51 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { deleteRegistration } from "@/lib/admin/actions";
 import { toastError } from "@/lib/toast";
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 interface DeleteRegistrationButtonProps {
   registrationId: string;
   registrantName: string;
   eventTitle:     string;
+  /** Deletion is only permitted for unpaid registrations — paid/refunded rows must go through the refund flow instead. */
+  paymentStatus:  string;
   /** If provided, router.push(redirectAfter) after successful delete. Otherwise router.refresh(). */
   redirectAfter?: string;
+  /** Show an explanatory note instead of rendering nothing when paymentStatus !== "unpaid". */
+  showStatusNote?: boolean;
 }
 
 export function DeleteRegistrationButton({
   registrationId,
   registrantName,
   eventTitle,
+  paymentStatus,
   redirectAfter,
+  showStatusNote = false,
 }: DeleteRegistrationButtonProps) {
   const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
-  const [loading,    setLoading]    = useState(false);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   async function handleDelete() {
+    setOpen(false);
     setLoading(true);
     const result = await deleteRegistration(registrationId);
     if ("error" in result) {
       toastError(result.error);
       setLoading(false);
-      setConfirming(false);
     } else if (redirectAfter !== undefined) {
       router.push(redirectAfter);
     } else {
@@ -38,42 +54,37 @@ export function DeleteRegistrationButton({
     }
   }
 
-  if (confirming) {
+  if (paymentStatus !== "unpaid") {
+    if (!showStatusNote) return null;
     return (
-      <div className="flex items-center gap-2 flex-wrap">
-        <p className="text-white/70 text-xs">
-          Delete <span className="text-white font-medium">{registrantName}</span>&apos;s registration for{" "}
-          <span className="text-white font-medium">{eventTitle}</span>? This cannot be undone.
-        </p>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => void handleDelete()}
-            disabled={loading}
-            className="h-6 px-2 text-xs bg-red-600/80 hover:bg-red-600 text-white border-0"
-          >
-            {loading ? "Deleting…" : "Delete"}
-          </Button>
-          <button
-            type="button"
-            onClick={() => setConfirming(false)}
-            className="text-sn-gray-medium hover:text-sn-off-white text-xs transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+      <p className="text-white/30 text-xs">
+        Delete unavailable — registration is {paymentStatus}.
+      </p>
     );
   }
 
+  if (loading) {
+    return <span className="text-white/40 text-xs">Deleting…</span>;
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => setConfirming(true)}
-      className="text-red-400/70 hover:text-red-400 text-xs transition-colors"
-    >
-      Delete
-    </button>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger className="text-red-400/70 hover:text-red-400 text-xs transition-colors">
+        Delete
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this registration?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Delete <strong className="text-white">{registrantName}</strong>&apos;s registration
+            for <strong className="text-white">{eventTitle}</strong>? This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => void handleDelete()}>Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

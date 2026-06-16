@@ -14,11 +14,16 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 
+const DEFAULT_TRIGGER_CLASSNAME =
+  "h-7 px-3 rounded-sm border border-white/20 text-white/60 hover:text-white text-xs transition-colors";
+
 interface Props {
   registrationId: string;
+  /** Overrides the trigger's className — defaults to the bordered button used on the detail page. */
+  triggerClassName?: string;
 }
 
-export function MarkRefundedButton({ registrationId }: Props) {
+export function MarkRefundedButton({ registrationId, triggerClassName }: Props) {
   const [phase, setPhase] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -60,9 +65,7 @@ export function MarkRefundedButton({ registrationId }: Props) {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        className="h-7 px-3 rounded-sm border border-white/20 text-white/60 hover:text-white text-xs transition-colors"
-      >
+      <AlertDialogTrigger className={triggerClassName ?? DEFAULT_TRIGGER_CLASSNAME}>
         Process Refund
       </AlertDialogTrigger>
       <AlertDialogContent>

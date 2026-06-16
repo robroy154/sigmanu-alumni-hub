@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ClipboardList } from "lucide-react";
 import { DeleteRegistrationButton } from "@/components/admin/DeleteRegistrationButton";
+import { MarkRefundedButton } from "@/components/admin/MarkRefundedButton";
 
 export const metadata: Metadata = { title: "Registrations — Admin" };
 
@@ -245,17 +246,24 @@ export default async function AdminRegistrationsPage({ searchParams }: Props) {
                     })}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-3">
+                    <div className="flex items-center justify-end gap-3 flex-wrap">
                       <Link
                         href={`/admin/registrations/${r.id}`}
                         className="text-sn-gold hover:text-sn-gold-light text-xs transition-colors"
                       >
                         View
                       </Link>
+                      {r.payment_status === "paid" && (
+                        <MarkRefundedButton
+                          registrationId={r.id}
+                          triggerClassName="text-amber-400/70 hover:text-amber-400 text-xs transition-colors"
+                        />
+                      )}
                       <DeleteRegistrationButton
                         registrationId={r.id}
                         registrantName={r.registrant_name}
                         eventTitle={eventTitle}
+                        paymentStatus={r.payment_status}
                       />
                     </div>
                   </td>

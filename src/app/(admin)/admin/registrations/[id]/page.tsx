@@ -228,7 +228,9 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
           registrationId={reg.id}
           registrantName={reg.registrant_name}
           eventTitle={eventTitle}
+          paymentStatus={reg.payment_status}
           redirectAfter="/admin/registrations"
+          showStatusNote
         />
       </div>
     </div>
