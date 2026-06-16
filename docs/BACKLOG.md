@@ -81,6 +81,15 @@ See Settings System above.
 **Status:** Scoped
 Security advisor `REVOKE` statements (e.g. column-level revokes like `referred_by`) are currently applied manually in the Supabase dashboard and are lost on a Postgres restart. Move them into a committed migration file so they're reapplied automatically and survive restarts.
 
+### Admin Notification Preferences
+**Status:** Scoped
+Admins currently receive operational emails at `info@csusigmanu.com` only, but not all admins have access to that inbox. The refund admin notification (`sendRefundProcessedAdminAlert`) is the first known case sending to that hardcoded inbox as the To address. Two changes needed:
+
+1. **Immediate fix (query change):** Admin notification emails (refund processed, new member registered, referral claimed, etc.) should query `members` where `status = 'admin'` and send to those email addresses directly, using `info@csusigmanu.com` as the From address — same pattern already used elsewhere in the codebase for other admin notifications (e.g. `notifyAdminsNewMember`, `sendBigBrotherSetNotification`).
+2. **Settings system integration:** Per-admin notification preferences stored on the `members` table or a separate `admin_notification_preferences` table. Each admin can toggle which operational emails they receive (refund processed, new registration, referral claimed, member approved, etc.). When firing any admin notification, query for admins where that preference is enabled. This depends on the broader Settings System — Two-Tier Preferences Model (see Future Features below) and should be scoped together with it.
+
+Interim workaround in place: an email forwarding rule on `info@csusigmanu.com` routes relevant emails to admin accounts directly.
+
 ---
 
 ## Data Layer Exists — UI Missing
