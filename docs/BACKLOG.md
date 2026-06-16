@@ -171,7 +171,7 @@ Record which admin performed sensitive actions (refunds, deletions, status chang
 
 ### Bulk Refund Capability
 **Status:** New
-Refund all paid registrations for a cancelled event in one action.
+Refund all paid registrations for a cancelled event in one action. The confirmation dialog must surface exact financial impact before execution: total amount to be refunded, aggregate Stripe transaction fees from all original payments (non-refundable, retrieved from Stripe balance transactions), and net balance impact. Fee data should be retrieved from Stripe before the dialog opens, same pattern as the individual Process Refund dialog (see `getRefundFeeDetails` in `src/lib/admin/actions.ts`). Admin must explicitly confirm after seeing the full financial breakdown.
 
 ### Event Cancellation Flow
 **Status:** New

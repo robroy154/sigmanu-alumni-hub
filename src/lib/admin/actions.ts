@@ -371,6 +371,67 @@ export async function removeBadge(
   return { success: true };
 }
 
+// ── Get Stripe fee details for the refund confirmation dialog ────────────────
+export async function getRefundFeeDetails(
+  registrationId: string
+): Promise<
+  | { error: string }
+  | { amountPaid: number; stripeFee: number | null; registrantName: string }
+> {
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard;
+
+  const admin = createAdminClient();
+
+  const { data: reg } = await admin
+    .from("registrations")
+    .select("stripe_payment_id, registrant_name, amount_paid, event_id")
+    .eq("id", registrationId)
+    .eq("payment_status", "paid")
+    .single();
+
+  if (reg === null) {
+    return { error: "Registration not found or is not in a paid state." };
+  }
+
+  let amountPaid = reg.amount_paid;
+  if (amountPaid === null) {
+    const { data: event } = await admin
+      .from("events")
+      .select("ticket_price")
+      .eq("id", reg.event_id)
+      .single();
+    amountPaid = event?.ticket_price ?? 0;
+  }
+
+  // The exact fee is only knowable from Stripe's balance transaction on the
+  // original charge — skip it silently (UI shows a "fee unavailable" note)
+  // for free events with no payment intent, or if the Stripe lookup fails.
+  let stripeFee: number | null = null;
+  if (reg.stripe_payment_id !== null && reg.stripe_payment_id !== "") {
+    try {
+      const paymentIntent = await stripe.paymentIntents.retrieve(reg.stripe_payment_id, {
+        expand: ["latest_charge.balance_transaction"],
+      });
+      const charge = typeof paymentIntent.latest_charge === "string" ? null : paymentIntent.latest_charge;
+      const balanceTransaction =
+        charge !== null && typeof charge.balance_transaction !== "string"
+          ? charge.balance_transaction
+          : null;
+      stripeFee = balanceTransaction !== null ? balanceTransaction.fee / 100 : null;
+    } catch (stripeErr) {
+      console.error("[getRefundFeeDetails] Stripe lookup failed:", stripeErr);
+      stripeFee = null;
+    }
+  }
+
+  return {
+    amountPaid: Number(amountPaid),
+    stripeFee,
+    registrantName: reg.registrant_name,
+  };
+}
+
 // ── Mark a registration as refunded ───────────────────────────────────────────
 export async function markRegistrationRefunded(
   registrationId: string
