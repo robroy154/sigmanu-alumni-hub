@@ -27,6 +27,7 @@
 ### Phase 24 — SMS Invites
 **Status:** Blocked
 Schema partially decided: 8-char token, nullable email/phone on referrals, `delivery_method` enum, sender ID `MuXiChapter`. Blocked on Brevo TFN (toll-free number) carrier registration — a 4–6 week external process with no workaround. Resume once TFN registration clears.
+SMS message template format locked: `[First] [Last] (Mu Xi [badge]) invited you to the Mu Xi Alumni Hub. Claim your profile: [URL]`.
 
 ---
 
@@ -76,6 +77,10 @@ AnnouncementSplash effectively surfaces important announcements. Full bell badge
 **Status:** Done
 See Settings System above.
 
+### Supabase Security Advisor SQL Revokes — Migration File
+**Status:** Scoped
+Security advisor `REVOKE` statements (e.g. column-level revokes like `referred_by`) are currently applied manually in the Supabase dashboard and are lost on a Postgres restart. Move them into a committed migration file so they're reapplied automatically and survive restarts.
+
 ---
 
 ## Data Layer Exists — UI Missing
@@ -108,6 +113,74 @@ Storage and serving of chapter documents — bylaws, historical materials, meeti
 **Status:** Future
 No Playwright or Cypress tests exist anywhere in the project. The payment and Stripe webhook flows are the highest-risk paths and have zero automated coverage. Not a feature gap but a stability requirement — should be addressed before the platform is considered fully production-stable.
 
+### Phase 25 — Donations System
+**Status:** Concept
+Standalone vertical, separate from events/registrations. Suggested-amount UI ($25/$50/$100/$250 + custom), optional campaign association (`donation_campaigns` table with goal amount + progress bar), anonymous donation option, Stripe Checkout payment flow, admin `/admin/donations` page with CSV export, donor history on admin member detail page, homepage revenue card split into event revenue + donations, email receipt via Resend on webhook. Not tied to member approval — `member` and `admin` status only.
+
+### Settings System — Two-Tier Preferences Model
+**Status:** Concept
+Admin global toggles + per-member preferences within admin-defined limits. Sections: notifications, privacy, account. Distinct from the existing `/settings` email/password change flow (already Done above) — needs a dedicated scoping conversation before implementation.
+
+### "Chapter Hub" Rebrand
+**Status:** Concept
+Rename from "Alumni Hub" to "Chapter Hub" across the platform. Needs a dedicated scoping conversation.
+
+### Hero Image — Animated Constellation Canvas
+**Status:** Concept
+Animated canvas with the Sigma Nu serpent spine rendered as a constellation network (Option L series). Decision deferred. Distinct from the existing `NEXT_PUBLIC_HERO_IMAGE_URL` static background image.
+
+### TypeScript Type Generation from Supabase CLI
+**Status:** Concept
+Automate `supabase.ts` generation via the Supabase CLI. A manual patch step would still be needed afterward for CHECK-constraint enums, which the CLI does not capture (only Postgres enum types).
+
+### Potential Commercialization for Other Greek Organizations
+**Status:** Concept
+Architecture consideration for multi-tenancy if the platform were offered to other chapters or fraternities/sororities. No scope or schema defined.
+
 ---
 
-*Last updated: May 16, 2026*
+## Ops / Infrastructure Parking Lot
+
+### `ADMIN_NOTIFICATION_EMAIL` Env Var
+**Status:** New
+Separate from `CHAPTER_CONTACT_EMAIL` — would route operational alerts (failures, errors) distinctly from general chapter contact communications.
+
+### Webhook Failure Alerting
+**Status:** New
+Silent failures in webhook handlers (e.g. Stripe webhook) currently have no admin notification path.
+
+### Resend Webhook Listener
+**Status:** New
+No visibility into bounced or failed transactional email delivery — would require a Resend webhook endpoint to track delivery status.
+
+### `charge.dispute.created` Webhook Handler
+**Status:** New
+Flag a registration as disputed in the DB and notify admin when a chargeback is filed against a Stripe charge.
+
+### Partial Refund Support
+**Status:** New
+Current refund flow (`markRegistrationRefunded`) assumes full refunds only — no UI for partial amounts (e.g. refunding one guest from a multi-guest registration).
+
+### Refund Reason Field
+**Status:** New
+Optional admin note on why a refund was issued, stored on the registration record.
+
+### Admin Action Audit Log
+**Status:** New
+Record which admin performed sensitive actions (refunds, deletions, status changes) and when.
+
+### Bulk Refund Capability
+**Status:** New
+Refund all paid registrations for a cancelled event in one action.
+
+### Event Cancellation Flow
+**Status:** New
+Cancel an event, auto-refund all paid registrations, and notify all registrants.
+
+### Stripe Idempotency Keys on Refund Calls
+**Status:** New
+Prevent double-refund edge cases on retries of `stripe.refunds.create()`.
+
+---
+
+*Last updated: June 16, 2026*
