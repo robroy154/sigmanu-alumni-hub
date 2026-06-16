@@ -32,6 +32,7 @@ import { ReferralCompletedEmail } from "./templates/ReferralCompletedEmail";
 import { BigBrotherNotificationEmail } from "./templates/BigBrotherNotificationEmail";
 import { LittleBrotherNotificationEmail } from "./templates/LittleBrotherNotificationEmail";
 import { WaitlistPromotionEmail } from "./templates/WaitlistPromotionEmail";
+import { RefundConfirmationEmail } from "./templates/RefundConfirmationEmail";
 
 // ---------------------------------------------------------------------------
 // Resend client
@@ -552,5 +553,42 @@ export async function sendWaitlistPromotionNotification({
     });
   } catch (err) {
     console.error("[email] sendWaitlistPromotionNotification threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 12. Refund confirmation
+// ---------------------------------------------------------------------------
+
+export async function sendRefundConfirmation({
+  to,
+  name,
+  eventTitle,
+  eventDate,
+  amountRefunded,
+}: {
+  to:             string;
+  name:           string;
+  eventTitle:     string;
+  eventDate:      string;
+  amountRefunded: number;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  try {
+    const html = await render(
+      React.createElement(RefundConfirmationEmail, { name, eventTitle, eventDate, amountRefunded, appUrl }),
+    );
+    await resend.emails.send({
+      from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to,
+      subject: `Your refund for ${eventTitle} has been processed`,
+      html,
+    });
+  } catch (err) {
+    console.error("[email] sendRefundConfirmation threw:", err);
   }
 }

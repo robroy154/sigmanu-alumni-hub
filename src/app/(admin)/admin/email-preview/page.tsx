@@ -13,6 +13,7 @@ import { ReferralCompletedEmail } from "@/lib/email/templates/ReferralCompletedE
 import { BigBrotherNotificationEmail } from "@/lib/email/templates/BigBrotherNotificationEmail";
 import { LittleBrotherNotificationEmail } from "@/lib/email/templates/LittleBrotherNotificationEmail";
 import { WaitlistPromotionEmail } from "@/lib/email/templates/WaitlistPromotionEmail";
+import { RefundConfirmationEmail } from "@/lib/email/templates/RefundConfirmationEmail";
 
 import { EmailPreviewClient } from "./EmailPreviewClient";
 
@@ -104,6 +105,14 @@ export default async function EmailPreviewPage() {
       eventTitle:      "Fall Brotherhood Banquet",
       registrationUrl: `${appUrl}/events/fall-brotherhood-banquet/register`,
     })).then((html) => ({ name: "Waitlist Promotion", html })),
+
+    render(React.createElement(RefundConfirmationEmail, {
+      name:           "Alex Johnson",
+      eventTitle:     "Fall Brotherhood Banquet",
+      eventDate:      "Saturday, November 15, 2025",
+      amountRefunded: 75.00,
+      appUrl,
+    })).then((html) => ({ name: "Refund Confirmation", html })),
   ]);
 
   return (

@@ -380,10 +380,11 @@ export async function markRegistrationRefunded(
 
   const admin = createAdminClient();
 
-  // Fetch stripe_payment_id before issuing the refund.
+  // Fetch everything needed for the refund and the confirmation email before
+  // issuing the refund, so the data is available regardless of what happens next.
   const { data: reg } = await admin
     .from("registrations")
-    .select("stripe_payment_id")
+    .select("stripe_payment_id, registrant_name, email, amount_paid, applied_price, guest_count, event_id")
     .eq("id", registrationId)
     .eq("payment_status", "paid")
     .single();
@@ -391,6 +392,12 @@ export async function markRegistrationRefunded(
   if (reg === null) {
     return { error: "Registration not found or is not in a paid state." };
   }
+
+  const { data: event } = await admin
+    .from("events")
+    .select("title, event_date, ticket_price")
+    .eq("id", reg.event_id)
+    .single();
 
   // Attempt Stripe refund for paid events that have a payment intent.
   if (reg.stripe_payment_id !== null && reg.stripe_payment_id !== "") {
@@ -413,6 +420,25 @@ export async function markRegistrationRefunded(
   if (error !== null) {
     console.error("[markRegistrationRefunded] DB update failed:", error.message);
     return { error: "Stripe refund issued but failed to update status. Contact support." };
+  }
+
+  if (event !== null) {
+    const appliedPrice = reg.applied_price ?? event.ticket_price;
+    const amountRefunded =
+      reg.amount_paid ?? (1 + reg.guest_count) * appliedPrice;
+    const eventDate = new Date(event.event_date).toLocaleDateString("en-US", {
+      weekday: "long", month: "long", day: "numeric", year: "numeric",
+    });
+
+    void import("@/lib/email").then(({ sendRefundConfirmation }) =>
+      sendRefundConfirmation({
+        to:             reg.email,
+        name:           reg.registrant_name,
+        eventTitle:     event.title,
+        eventDate,
+        amountRefunded: Number(amountRefunded),
+      })
+    );
   }
 
   revalidatePath(`/admin/registrations/${registrationId}`);
