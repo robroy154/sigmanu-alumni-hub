@@ -14,6 +14,7 @@ import { BigBrotherNotificationEmail } from "@/lib/email/templates/BigBrotherNot
 import { LittleBrotherNotificationEmail } from "@/lib/email/templates/LittleBrotherNotificationEmail";
 import { WaitlistPromotionEmail } from "@/lib/email/templates/WaitlistPromotionEmail";
 import { RefundConfirmationEmail } from "@/lib/email/templates/RefundConfirmationEmail";
+import { RefundProcessedAdminAlert } from "@/lib/email/templates/RefundProcessedAdminAlert";
 
 import { EmailPreviewClient } from "./EmailPreviewClient";
 
@@ -113,6 +114,16 @@ export default async function EmailPreviewPage() {
       amountRefunded: 75.00,
       appUrl,
     })).then((html) => ({ name: "Refund Confirmation", html })),
+
+    render(React.createElement(RefundProcessedAdminAlert, {
+      registrantName:  "Alex Johnson",
+      registrantEmail: "alex.johnson@example.com",
+      eventTitle:      "Fall Brotherhood Banquet",
+      eventDate:       "Saturday, November 15, 2025",
+      amountRefunded:  75.00,
+      paymentIntentId: "pi_3Pexample1234567890",
+      timestamp:       "June 16, 2026, 2:30 PM",
+    })).then((html) => ({ name: "Admin — Refund Processed", html })),
   ]);
 
   return (

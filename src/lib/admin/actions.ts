@@ -439,6 +439,17 @@ export async function markRegistrationRefunded(
         amountRefunded: Number(amountRefunded),
       })
     );
+
+    void import("@/lib/email").then(({ sendRefundProcessedAdminAlert }) =>
+      sendRefundProcessedAdminAlert({
+        registrantName:  reg.registrant_name,
+        registrantEmail: reg.email,
+        eventTitle:      event.title,
+        eventDate,
+        amountRefunded:  Number(amountRefunded),
+        paymentIntentId: reg.stripe_payment_id ?? "N/A (free event)",
+      })
+    );
   }
 
   revalidatePath(`/admin/registrations/${registrationId}`);

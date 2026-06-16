@@ -33,6 +33,7 @@ import { BigBrotherNotificationEmail } from "./templates/BigBrotherNotificationE
 import { LittleBrotherNotificationEmail } from "./templates/LittleBrotherNotificationEmail";
 import { WaitlistPromotionEmail } from "./templates/WaitlistPromotionEmail";
 import { RefundConfirmationEmail } from "./templates/RefundConfirmationEmail";
+import { RefundProcessedAdminAlert } from "./templates/RefundProcessedAdminAlert";
 
 // ---------------------------------------------------------------------------
 // Resend client
@@ -590,5 +591,53 @@ export async function sendRefundConfirmation({
     });
   } catch (err) {
     console.error("[email] sendRefundConfirmation threw:", err);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 13. Refund processed — admin alert
+// ---------------------------------------------------------------------------
+
+export async function sendRefundProcessedAdminAlert({
+  registrantName,
+  registrantEmail,
+  eventTitle,
+  eventDate,
+  amountRefunded,
+  paymentIntentId,
+}: {
+  registrantName:  string;
+  registrantEmail: string;
+  eventTitle:      string;
+  eventDate:       string;
+  amountRefunded:  number;
+  paymentIntentId: string;
+}): Promise<void> {
+  const resend = getResend();
+  if (resend === null) return;
+
+  const chapterContactEmail = process.env.CHAPTER_CONTACT_EMAIL ?? "info@csusigmanu.com";
+  const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
+
+  try {
+    const html = await render(
+      React.createElement(RefundProcessedAdminAlert, {
+        registrantName,
+        registrantEmail,
+        eventTitle,
+        eventDate,
+        amountRefunded,
+        paymentIntentId,
+        timestamp,
+      }),
+    );
+    await resend.emails.send({
+      from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to:      chapterContactEmail,
+      subject: `Refund processed for ${registrantName} — ${eventTitle}`,
+      html,
+    });
+  } catch (err) {
+    console.error("[email] sendRefundProcessedAdminAlert threw:", err);
   }
 }
