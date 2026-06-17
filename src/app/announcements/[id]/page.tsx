@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { isUuid } from "@/lib/events/slug";
 import { RichTextContent } from "@/components/ui/RichTextContent";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -46,24 +49,51 @@ export default async function AnnouncementPermalinkPage({ params }: Props) {
   const a = await getAnnouncement(id);
   if (a === null) notFound();
 
-  // Fetch next upcoming published event for the CTA
-  const admin = createAdminClient();
-  const { data: nextEvent } = await admin
-    .from("events")
-    .select("id, slug, title")
-    .eq("status", "published")
-    .gte("event_date", new Date().toISOString().split("T")[0])
-    .order("event_date", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const eventHref = nextEvent !== null
-    ? `/events/${nextEvent.slug ?? nextEvent.id}`
-    : "/events";
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = user !== null;
 
   return (
-    <div className="bg-sn-black min-h-screen py-12 px-4">
-      <div className="mx-auto max-w-[680px]">
+    <div className="bg-sn-black min-h-screen flex flex-col">
+
+      {/* Header nav */}
+      <header className="border-b border-sn-gold/20 px-6 py-4">
+        <div className="max-w-[680px] mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
+              ΣΝ
+            </div>
+            <div>
+              <p className="text-sn-gold font-semibold text-sm leading-none">Sigma Nu Fraternity</p>
+              <p className="text-white/50 text-xs leading-none mt-0.5">Mu Xi Chapter · Columbus State University</p>
+            </div>
+          </Link>
+          <nav className="flex items-center gap-3">
+            {isLoggedIn ? (
+              <Link href="/home">
+                <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
+                  Member Home
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login">
+                  <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
+                    Member Login
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
+                    Create Account
+                  </Button>
+                </Link>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-[680px] w-full px-4 py-12">
 
         {/* Chapter label */}
         <p className="text-sn-gold text-xs font-semibold uppercase tracking-[0.2em] text-center mb-4">
@@ -91,22 +121,6 @@ export default async function AnnouncementPermalinkPage({ params }: Props) {
         <RichTextContent content={a.body} className="rich-text-content" />
 
         <hr className="border-sn-gold/30 mt-10 mb-8" />
-
-        {/* CTAs */}
-        <div className="flex flex-wrap gap-4 justify-center mb-10">
-          <a
-            href={eventHref}
-            className="inline-flex items-center px-5 py-2.5 rounded-sm bg-sn-gold text-sn-black font-semibold text-sm hover:bg-sn-gold-light transition-colors"
-          >
-            Register for the Gala →
-          </a>
-          <a
-            href="/signup"
-            className="inline-flex items-center px-5 py-2.5 rounded-sm border border-sn-gold text-sn-gold font-semibold text-sm hover:bg-sn-gold/10 transition-colors"
-          >
-            Join the Alumni Hub →
-          </a>
-        </div>
 
         {/* Footer */}
         <p className="text-sn-gray-medium text-xs text-center">
