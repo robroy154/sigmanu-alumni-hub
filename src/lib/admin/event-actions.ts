@@ -100,8 +100,25 @@ export async function createEvent(
     .select("id")
     .single();
 
-  if (error !== null || event === null) {
-    return { error: "Failed to create event. Please try again." };
+  if (error !== null) {
+    const details = error.details ?? "No additional details";
+    const hint = error.hint ?? "No hint provided";
+
+    console.error("[createEvent] Supabase error", {
+      code: error.code,
+      message: error.message,
+      details,
+      hint,
+    });
+
+    if (error.message === "Invalid API key") {
+      return {
+        error:
+          "Supabase admin key is invalid for this project. Verify SUPABASE_SERVICE_ROLE_KEY matches NEXT_PUBLIC_SUPABASE_URL in your environment.",
+      };
+    }
+
+    return { error: error.message };
   }
 
   revalidatePath("/admin/events");
@@ -291,6 +308,7 @@ export async function saveEventFields(
       event_id:      eventId,
       field_label:   f.field_label,
       field_type:    f.field_type,
+      field_scope:   f.field_scope,
       field_options: f.field_options ?? null,
       required:      f.required,
       display_order: i,

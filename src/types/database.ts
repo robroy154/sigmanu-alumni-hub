@@ -16,6 +16,7 @@ export type RegistrationRow          = Database["public"]["Tables"]["registratio
 export type RegistrationGuestRow     = Database["public"]["Tables"]["registration_guests"]["Row"];
 export type EventFieldRow            = Database["public"]["Tables"]["event_fields"]["Row"];
 export type EventFieldResponseRow    = Database["public"]["Tables"]["event_field_responses"]["Row"];
+export type GuestFieldResponseRow    = Database["public"]["Tables"]["guest_field_responses"]["Row"];
 export type WaitlistRow              = Database["public"]["Tables"]["waitlist"]["Row"];
 
 // Insert types — what you pass to an INSERT. Columns with defaults are optional.
@@ -26,6 +27,7 @@ export type RegistrationInsert          = Database["public"]["Tables"]["registra
 export type RegistrationGuestInsert     = Database["public"]["Tables"]["registration_guests"]["Insert"];
 export type EventFieldInsert            = Database["public"]["Tables"]["event_fields"]["Insert"];
 export type EventFieldResponseInsert    = Database["public"]["Tables"]["event_field_responses"]["Insert"];
+export type GuestFieldResponseInsert    = Database["public"]["Tables"]["guest_field_responses"]["Insert"];
 export type WaitlistInsert              = Database["public"]["Tables"]["waitlist"]["Insert"];
 
 // Update types — all columns optional, for PATCH-style updates.
@@ -36,6 +38,7 @@ export type RegistrationUpdate          = Database["public"]["Tables"]["registra
 export type RegistrationGuestUpdate     = Database["public"]["Tables"]["registration_guests"]["Update"];
 export type EventFieldUpdate            = Database["public"]["Tables"]["event_fields"]["Update"];
 export type EventFieldResponseUpdate    = Database["public"]["Tables"]["event_field_responses"]["Update"];
+export type GuestFieldResponseUpdate    = Database["public"]["Tables"]["guest_field_responses"]["Update"];
 export type WaitlistUpdate              = Database["public"]["Tables"]["waitlist"]["Update"];
 
 // Enum unions — maintained manually because Postgres check constraints do not
@@ -47,6 +50,7 @@ export type EventStatus   = "draft" | "published" | "archived";
 export type CapacityMode  = "unlimited" | "capped" | "waitlist";
 export type EventType     = "internal" | "external";
 export type FieldType     = "short_text" | "long_text" | "dropdown" | "checkbox" | "multi_select" | "file_upload";
+export type FieldScope    = "registration" | "attendee";
 
 // Composite types for common join shapes — extend as query patterns emerge.
 export type MemberWithBadges         = MemberRow & { badges: BadgeRow[] };

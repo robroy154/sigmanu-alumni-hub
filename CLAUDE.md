@@ -303,6 +303,46 @@ Feature backlog tracked in docs/BACKLOG.md — read this file at the start of an
 
 ---
 
+## Active Experiment Branch
+
+**Branch:** `feature/enhanced-events`
+**Status:** Implementation complete — pending migration apply and QA
+
+### What changed
+
+Per-attendee field scoping (`field_scope: "registration" | "attendee"`) added to the custom event fields system. Attendee-scoped fields are collected once per person (registrant + each guest) instead of once per order.
+
+### New files / tables (NOT yet applied to production)
+
+- Migration: `supabase/migrations/20260618000000_per_attendee_fields.sql`
+  - `event_fields.field_scope` text column (default `'registration'`)
+  - `registration_guests.guest_email`, `registration_guests.guest_phone` nullable columns
+  - `guest_field_responses` table (stores per-guest attendee-scoped responses)
+- `docs/ENHANCED_EVENTS_TESTING.md` — QA test plan
+
+### Key runtime decisions on this branch
+
+- `FieldScope = "registration" | "attendee"` type in `src/types/database.ts`
+- `GuestFieldResponsesInput = Array<Record<string, string>>` — 4th param to `createRegistration` and `createGuestRegistration`; index matches `guest_names` array position
+- `EventFieldsBuilder`: scope toggle visible only for `short_text`, `dropdown`, `multi_select`, `checkbox` types; `long_text` and `file_upload` always registration-scoped; field type change to non-eligible resets scope to `"registration"`
+- `RegistrationForm` / `GuestRegistrationForm`: Section B = registration-scoped fields; Section C = per-attendee cards (one per attendee); Section C hidden if no attendee-scoped fields exist
+- Registrant's attendee-scoped responses written to `event_field_responses` (same table as registration-scoped — field IDs are globally unique, no collision)
+- Guest attendee-scoped responses written to `guest_field_responses` keyed by `guest_id` (captured via `.select("id")` on the guest insert)
+- Stripe: per-attendee line items (`quantity: 1` each, `product_data.name` = `"Event Title — Attendee Name"`); Customer create/lookup by email on alumni path only; Stripe metadata uses `attendee_N_name` + `attendee_N_<snake_label>` keys, capped at 50 total
+- Webhook `amount_paid` computation unchanged — still `appliedPrice × (1 + guest_count)` from DB, not derived from Stripe quantities
+- Stripe Customer TODO: `stripe_customer_id` column not yet added to `members` table; current implementation looks up by email on each checkout (deferred to main branch review)
+- Admin registration detail: `guest_field_responses` fetched separately after main query; grouped by `guest_id` into a Map; rendered below each guest name with `pl-4` indentation, sorted by `display_order`
+
+### To merge to main
+
+1. Apply migration to production Supabase
+2. Complete QA per `docs/ENHANCED_EVENTS_TESTING.md`
+3. Decide on `stripe_customer_id` column addition (see TODO in `src/lib/registration/actions.ts`)
+4. Update `CLAUDE.md` Phase section; remove this Active Experiment Block
+5. Delete `docs/ENHANCED_EVENTS_TESTING.md` and `docs/EXPERIMENT_LOG.md`
+
+---
+
 ## Full Reference
 
 All schema tables, query patterns, Stripe flow, build order, hosting details, and decision log are in:

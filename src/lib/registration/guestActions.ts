@@ -2,14 +2,23 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
-import type { GuestRegistrationInput } from "@/lib/registration/schemas";
+import type { GuestRegistrationInput, GuestFieldResponsesInput } from "@/lib/registration/schemas";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+function labelToKey(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "_");
+}
 
 export async function createGuestRegistration(
   eventId: string,
   data: GuestRegistrationInput,
-  fieldResponses?: Record<string, string>
+  fieldResponses?: Record<string, string>,
+  guestFieldResponses?: GuestFieldResponsesInput
 ): Promise<{ checkoutUrl: string } | { confirmationUrl: string } | { error: string }> {
   const admin = createAdminClient();
 
@@ -53,7 +62,6 @@ export async function createGuestRegistration(
       : event.ticket_price;
 
   const guestCount = data.guest_names.length;
-  const totalAttendees = 1 + guestCount;
   const registrantName = `${data.first_name} ${data.last_name}`.trim();
 
   // Insert the registration row with member_id = null.
@@ -76,23 +84,25 @@ export async function createGuestRegistration(
     return { error: "Failed to create registration. Please try again." };
   }
 
-  // Insert guest rows.
+  // Insert guest rows and capture IDs (ordered to match guestFieldResponses indices).
+  let guestIds: string[] = [];
   if (guestCount > 0) {
     const guestRows = data.guest_names.map((name) => ({
       registration_id: registration.id,
       guest_name:      name,
     }));
-
-    const { error: guestError } = await admin
+    const { data: insertedGuests, error: guestError } = await admin
       .from("registration_guests")
-      .insert(guestRows);
-
+      .insert(guestRows)
+      .select("id");
     if (guestError !== null) {
       console.error("Failed to insert guest rows:", guestError.message);
+    } else if (insertedGuests !== null) {
+      guestIds = insertedGuests.map((g) => g.id);
     }
   }
 
-  // Insert custom field responses.
+  // Insert registration-scoped and registrant attendee-scoped field responses.
   if (fieldResponses !== undefined) {
     const responseRows = Object.entries(fieldResponses)
       .filter(([, value]) => value !== "")
@@ -103,6 +113,24 @@ export async function createGuestRegistration(
       }));
     if (responseRows.length > 0) {
       await admin.from("event_field_responses").insert(responseRows);
+    }
+  }
+
+  // Insert per-guest attendee-scoped field responses.
+  if (guestFieldResponses !== undefined && guestIds.length > 0) {
+    const guestResponseRows = guestFieldResponses.flatMap((responses, guestIndex) => {
+      const guestId = guestIds[guestIndex];
+      if (guestId === undefined) return [];
+      return Object.entries(responses)
+        .filter(([, value]) => value !== "")
+        .map(([fieldId, value]) => ({
+          guest_id:       guestId,
+          field_id:       fieldId,
+          response_value: value,
+        }));
+    });
+    if (guestResponseRows.length > 0) {
+      await admin.from("guest_field_responses").insert(guestResponseRows);
     }
   }
 
@@ -123,20 +151,83 @@ export async function createGuestRegistration(
     };
   }
 
-  // Paid event — create Stripe Checkout session.
+  // ── Paid event — Stripe Checkout ──────────────────────────────────────────
+
+  // Fetch field labels for human-readable metadata keys.
+  const { data: eventFieldRows } = await admin
+    .from("event_fields")
+    .select("id, field_label")
+    .eq("event_id", eventId);
+
+  const fieldLabelMap: Record<string, string> = {};
+  for (const f of eventFieldRows ?? []) {
+    fieldLabelMap[f.id] = f.field_label;
+  }
+
+  // Build per-attendee metadata (max 50 key-value pairs).
+  const metadataEntries: [string, string][] = [
+    ["registration_id", registration.id],
+  ];
+
+  const allAttendees = [
+    { name: registrantName, responses: fieldResponses ?? {} },
+    ...data.guest_names.map((name, i) => ({
+      name,
+      responses: guestFieldResponses?.[i] ?? {},
+    })),
+  ];
+
+  let truncated = 0;
+  for (let ai = 0; ai < allAttendees.length; ai++) {
+    const attendee = allAttendees[ai];
+    if (attendee === undefined) continue;
+    if (metadataEntries.length >= 50) { truncated += 1 + Object.keys(attendee.responses).length; continue; }
+    metadataEntries.push([`attendee_${ai}_name`, attendee.name]);
+    for (const [fieldId, value] of Object.entries(attendee.responses)) {
+      if (value === "") continue;
+      if (metadataEntries.length >= 50) { truncated++; continue; }
+      const label = fieldLabelMap[fieldId];
+      if (label === undefined) continue;
+      metadataEntries.push([`attendee_${ai}_${labelToKey(label)}`, value.slice(0, 500)]);
+    }
+  }
+
+  if (truncated > 0) {
+    console.log(`[Stripe metadata] Truncated at 50 keys — ${truncated} values omitted`);
+  }
+
+  const metadata = Object.fromEntries(metadataEntries);
+
+  // Per-attendee line items — one item per person, quantity 1 each.
+  const lineItems = [
+    {
+      price_data: {
+        currency:     "usd",
+        product_data: {
+          name:     `${event.title} — ${registrantName}`,
+          metadata: { attendee_index: "0", attendee_name: registrantName },
+        },
+        unit_amount: Math.round(appliedPrice * 100),
+      },
+      quantity: 1,
+    },
+    ...data.guest_names.map((name, i) => ({
+      price_data: {
+        currency:     "usd",
+        product_data: {
+          name:     `${event.title} — ${name}`,
+          metadata: { attendee_index: String(i + 1), attendee_name: name },
+        },
+        unit_amount: Math.round(appliedPrice * 100),
+      },
+      quantity: 1,
+    })),
+  ];
+
   const session = await stripe.checkout.sessions.create({
     mode:       "payment",
-    line_items: [
-      {
-        price_data: {
-          currency:     "usd",
-          product_data: { name: `${event.title} — Ticket` },
-          unit_amount:  Math.round(appliedPrice * 100),
-        },
-        quantity: totalAttendees,
-      },
-    ],
-    metadata:    { registration_id: registration.id },
+    line_items: lineItems,
+    metadata,
     success_url: `${APP_URL}/events/${eventId}/register/guest/confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${APP_URL}/events/${eventId}/register/guest`,
   });

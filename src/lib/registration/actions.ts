@@ -3,14 +3,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
-import type { RegistrationInput } from "@/lib/registration/schemas";
+import type { RegistrationInput, GuestFieldResponsesInput } from "@/lib/registration/schemas";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+// Convert a field label to a compact snake_case key safe for Stripe metadata.
+// "T-Shirt Size" → "tshirt_size"
+function labelToKey(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "_");
+}
 
 export async function createRegistration(
   eventId: string,
   data: RegistrationInput,
-  fieldResponses?: Record<string, string>
+  fieldResponses?: Record<string, string>,
+  guestFieldResponses?: GuestFieldResponsesInput
 ): Promise<{ checkoutUrl: string } | { confirmationUrl: string } | { error: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -58,8 +69,7 @@ export async function createRegistration(
       ? Number(event.early_bird_price)
       : event.ticket_price;
 
-  const guestCount     = data.guest_names.length;
-  const totalAttendees = 1 + guestCount;
+  const guestCount = data.guest_names.length;
 
   // Insert the registration row.
   const admin = createAdminClient();
@@ -82,21 +92,25 @@ export async function createRegistration(
     return { error: "Failed to create registration. Please try again." };
   }
 
-  // Insert guest rows.
+  // Insert guest rows and capture IDs (ordered to match guestFieldResponses indices).
+  let guestIds: string[] = [];
   if (guestCount > 0) {
     const guestRows = data.guest_names.map((name) => ({
       registration_id: registration.id,
       guest_name:      name,
     }));
-    const { error: guestError } = await admin
+    const { data: insertedGuests, error: guestError } = await admin
       .from("registration_guests")
-      .insert(guestRows);
+      .insert(guestRows)
+      .select("id");
     if (guestError !== null) {
       console.error("Failed to insert guest rows:", guestError.message);
+    } else if (insertedGuests !== null) {
+      guestIds = insertedGuests.map((g) => g.id);
     }
   }
 
-  // Insert custom field responses.
+  // Insert registration-scoped and registrant attendee-scoped field responses.
   if (fieldResponses !== undefined) {
     const responseRows = Object.entries(fieldResponses)
       .filter(([, value]) => value !== "")
@@ -107,6 +121,24 @@ export async function createRegistration(
       }));
     if (responseRows.length > 0) {
       await admin.from("event_field_responses").insert(responseRows);
+    }
+  }
+
+  // Insert per-guest attendee-scoped field responses.
+  if (guestFieldResponses !== undefined && guestIds.length > 0) {
+    const guestResponseRows = guestFieldResponses.flatMap((responses, guestIndex) => {
+      const guestId = guestIds[guestIndex];
+      if (guestId === undefined) return [];
+      return Object.entries(responses)
+        .filter(([, value]) => value !== "")
+        .map(([fieldId, value]) => ({
+          guest_id:       guestId,
+          field_id:       fieldId,
+          response_value: value,
+        }));
+    });
+    if (guestResponseRows.length > 0) {
+      await admin.from("guest_field_responses").insert(guestResponseRows);
     }
   }
 
@@ -127,20 +159,105 @@ export async function createRegistration(
     };
   }
 
-  // Paid event — create Stripe Checkout session using resolved applied_price.
+  // ── Paid event — Stripe Checkout ──────────────────────────────────────────
+
+  // Fetch field labels so we can embed human-readable keys in session metadata.
+  const { data: eventFieldRows } = await admin
+    .from("event_fields")
+    .select("id, field_label")
+    .eq("event_id", eventId);
+
+  const fieldLabelMap: Record<string, string> = {};
+  for (const f of eventFieldRows ?? []) {
+    fieldLabelMap[f.id] = f.field_label;
+  }
+
+  // Build per-attendee metadata (max 50 Stripe key-value pairs).
+  // registration_id is always first. Remaining slots fill attendee data in order.
+  const metadataEntries: [string, string][] = [
+    ["registration_id", registration.id],
+  ];
+
+  const allAttendees = [
+    { name: data.registrant_name, responses: fieldResponses ?? {} },
+    ...data.guest_names.map((name, i) => ({
+      name,
+      responses: guestFieldResponses?.[i] ?? {},
+    })),
+  ];
+
+  let truncated = 0;
+  for (let ai = 0; ai < allAttendees.length; ai++) {
+    const attendee = allAttendees[ai];
+    if (attendee === undefined) continue;
+    if (metadataEntries.length >= 50) { truncated += 1 + Object.keys(attendee.responses).length; continue; }
+    metadataEntries.push([`attendee_${ai}_name`, attendee.name]);
+    for (const [fieldId, value] of Object.entries(attendee.responses)) {
+      if (value === "") continue;
+      if (metadataEntries.length >= 50) { truncated++; continue; }
+      const label = fieldLabelMap[fieldId];
+      if (label === undefined) continue;
+      metadataEntries.push([`attendee_${ai}_${labelToKey(label)}`, value.slice(0, 500)]);
+    }
+  }
+
+  if (truncated > 0) {
+    console.log(`[Stripe metadata] Truncated at 50 keys — ${truncated} values omitted`);
+  }
+
+  const metadata = Object.fromEntries(metadataEntries);
+
+  // Create or retrieve Stripe Customer for this member so payment history is
+  // linked to a customer record in the Stripe dashboard.
+  // TODO: Store customerId on member record when stripe_customer_id column
+  // is added to members table — deferred to main branch review
+  const existingCustomers = await stripe.customers.list({
+    email: data.email,
+    limit: 1,
+  });
+  const customerId =
+    existingCustomers.data[0]?.id ??
+    (
+      await stripe.customers.create({
+        email:    data.email,
+        name:     data.registrant_name,
+        metadata: { member_id: user.id },
+      })
+    ).id;
+
+  // Per-attendee line items — one item per person, quantity 1 each.
+  // The webhook computes amount_paid from DB values (applied_price × (1 + guest_count)),
+  // so changing line item shape here has no effect on DB-side accounting.
+  const lineItems = [
+    {
+      price_data: {
+        currency:     "usd",
+        product_data: {
+          name:     `${event.title} — ${data.registrant_name}`,
+          metadata: { attendee_index: "0", attendee_name: data.registrant_name },
+        },
+        unit_amount: Math.round(appliedPrice * 100),
+      },
+      quantity: 1,
+    },
+    ...data.guest_names.map((name, i) => ({
+      price_data: {
+        currency:     "usd",
+        product_data: {
+          name:     `${event.title} — ${name}`,
+          metadata: { attendee_index: String(i + 1), attendee_name: name },
+        },
+        unit_amount: Math.round(appliedPrice * 100),
+      },
+      quantity: 1,
+    })),
+  ];
+
   const session = await stripe.checkout.sessions.create({
     mode:       "payment",
-    line_items: [
-      {
-        price_data: {
-          currency:     "usd",
-          product_data: { name: `${event.title} — Ticket` },
-          unit_amount:  Math.round(appliedPrice * 100),
-        },
-        quantity: totalAttendees,
-      },
-    ],
-    metadata:    { registration_id: registration.id },
+    customer:   customerId,
+    line_items: lineItems,
+    metadata,
     success_url: `${APP_URL}/register/confirmation?registration_id=${registration.id}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url:  `${APP_URL}/events/${eventId}/register?cancelled=1`,
   });

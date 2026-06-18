@@ -25,7 +25,7 @@ export default async function AdminEditEventPage({ params }: Props) {
   // Load custom fields and their response counts
   const { data: fields } = await admin
     .from("event_fields")
-    .select("id, event_id, field_label, field_type, field_options, required, display_order, created_at")
+    .select("id, event_id, field_label, field_type, field_scope, field_options, required, display_order, created_at")
     .eq("event_id", id)
     .order("display_order");
 
