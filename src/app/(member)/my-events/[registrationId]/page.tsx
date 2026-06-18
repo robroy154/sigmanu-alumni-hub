@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 interface Props {
   params: Promise<{ registrationId: string }>;
@@ -27,7 +28,7 @@ export default async function RegistrationReceiptPage({ params }: Props) {
       id, registrant_name, email, phone, guest_count, payment_status,
       stripe_payment_id, submitted_at, amount_paid, applied_price,
       events(title, event_date, location, ticket_price),
-      registration_guests(guest_name),
+      registration_guests(id, guest_name),
       event_field_responses(response_value, event_fields(field_label, display_order)),
       registration_payments(id, amount, created_at, stripe_payment_id)
     `)
@@ -37,14 +38,46 @@ export default async function RegistrationReceiptPage({ params }: Props) {
 
   if (reg === null) redirect("/my-events");
 
+  const guests = (reg.registration_guests ?? []) as { id: string; guest_name: string }[];
+
+  // Fetch per-guest attendee-scoped field responses via admin client.
+  // Ownership is already verified above via session-client member_id check.
+  const admin = createAdminClient();
+  const guestIds = guests.map((g) => g.id);
+  const { data: guestResponseRows } = guestIds.length > 0
+    ? await admin
+        .from("guest_field_responses")
+        .select("id, guest_id, response_value, field_id, event_fields(field_label, display_order)")
+        .in("guest_id", guestIds)
+    : { data: [] };
+
+  type GuestResponseRow = {
+    id:            string;
+    guest_id:      string;
+    response_value: string | null;
+    field_id:      string;
+    event_fields:  { field_label: string; display_order: number } | null;
+  };
+
+  const guestResponsesByGuestId = new Map<string, GuestResponseRow[]>();
+  for (const row of (guestResponseRows ?? []) as GuestResponseRow[]) {
+    const existing = guestResponsesByGuestId.get(row.guest_id) ?? [];
+    existing.push(row);
+    guestResponsesByGuestId.set(row.guest_id, existing);
+  }
+  for (const [guestId, rows] of guestResponsesByGuestId) {
+    guestResponsesByGuestId.set(
+      guestId,
+      rows.sort((a, b) => (a.event_fields?.display_order ?? 0) - (b.event_fields?.display_order ?? 0))
+    );
+  }
+
   const event = reg.events as {
     title:        string;
     event_date:   string;
     location:     string | null;
     ticket_price: number;
   } | null;
-
-  const guests = (reg.registration_guests ?? []) as { guest_name: string }[];
 
   const fieldResponses = ((reg.event_field_responses ?? []) as {
     response_value: string | null;
@@ -115,12 +148,23 @@ export default async function RegistrationReceiptPage({ params }: Props) {
         {guests.length === 0 ? (
           <p className="text-sn-gray-text text-sm">No additional guests.</p>
         ) : (
-          <ul className="space-y-1.5">
-            {guests.map((g, i) => (
-              <li key={i} className="text-sn-off-white text-sm">
-                {g.guest_name}
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {guests.map((g, i) => {
+              const guestFieldRows = guestResponsesByGuestId.get(g.id) ?? [];
+              return (
+                <li key={i} className="space-y-1.5">
+                  <p className="text-sn-off-white text-sm">{g.guest_name}</p>
+                  {guestFieldRows.map((r) => (
+                    <div key={r.id} className="pl-4">
+                      <InfoRow
+                        label={r.event_fields?.field_label ?? "—"}
+                        value={r.response_value ?? "—"}
+                      />
+                    </div>
+                  ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Section>

@@ -19,3 +19,8 @@ export const GuestRegistrationSchema = z.object({
 });
 
 export type GuestRegistrationInput = z.infer<typeof GuestRegistrationSchema>;
+
+// guestFieldResponses is passed as a separate parameter (not in Zod schemas)
+// because it may contain file upload paths that are resolved client-side before
+// submission. Index 0 = first guest, index 1 = second guest, etc.
+export type GuestFieldResponsesInput = Array<Record<string, string>>;

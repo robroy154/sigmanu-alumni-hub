@@ -38,6 +38,7 @@ function fieldRowsToDrafts(rows: EventFieldRow[]): EventFieldDraft[] {
     id:            r.id,
     field_label:   r.field_label,
     field_type:    r.field_type as EventFieldDraft["field_type"],
+    field_scope:   (r.field_scope === "attendee" ? "attendee" : "registration") as EventFieldDraft["field_scope"],
     field_options: (r.field_options as { options: string[] } | null) ?? null,
     required:      r.required,
     display_order: r.display_order,

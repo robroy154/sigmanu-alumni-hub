@@ -121,6 +121,45 @@ export type Database = {
           },
         ]
       }
+      guest_field_responses: {
+        Row: {
+          created_at: string
+          field_id: string
+          guest_id: string
+          id: string
+          response_value: string | null
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          guest_id: string
+          id?: string
+          response_value?: string | null
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          guest_id?: string
+          id?: string
+          response_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_field_responses_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "registration_guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_field_responses_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "event_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_field_responses: {
         Row: {
           created_at: string
@@ -167,6 +206,7 @@ export type Database = {
           event_id: string
           field_label: string
           field_options: Json | null
+          field_scope: string
           field_type: string
           id: string
           required: boolean
@@ -177,6 +217,7 @@ export type Database = {
           event_id: string
           field_label: string
           field_options?: Json | null
+          field_scope?: string
           field_type: string
           id?: string
           required?: boolean
@@ -187,6 +228,7 @@ export type Database = {
           event_id?: string
           field_label?: string
           field_options?: Json | null
+          field_scope?: string
           field_type?: string
           id?: string
           required?: boolean
@@ -427,17 +469,23 @@ export type Database = {
       }
       registration_guests: {
         Row: {
+          guest_email: string | null
           guest_name: string
+          guest_phone: string | null
           id: string
           registration_id: string
         }
         Insert: {
+          guest_email?: string | null
           guest_name: string
+          guest_phone?: string | null
           id?: string
           registration_id: string
         }
         Update: {
+          guest_email?: string | null
           guest_name?: string
+          guest_phone?: string | null
           id?: string
           registration_id?: string
         }

@@ -19,12 +19,13 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, Trash2 } from "lucide-react";
-import type { FieldType } from "@/types/database";
+import type { FieldType, FieldScope } from "@/types/database";
 
 export interface EventFieldDraft {
   id:            string; // local key for dnd — not the DB id on new fields
   field_label:   string;
   field_type:    FieldType;
+  field_scope:   FieldScope;
   field_options: { options: string[] } | null;
   required:      boolean;
   display_order: number;
@@ -45,11 +46,16 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   file_upload: "File Upload",
 };
 
+// Field types that support attendee-scoped collection.
+// file_upload and long_text are always registration-scoped.
+const SCOPE_ELIGIBLE_TYPES = new Set<FieldType>(["short_text", "dropdown", "multi_select", "checkbox"]);
+
 function newField(): EventFieldDraft {
   return {
     id:            crypto.randomUUID(),
     field_label:   "",
     field_type:    "short_text",
+    field_scope:   "registration",
     field_options: null,
     required:      false,
     display_order: 0,
@@ -85,6 +91,8 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
   const needsOptions =
     field.field_type === "dropdown" || field.field_type === "multi_select";
 
+  const showScopeToggle = SCOPE_ELIGIBLE_TYPES.has(field.field_type);
+
   // Keep a local raw string for the options input so typing commas isn't
   // stripped on each keystroke. Only parse into the options array on blur.
   const [optionsText, setOptionsText] = useState(
@@ -99,9 +107,14 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
   /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleTypeChange(newType: FieldType) {
+    // If the new type doesn't support attendee scope, reset to registration.
+    const newScope: FieldScope = SCOPE_ELIGIBLE_TYPES.has(newType)
+      ? field.field_scope
+      : "registration";
     onUpdate({
       ...field,
       field_type:    newType,
+      field_scope:   newScope,
       field_options: newType === "dropdown" || newType === "multi_select"
         ? (field.field_options ?? { options: [] })
         : null,
@@ -154,6 +167,13 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
           className="flex-1 min-w-0 rounded bg-sn-black border border-white/10 text-white text-sm px-2 py-1.5 focus:outline-none focus:border-sn-gold/50 placeholder:text-white/25"
         />
 
+        {/* "Per person" badge — shown in header when scope is attendee */}
+        {field.field_scope === "attendee" && (
+          <span className="shrink-0 text-[10px] font-medium text-sn-gold border border-sn-gold/40 rounded px-1.5 py-0.5 leading-none">
+            Per person
+          </span>
+        )}
+
         {/* Type select */}
         <select
           value={field.field_type}
@@ -186,6 +206,35 @@ function SortableFieldRow({ field, index: _index, onUpdate, onDelete, hasRespons
           <Trash2 size={14} />
         </button>
       </div>
+
+      {/* Scope toggle — only for eligible field types */}
+      {showScopeToggle && (
+        <div className="pl-6 flex items-center gap-1.5">
+          <span className="text-white/40 text-xs mr-1">Collect:</span>
+          <button
+            type="button"
+            onClick={() => onUpdate({ ...field, field_scope: "registration" })}
+            className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+              field.field_scope === "registration"
+                ? "border-sn-gold text-sn-gold"
+                : "border-white/20 text-white/40 hover:border-white/40"
+            }`}
+          >
+            Whole order
+          </button>
+          <button
+            type="button"
+            onClick={() => onUpdate({ ...field, field_scope: "attendee" })}
+            className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+              field.field_scope === "attendee"
+                ? "border-sn-gold text-sn-gold"
+                : "border-white/20 text-white/40 hover:border-white/40"
+            }`}
+          >
+            Per person
+          </button>
+        </div>
+      )}
 
       {/* Options input for dropdown / multi-select */}
       {needsOptions && (

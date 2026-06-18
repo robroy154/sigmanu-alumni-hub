@@ -30,7 +30,7 @@ export default async function GuestRegisterPage({ params }: Props) {
   // Fetch custom fields for this event.
   const { data: eventFields } = await admin
     .from("event_fields")
-    .select("id, event_id, field_label, field_type, field_options, required, display_order, created_at")
+    .select("id, event_id, field_label, field_type, field_scope, field_options, required, display_order, created_at")
     .eq("event_id", event.id)
     .order("display_order");
 

@@ -77,9 +77,35 @@ AnnouncementSplash effectively surfaces important announcements. Full bell badge
 **Status:** Done
 See Settings System above.
 
-### Supabase Security Advisor SQL Revokes — Migration File
+### Security Hardening — Column-Level Access Control
+
 **Status:** Scoped
-Security advisor `REVOKE` statements (e.g. column-level revokes like `referred_by`) are currently applied manually in the Supabase dashboard and are lost on a Postgres restart. Move them into a committed migration file so they're reapplied automatically and survive restarts.
+
+Investigation revealed two distinct problems:
+
+1. **UPDATE revokes (actionable):** Four column-level UPDATE revokes are effective
+   because authenticated holds no table-level UPDATE grant on members:
+   - members.status UPDATE
+   - members.pin_number UPDATE
+   - members.id UPDATE
+   - members.created_at UPDATE
+   These should be committed in a migration once the broader issue below is resolved.
+
+2. **referred_by exposure (requires schema change):** members.referred_by is readable
+   by any authenticated member via the "members: member+ can read all" RLS policy.
+   RLS is row-level only — it cannot scope individual columns. Column-level SELECT
+   revokes are no-ops due to Supabase's table-level SELECT grant on authenticated.
+   The correct fix is Option D: move referred_by into a separate admin-only table
+   (e.g. admin_member_metadata) with restrictive RLS. This is a schema migration
+   with downstream query changes in admin panel routes.
+
+3. **stripe_payment_id and referrals.token:** Lower risk. stripe_payment_id is never
+   selected in member-facing queries. referrals.token is protected by RLS limiting
+   members to their own referral rows (referred_by = auth.uid()). Neither requires
+   urgent action but should be documented.
+
+Do not attempt a partial fix. Scope the admin_member_metadata approach as a
+dedicated session before implementing anything.
 
 ### Admin Notification Preferences
 **Status:** Scoped
@@ -89,6 +115,27 @@ Admins currently receive operational emails at `info@csusigmanu.com` only, but n
 2. **Settings system integration:** Per-admin notification preferences stored on the `members` table or a separate `admin_notification_preferences` table. Each admin can toggle which operational emails they receive (refund processed, new registration, referral claimed, member approved, etc.). When firing any admin notification, query for admins where that preference is enabled. This depends on the broader Settings System — Two-Tier Preferences Model (see Future Features below) and should be scoped together with it.
 
 Interim workaround in place: an email forwarding rule on `info@csusigmanu.com` routes relevant emails to admin accounts directly.
+
+### Per-Attendee Field Scoping
+
+**Status:** In Progress — `feature/enhanced-events` branch
+
+Adds `field_scope: "registration" | "attendee"` to custom event fields. Attendee-scoped fields are collected once per person (registrant + each guest) instead of once per order.
+
+**What's built (branch only, not merged):**
+
+- Migration `20260618000000_per_attendee_fields.sql`: `event_fields.field_scope` column, `registration_guests.guest_email/guest_phone` columns, `guest_field_responses` table
+- EventFieldsBuilder: scope toggle (Whole order / Per person) for eligible field types
+- RegistrationForm + GuestRegistrationForm: Section C (per-attendee cards) when attendee-scoped fields exist
+- `createRegistration` + `createGuestRegistration`: stores per-guest responses in `guest_field_responses`; per-attendee Stripe line items and metadata
+- Admin registration detail: displays per-guest responses below each guest name
+- Testing guide: `docs/ENHANCED_EVENTS_TESTING.md`
+
+**To complete before merge:**
+
+- Apply migration to production Supabase
+- QA per `docs/ENHANCED_EVENTS_TESTING.md`
+- Decide on `stripe_customer_id` column addition to `members` table (see TODO in `src/lib/registration/actions.ts`)
 
 ---
 

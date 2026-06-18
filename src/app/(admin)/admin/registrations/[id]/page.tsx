@@ -32,7 +32,7 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
         id, registrant_name, email, phone, guest_count, payment_status,
         stripe_payment_id, submitted_at, amount_paid, applied_price, member_id,
         events(title, event_date, location, ticket_price),
-        registration_guests(guest_name),
+        registration_guests(id, guest_name),
         event_field_responses(response_value, event_fields(field_label, display_order))
       `)
       .eq("id", id)
@@ -46,14 +46,39 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
 
   if (reg === null) notFound();
 
+  const guests = (reg.registration_guests ?? []) as { id: string; guest_name: string }[];
+
+  // Fetch per-guest attendee-scoped field responses (new table, may be empty).
+  const guestIdList = guests.map((g) => g.id);
+  const { data: guestResponseRows } = guestIdList.length > 0
+    ? await admin
+        .from("guest_field_responses")
+        .select("id, guest_id, response_value, field_id, event_fields(field_label, display_order)")
+        .in("guest_id", guestIdList)
+    : { data: [] };
+
+  // Group responses by guest_id for easy lookup.
+  type GuestResponseRow = {
+    id: string;
+    guest_id: string;
+    response_value: string | null;
+    field_id: string;
+    event_fields: { field_label: string; display_order: number } | null;
+  };
+
+  const responsesByGuestId = new Map<string, GuestResponseRow[]>();
+  for (const row of (guestResponseRows ?? []) as GuestResponseRow[]) {
+    const existing = responsesByGuestId.get(row.guest_id) ?? [];
+    existing.push(row);
+    responsesByGuestId.set(row.guest_id, existing);
+  }
+
   const event = reg.events as {
     title: string;
     event_date: string;
     location: string | null;
     ticket_price: number;
   } | null;
-
-  const guests = (reg.registration_guests ?? []) as { guest_name: string }[];
 
   const fieldResponses = ((reg.event_field_responses ?? []) as {
     response_value: string | null;
@@ -163,13 +188,30 @@ export default async function AdminRegistrationDetailPage({ params }: Props) {
         {guests.length === 0 ? (
           <p className="text-sn-gray-text text-sm">No additional guests.</p>
         ) : (
-          <ul className="space-y-1.5">
-            {guests.map((g, i) => (
-              <li key={i} className="text-sn-off-white text-sm">
-                {g.guest_name}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-3">
+            {guests.map((g, i) => {
+              const guestResponses = (responsesByGuestId.get(g.id) ?? [])
+                .slice()
+                .sort((a, b) => (a.event_fields?.display_order ?? 0) - (b.event_fields?.display_order ?? 0));
+              return (
+                <div key={i}>
+                  <p className="text-sn-off-white text-sm font-medium">
+                    {i + 1}. {g.guest_name}
+                  </p>
+                  {guestResponses.map((r, ri) => (
+                    <div key={ri} className="pl-4 flex gap-3 mt-1">
+                      <span className="w-28 shrink-0 text-sn-gray-text text-sm">
+                        {r.event_fields?.field_label ?? "—"}
+                      </span>
+                      <span className="text-sn-off-white text-sm break-all">
+                        {r.response_value ?? "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
         )}
       </Section>
 
