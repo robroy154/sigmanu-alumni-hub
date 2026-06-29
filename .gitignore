@@ -51,3 +51,4 @@ next-env.d.ts
 logs/xvba_debug.log
 logs/xvba_debug.log
 logs/xvba_debug.log
+.claude/settings.local.json
