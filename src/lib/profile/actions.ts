@@ -23,23 +23,29 @@ export async function updateProfile(
   const { error } = await supabase
     .from("members")
     .update({
-      first_name:     data.first_name,
-      last_name:      data.last_name,
-      nickname:       data.nickname ?? null,
-      pledge_class:   data.pledge_class ?? null,
-      phone:          data.phone ?? null,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      nickname: data.nickname ?? null,
+      pledge_class: data.pledge_class ?? null,
+      phone: data.phone ?? null,
       street_address: data.street_address ?? null,
-      city:           data.city ?? null,
-      state:          data.state ?? null,
-      zip:            data.zip ?? null,
-      country:        data.country ?? "USA",
-      birthday:       data.birthday ?? null,
-      linkedin_url:   data.linkedin_url ?? null,
+      city: data.city ?? null,
+      state: data.state ?? null,
+      zip: data.zip ?? null,
+      country: data.country ?? "USA",
+      birthday: data.birthday ?? null,
+      linkedin_url: data.linkedin_url ?? null,
       // Privacy toggles — undefined means "not submitted", preserve current value.
-      ...(data.show_address       !== undefined && { show_address:       data.show_address }),
-      ...(data.show_birthday      !== undefined && { show_birthday:      data.show_birthday }),
-      ...(data.show_phone         !== undefined && { show_phone:         data.show_phone }),
-      ...(data.newsletter_opt_out !== undefined && { newsletter_opt_out: data.newsletter_opt_out }),
+      ...(data.show_address !== undefined && {
+        show_address: data.show_address,
+      }),
+      ...(data.show_birthday !== undefined && {
+        show_birthday: data.show_birthday,
+      }),
+      ...(data.show_phone !== undefined && { show_phone: data.show_phone }),
+      ...(data.newsletter_opt_out !== undefined && {
+        newsletter_opt_out: data.newsletter_opt_out,
+      }),
     })
     .eq("id", user.id);
 
@@ -91,7 +97,9 @@ export async function setPinNumber(
   if (error !== null) {
     // Unique constraint violation
     if (error.code === "23505") {
-      return { error: "That pin number is already in use. Please choose another." };
+      return {
+        error: "That pin number is already in use. Please choose another.",
+      };
     }
     return { error: "Failed to set pin number. Please try again." };
   }
@@ -131,15 +139,22 @@ export async function updateBigBrother(
       .single();
 
     if (proposed?.big_id === user.id) {
-      return { error: "That member already has you as their Big — circular lineage not allowed." };
+      return {
+        error:
+          "That member already has you as their Big — circular lineage not allowed.",
+      };
     }
   }
 
-  const { error } = await supabase
+  // const { error } = await supabase
+  //   .from("members")
+  //   .update({ big_id: bigId })
+  //   .eq("id", user.id);
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("members")
     .update({ big_id: bigId })
     .eq("id", user.id);
-
   if (error !== null) {
     return { error: "Failed to update Big Brother. Please try again." };
   }
@@ -154,8 +169,8 @@ export async function updateBigBrother(
     .eq("id", user.id)
     .single();
 
-  let bigFirstName:    string | null = null;
-  let bigLastName:     string | null = null;
+  let bigFirstName: string | null = null;
+  let bigLastName: string | null = null;
   let bigMemberStatus: string | null = null;
 
   if (bigId !== null) {
@@ -165,17 +180,17 @@ export async function updateBigBrother(
       .select("first_name, last_name, status")
       .eq("id", bigId)
       .single();
-    bigFirstName      = bigMember?.first_name ?? null;
-    bigLastName       = bigMember?.last_name  ?? null;
-    bigMemberStatus   = bigMember?.status     ?? null;
+    bigFirstName = bigMember?.first_name ?? null;
+    bigLastName = bigMember?.last_name ?? null;
+    bigMemberStatus = bigMember?.status ?? null;
   }
 
   if (currentMember !== null) {
     void import("@/lib/email").then(({ sendBigBrotherSetNotification }) =>
       sendBigBrotherSetNotification({
         memberFirstName: currentMember.first_name,
-        memberLastName:  currentMember.last_name,
-        memberEmail:     currentMember.email,
+        memberLastName: currentMember.last_name,
+        memberEmail: currentMember.email,
         bigFirstName,
         bigLastName,
       })
@@ -199,10 +214,10 @@ export async function updateBigBrother(
     if (bigEmailRow !== null) {
       void import("@/lib/email").then(({ sendLittleBrotherNotification }) =>
         sendLittleBrotherNotification({
-          to:              bigEmailRow.email,
+          to: bigEmailRow.email,
           bigFirstName,
           littleFirstName: currentMember.first_name,
-          littleLastName:  currentMember.last_name,
+          littleLastName: currentMember.last_name,
         })
       );
     }
