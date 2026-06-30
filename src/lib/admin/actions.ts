@@ -110,6 +110,29 @@ export async function adminUpdateMember(
     return { error: "Failed to update member." };
   }
 
+  // Notify the big brother when an admin sets big_id for another member.
+  if (data.big_id !== undefined && data.big_id !== null) {
+    const [{ data: little }, { data: big }] = await Promise.all([
+      admin.from("members").select("first_name, last_name").eq("id", memberId).single(),
+      admin.from("members").select("first_name, last_name, email, status").eq("id", data.big_id).single(),
+    ]);
+
+    if (
+      little !== null &&
+      big !== null &&
+      (big.status === "member" || big.status === "admin")
+    ) {
+      void import("@/lib/email").then(({ sendLittleBrotherNotification }) =>
+        sendLittleBrotherNotification({
+          to:              big.email,
+          bigFirstName:    big.first_name,
+          littleFirstName: little.first_name,
+          littleLastName:  little.last_name,
+        })
+      );
+    }
+  }
+
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${memberId}`);
   revalidatePath("/admin");
