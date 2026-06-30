@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const a = await getAnnouncement(id);
   if (a === null) return {};
 
-  const plainText = a.body.replace(/<[^>]+>/g, "").slice(0, 160);
+  const plainText = a.body.replace(/[<>]/g, "").slice(0, 160);
   const canonicalSlug = a.slug ?? a.id;
 
   return {
