@@ -162,7 +162,7 @@ Key runtime decisions:
 - Tailwind v4 CSS-based config — @theme inline {} in globals.css
 - shadcn base-nova uses @base-ui/react — no Radix asChild, no form.tsx wrapper
 - exactOptionalPropertyTypes: true — optional props need explicit `| undefined`
-- Stripe API version: "2026-03-25.dahlia" (stripe npm v22)
+- Stripe API version: "2026-07-29.dahlia" (stripe npm v22)
 - pin_number: set once by member (admin client action), unique DB constraint
 - Profile photos: stored as path in members.profile_photo_url, signed URLs (1hr) server-side; cropped 1:1 at 512px before upload via react-image-crop
 - proxy.ts PUBLIC_ROUTES: `["/", "/auth/callback", "/auth/forgot-password", "/auth/reset-password", "/api/stripe", "/events", "/join"]`
