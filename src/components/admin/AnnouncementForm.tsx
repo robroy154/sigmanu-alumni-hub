@@ -234,7 +234,7 @@ export function AnnouncementForm({ adminEmail }: Props) {
             </div>
 
             {/* Announcement card — matches homepage AnnouncementCard */}
-            <div className="bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4">
+            <div className="bg-sn-surface rounded-2xl border border-white/8 px-5 py-4">
               <p className="text-sn-off-white font-semibold text-base mb-1">
                 {title.trim() !== "" ? title : <span className="text-sn-gray-medium italic">Untitled</span>}
               </p>

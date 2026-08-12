@@ -72,7 +72,7 @@ export function HomeEventsSection({
           <div key={event.id}>
             <Link
               href={eventHref(event)}
-              className="block bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
+              className="block bg-sn-surface rounded-2xl border border-white/8 px-5 py-4 hover:opacity-90 transition-opacity group"
             >
               <div className="flex items-start gap-4">
                 {/* Date badge */}

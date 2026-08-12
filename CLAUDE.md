@@ -70,22 +70,32 @@ Do not suggest alternatives to any of these without flagging it explicitly.
 ## Branding
 
 - Sigma Nu colors: Black, White, and Gold (navy was never an official color)
-- Primary Black: `#0B0B0C` — token `sn-black`
-- Secondary Black: `#121214` — token `sn-black-secondary`
+- Primary Black: `#0A0A0B` — token `sn-black`
+- Secondary Black: `#0E0E10` — token `sn-black-secondary`
+- Surface: `#16161A` — token `sn-surface`
+- Surface 2 (nested): `#1C1C1F` — token `sn-surface-2`
+- Rail (nav rail / tab bar bg): `#131315` — token `sn-rail`
 - Gold: `#C6A75E` — token `sn-gold`
-- Gold Light: `#E0C97F` — token `sn-gold-light`
+- Gold Light: `#E6CF94` — token `sn-gold-light`
 - Gray Dark: `#2A2A2E` — token `sn-gray-dark`
-- Gray Medium: `#6B6B73` — token `sn-gray-medium`
+- Gray Medium: `#75736D` — token `sn-gray-medium`
+- Gray Text: `#A6A39C` — token `sn-gray-text`
 - Gray Light: `#D1D1D6` — token `sn-gray-light`
-- Off White: `#F5F5F7` — token `sn-off-white`
+- Gray Faint (disabled/captions): `#5C5A55` — token `sn-gray-faint`
+- Off White: `#F6F4F0` — token `sn-off-white`
+- Body Text: `#ECE9E3` — token `sn-text`
+- `--radius: 0.75rem` base (up from 0.5rem); derived radii scale via `calc(var(--radius) * N)` in globals.css
 - shadcn/ui as base component library with Sigma Nu theming on top
 - Must not look like a generic template
+- Cards/tiles carry elevation via `bg-sn-surface` + `1px` `border-white/8` + `rounded-2xl` — no gold top-border accent stripe on cards. Gold is reserved for primary action fills, active nav, focus rings, prices, and eyebrow accents (e.g. "next event").
 
 ---
 
 ## Current Build Phase
 
 > **Update this section at the start of each session to reflect where you are.**
+
+**2026 Redesign — Pass 1 of 5 complete** (branch `redesign/2026`). Token repaint only, per `docs/redesign/` handoff (README.md + PROMPTS.md) — zero layout/structure change. `src/app/globals.css`: `@theme inline` brand tokens repainted to the new warmer palette (sn-black #0a0a0b, sn-black-secondary #0e0e10, sn-surface #16161a, sn-gold-light #e6cf94, sn-off-white #f6f4f0, sn-gray-text #a6a39c, sn-gray-medium #75736d) plus new tokens sn-surface-2 (#1c1c1f), sn-rail (#131315), sn-text (#ece9e3), sn-gray-faint (#5c5a55); `:root` shadcn semantic-token hex duplicates (--background/--card/--popover/--primary-foreground/--secondary/--muted-foreground/--accent/--sidebar*/--chart-2/3) updated in lockstep since they were hardcoded separately from the brand tokens, not `var()`-referencing them — an undocumented gap in the original palette, would have caused a two-tone mismatch if left alone; `--radius` 0.5rem → 0.75rem. sn-gold, sn-gray-dark, sn-gray-light left unchanged (not in the new token spec). Hardcoded old-hex outliers fixed: `src/app/layout.tsx` (Sonner toast style), `src/components/auth/BigBrotherSearch.tsx` (arbitrary `bg-[#1a1a1d]` → `bg-sn-surface`), `src/components/my-events/EventsCalendar.tsx` (react-day-picker gold-light refs). `src/components/family-tree/FamilyTreeClient.tsx`'s hardcoded `#0B0B0C` refs deliberately left as-is — full file rewrite lands in Pass 5. Gold top-border card pattern removed: `border-t-2 border-t-sn-gold` replaced with `bg-sn-surface border border-white/8 rounded-2xl` elevation-only styling across all 7 occurrences (`src/app/page.tsx` ×2, `src/app/events/[id]/page.tsx`, `src/components/my-events/MyEventsClient.tsx`, `src/components/home/HomeEventsSection.tsx`, `src/components/home/AnnouncementCard.tsx`, `src/components/admin/AnnouncementForm.tsx`). Email templates (`src/lib/email/templates/*`, `serialize-rich-text.ts`) intentionally NOT repainted — separate rendering surface outside the README's scope; follow-up tracked in `docs/BACKLOG.md`. Passes 2–5 (member app shell, home bento, registration sticky bar, family tree canvas + ⌘K) not started — each is its own branch/PR per the redesign's working rules; do not start Pass 2 without explicit go-ahead. Two conflicts flagged for Pass 3 planning: `events.capacity`/`capacity_mode` already exist (no new migration needed, contrary to the handoff's Pass 3 prompt text), and no DB-level registration-count aggregate exists yet (current capacity gate on `/events/[id]` counts paid registration rows, not guest-inclusive attendees — the home bento's "brothers going" tile should match that convention for consistency). One flagged for Pass 2/5: no Sheet/Dialog/Command primitive exists in `src/components/ui/` yet (only `alert-dialog.tsx`) — needed for the "More" sheet and ⌘K palette.
 
 Phase 30 complete. Refund flow overhaul. New shadcn-style `src/components/ui/alert-dialog.tsx` wraps `@base-ui/react/alert-dialog` (same pattern as `Dialog` usage in RichTextEditor.tsx) — exports AlertDialog/Trigger/Portal/Backdrop/Content/Header/Footer/Title/Description/Action/Cancel, Action/Cancel built on the existing Button component (destructive/ghost variants). MarkRefundedButton.tsx: trigger renamed "Mark as refunded" → "Process Refund"; inline "confirming" phase removed entirely, replaced by the new AlertDialog (open/onOpenChange state) with title "Process Refund?" and description warning the action is immediate via Stripe and irreversible; loading/done/error phases unchanged. New email template src/lib/email/templates/RefundConfirmationEmail.tsx (BaseLayout + styles.ts pattern) showing event title/date/amount refunded table + "a few business days to appear on statement" note + CTA. sendRefundConfirmation() added to src/lib/email/index.ts following the sendWaitlistPromotionNotification shape (getResend() null-guard, try/catch, fire-and-forget from the caller). markRegistrationRefunded in src/lib/admin/actions.ts: select extended to fetch registrant_name/email/amount_paid/applied_price/guest_count/event_id (fetched before the Stripe call), plus a second admin-client fetch for the event's title/event_date/ticket_price; after the DB update succeeds, fires sendRefundConfirmation via the standard `void import("@/lib/email").then(...)` fire-and-forget pattern — amountRefunded falls back to `(1 + guest_count) * (applied_price ?? ticket_price)` when amount_paid is null, matching the admin registrations list's existing estimate formula. RefundConfirmationEmail added to /admin/email-preview's template list with sample data.
 
@@ -206,9 +216,9 @@ Key runtime decisions:
 - CHAPTER_CONTACT_EMAIL env var: shown on expired/invalid invite error pages; hidden if unset
 - Token expiry maintenance: pg_cron nightly job — SQL in migration file comments, manual setup via Supabase dashboard
 - Fonts: Syne Bold (headings) and Inter (body/UI) via next/font/google; CSS vars --font-syne and --font-inter
-- New color tokens: sn-surface (#1a1a1d) for card backgrounds; sn-gray-text (#a1a1a6) for secondary text
+- New color tokens: sn-surface (#16161a) for card backgrounds; sn-gray-text (#a6a39c) for secondary text
 - Buttons: rounded-sm base, 4 canonical variants (default/outline/ghost/destructive); gold focus ring via focus-visible
-- Cards: bg-sn-surface lifts above bg-sn-black page backgrounds; event+announcement cards use border-t-2 border-t-sn-gold
+- Cards: bg-sn-surface lifts above bg-sn-black-secondary page backgrounds via bg-sn-surface + border-white/8 + rounded-2xl elevation (2026 redesign Pass 1 — replaced the earlier border-t-2 border-t-sn-gold top-accent-stripe pattern; gold no longer appears on card borders)
 - Toast: sonner library, dark theme, bottom-right, toastSuccess/toastError wrappers in src/lib/toast.ts
 - Skeleton: src/components/ui/skeleton.tsx; loading.tsx files for home, directory, profile, my-events, admin, admin/members
 - Family tree overhauled (post-Phase 22): Variation 2 warm dark color scheme — canvas `#2e2010` with `#4a3418` dot grid; nodes `#0B0B0C` bg / `1px solid #3e2e14` border / `4px solid #C6A75E` left accent / `8px` radius; selected node `2px solid #C6A75E` + shadow; non-lineage opacity 0.25; edges `smoothstep` `rgba(198,167,94,0.35)` at rest, full gold `#C6A75E` strokeWidth=2 on lineage; minimap `#1a1208` bg gold nodes; NODE_W=220 NODE_H=90 dagre nodesep=80 ranksep=120; Unclaimed badge `top:-9px right:8px` outside node border

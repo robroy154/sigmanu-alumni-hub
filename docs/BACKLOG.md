@@ -237,6 +237,10 @@ Cancel an event, auto-refund all paid registrations, and notify all registrants.
 **Status:** New
 Prevent double-refund edge cases on retries of `stripe.refunds.create()`.
 
+### Email Templates Not Repainted for 2026 Redesign
+**Status:** New
+The 2026 redesign's Pass 1 token repaint (`docs/redesign/` handoff) intentionally left `src/lib/email/templates/*.tsx` and `src/lib/email/serialize-rich-text.ts` on the old palette (`#0B0B0C`, `#121214`, `#6B6B73`, `#E0C97F`, etc.) — the handoff README never scopes transactional email, and these files hardcode hex because email HTML can't use CSS vars/Tailwind classes. Decide whether to repaint them to the new palette (sn-black #0A0A0B, sn-black-secondary #0E0E10, sn-gray-medium #75736D, sn-gold-light #E6CF94, etc.) in a dedicated pass, with real email-client testing.
+
 ---
 
 *Last updated: June 16, 2026*

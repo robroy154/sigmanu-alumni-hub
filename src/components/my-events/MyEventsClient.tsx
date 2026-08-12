@@ -168,7 +168,7 @@ function EventRow({
     <div>
       <Link
         href={`/events/${event.id}`}
-        className="block bg-sn-surface rounded-sm border-t-2 border-t-sn-gold px-5 py-4 hover:opacity-90 transition-opacity group"
+        className="block bg-sn-surface rounded-2xl border border-white/8 px-5 py-4 hover:opacity-90 transition-opacity group"
       >
         <div className="flex items-start gap-4">
           {/* Date badge */}

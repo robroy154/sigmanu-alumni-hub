@@ -39,7 +39,7 @@ export function AnnouncementCard({ id, slug, title, body, date, isPinned }: Prop
   }
 
   return (
-    <div className="bg-sn-surface rounded-xl border-t-2 border-t-sn-gold px-5 py-4">
+    <div className="bg-sn-surface rounded-2xl border border-white/8 px-5 py-4">
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 min-w-0">
           {isPinned === true && (

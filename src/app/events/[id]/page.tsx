@@ -305,7 +305,7 @@ export default async function EventDetailPage({ params }: Props) {
         {/* Event flyer */}
         {event.flyer_url !== null && (
           <div className="border-t border-white/5 pt-8">
-            <div className="mx-auto max-w-150 bg-sn-surface rounded-xl border-t-2 border-t-sn-gold border border-white/10 overflow-hidden">
+            <div className="mx-auto max-w-150 bg-sn-surface rounded-2xl border border-white/8 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={event.flyer_url}

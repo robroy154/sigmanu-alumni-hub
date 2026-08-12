@@ -60,7 +60,7 @@ export function EventsCalendar({ eventDateStrings }: Props) {
           {
             "--rdp-accent-color":      "var(--color-sn-gold, #C6A75E)",
             "--rdp-background-color":  "rgba(198,167,94,0.15)",
-            "--rdp-accent-color-dark": "var(--color-sn-gold-light, #E0C97F)",
+            "--rdp-accent-color-dark": "var(--color-sn-gold-light, #E6CF94)",
             color: "rgba(255,255,255,0.7)",
           } as React.CSSProperties
         }
@@ -76,7 +76,7 @@ export function EventsCalendar({ eventDateStrings }: Props) {
         .rdp-event-day,
         .rdp-event-day .rdp-day_button {
           background: rgba(198,167,94,0.25) !important;
-          color: #E0C97F !important;
+          color: #E6CF94 !important;
           font-weight: 700;
           border-radius: 0.375rem;
         }

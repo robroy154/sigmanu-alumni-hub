@@ -125,7 +125,7 @@ export default async function LandingPage() {
 
           {/* Featured event card */}
           {featuredEvent !== null && (
-            <div className="mt-10 bg-sn-surface border border-sn-gold/20 border-t-2 border-t-sn-gold rounded-sm px-6 py-5 max-w-md w-full text-left">
+            <div className="mt-10 bg-sn-surface border border-white/8 rounded-2xl px-6 py-5 max-w-md w-full text-left">
               <p className="text-sn-gold text-xs font-semibold uppercase tracking-widest mb-2">
                 Featured Event
               </p>
@@ -213,7 +213,7 @@ export default async function LandingPage() {
                 {(upcomingEvents ?? []).map((ev) => (
                   <div
                     key={ev.id}
-                    className="bg-sn-surface border border-sn-gold/20 border-t-2 border-t-sn-gold rounded-sm p-6 flex flex-col gap-4"
+                    className="bg-sn-surface border border-white/8 rounded-2xl p-6 flex flex-col gap-4"
                   >
                     <div className="flex-1 space-y-1.5">
                       <p className="text-sn-off-white font-bold text-lg leading-snug">

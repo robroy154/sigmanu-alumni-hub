@@ -6,16 +6,20 @@
 
 @theme inline {
   /* Sigma Nu brand color tokens — use these throughout the app */
-  --color-sn-black:           #0b0b0c;
-  --color-sn-black-secondary: #121214;
-  --color-sn-surface:         #1a1a1d;
+  --color-sn-black:           #0a0a0b;
+  --color-sn-black-secondary: #0e0e10;
+  --color-sn-surface:         #16161a;
+  --color-sn-surface-2:       #1c1c1f;
+  --color-sn-rail:            #131315;
   --color-sn-gold:            #c6a75e;
-  --color-sn-gold-light:      #e0c97f;
+  --color-sn-gold-light:      #e6cf94;
   --color-sn-gray-dark:       #2a2a2e;
-  --color-sn-gray-medium:     #6b6b73;
-  --color-sn-gray-text:       #a1a1a6;
+  --color-sn-gray-medium:     #75736d;
+  --color-sn-gray-text:       #a6a39c;
   --color-sn-gray-light:      #d1d1d6;
-  --color-sn-off-white:       #f5f5f7;
+  --color-sn-gray-faint:      #5c5a55;
+  --color-sn-off-white:       #f6f4f0;
+  --color-sn-text:            #ece9e3;
 
   /* shadcn semantic tokens mapped to CSS variables */
   --color-background: var(--background);
@@ -65,28 +69,28 @@
  * All semantic tokens default to the black/gold palette.
  */
 :root {
-  --background: #121214;                         /* sn-black-secondary */
-  --foreground: #f5f5f7;                         /* sn-off-white */
+  --background: #0e0e10;                         /* sn-black-secondary */
+  --foreground: #f6f4f0;                         /* sn-off-white */
 
-  --card: #0b0b0c;                               /* sn-black */
-  --card-foreground: #f5f5f7;
+  --card: #0a0a0b;                               /* sn-black */
+  --card-foreground: #f6f4f0;
 
-  --popover: #0b0b0c;
-  --popover-foreground: #f5f5f7;
+  --popover: #0a0a0b;
+  --popover-foreground: #f6f4f0;
 
   /* Primary = Sigma Nu Gold */
   --primary: #c6a75e;                            /* sn-gold */
-  --primary-foreground: #0b0b0c;
+  --primary-foreground: #0a0a0b;
 
   /* Secondary = dark gray surface */
   --secondary: #2a2a2e;                          /* sn-gray-dark */
-  --secondary-foreground: #f5f5f7;
+  --secondary-foreground: #f6f4f0;
 
   --muted: #2a2a2e;
-  --muted-foreground: #6b6b73;                   /* sn-gray-medium */
+  --muted-foreground: #75736d;                   /* sn-gray-medium */
 
-  --accent: #e0c97f;                             /* sn-gold-light */
-  --accent-foreground: #0b0b0c;
+  --accent: #e6cf94;                             /* sn-gold-light */
+  --accent-foreground: #0a0a0b;
 
   --destructive: oklch(0.704 0.191 22.216);
 
@@ -94,20 +98,20 @@
   --input: rgba(255, 255, 255, 0.12);
   --ring: #c6a75e;                               /* gold ring */
 
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
   --chart-1: #c6a75e;
-  --chart-2: #e0c97f;
+  --chart-2: #e6cf94;
   --chart-3: #2a2a2e;
   --chart-4: oklch(0.439 0 0);
   --chart-5: oklch(0.269 0 0);
 
-  --sidebar: #0b0b0c;
-  --sidebar-foreground: #f5f5f7;
+  --sidebar: #0a0a0b;
+  --sidebar-foreground: #f6f4f0;
   --sidebar-primary: #c6a75e;
-  --sidebar-primary-foreground: #0b0b0c;
-  --sidebar-accent: #e0c97f;
-  --sidebar-accent-foreground: #0b0b0c;
+  --sidebar-primary-foreground: #0a0a0b;
+  --sidebar-accent: #e6cf94;
+  --sidebar-accent-foreground: #0a0a0b;
   --sidebar-border: rgba(255, 255, 255, 0.10);
   --sidebar-ring: #c6a75e;
 }
@@ -133,13 +137,13 @@
 
 /* ── Rich text content renderer (RichTextContent.tsx) ─────────────────────── */
 .rich-text-content {
-  color: rgba(245, 245, 247, 0.9);
+  color: rgba(246, 244, 240, 0.9);
   line-height: 1.7;
   font-size: 0.9375rem;
 }
 .rich-text-content p { margin-bottom: 0.875rem; }
 .rich-text-content h2 {
-  color: #e0c97f;
+  color: #e6cf94;
   font-family: var(--font-syne);
   font-weight: 700;
   font-size: 1.25rem;
@@ -147,7 +151,7 @@
   margin-bottom: 0.5rem;
 }
 .rich-text-content h3 {
-  color: #e0c97f;
+  color: #e6cf94;
   font-family: var(--font-syne);
   font-weight: 700;
   font-size: 1.0625rem;
@@ -165,7 +169,7 @@
   border-left: 3px solid #c6a75e;
   padding-left: 1rem;
   margin-left: 0;
-  color: rgba(245, 245, 247, 0.6);
+  color: rgba(246, 244, 240, 0.6);
   font-style: italic;
 }
 .rich-text-content hr {
@@ -178,7 +182,7 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-.rich-text-content a:hover { color: #e0c97f; }
+.rich-text-content a:hover { color: #e6cf94; }
 .rich-text-content strong { font-weight: 600; }
 /* GIFs animate natively — no CSS change needed. max-width + height:auto prevent overflow. */
 .rich-text-content img {
@@ -251,7 +255,7 @@
 /* Tiptap editor placeholder */
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
-  color: rgba(107, 107, 115, 0.7);
+  color: rgba(117, 115, 109, 0.7);
   pointer-events: none;
   float: left;
   height: 0;

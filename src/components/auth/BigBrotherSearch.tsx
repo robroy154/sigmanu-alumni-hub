@@ -146,7 +146,7 @@ export function BigBrotherSearch({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-white/20 bg-[#1a1a1d] shadow-xl overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-white/20 bg-sn-surface shadow-xl overflow-hidden">
           <div className="max-h-52 overflow-y-auto">
             {loading && (
               <div className="px-3 py-2.5 text-white/40 text-sm">Searching…</div>
