@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AnnouncementCard } from "@/components/home/AnnouncementCard";
 import { AnnouncementSplash } from "@/components/home/AnnouncementSplash";
-import { HomeEventsSection } from "@/components/home/HomeEventsSection";
+import { NextEventTile } from "@/components/home/NextEventTile";
+import { LineageTile } from "@/components/home/LineageTile";
+import { StatTile } from "@/components/home/StatTile";
+import { eventHref } from "@/lib/events/slug";
 import { Users, GitBranch, User, Calendar, ExternalLink } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -18,18 +21,22 @@ export default async function HomePage() {
   } = await supabase.auth.getUser();
 
   const admin = createAdminClient();
+  const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
 
-  // Parallel fetches: member info, upcoming events, birthdays, announcements
-  const [memberResult, eventsResult, birthdayResult, announcementsResult, dismissedResult] = await Promise.all([
+  // Parallel fetches: member info, upcoming events, birthdays, announcements, bento stats
+  const [
+    memberResult, eventsResult, birthdayResult, announcementsResult, dismissedResult,
+    littlesResult, brothersCountResult, brothersThisYearResult, eventsBadgeResult,
+  ] = await Promise.all([
     supabase
       .from("members")
-      .select("first_name, status")
+      .select("first_name, last_name, status, big_id, pledge_class")
       .eq("id", user!.id)
       .single(),
 
     supabase
       .from("events")
-      .select("id, slug, title, event_date, location, ticket_price, registration_open")
+      .select("id, slug, title, event_date, location, ticket_price, registration_open, capacity, capacity_mode")
       .eq("status", "published")
       .gte("event_date", new Date().toISOString())
       .order("event_date", { ascending: true })
@@ -56,6 +63,30 @@ export default async function HomePage() {
       .from("dismissed_announcements")
       .select("announcement_id")
       .eq("member_id", user!.id),
+
+    // Littles: members whose big_id points to the current user
+    supabase
+      .from("members")
+      .select("id, first_name, last_name")
+      .eq("big_id", user!.id),
+
+    supabase
+      .from("members")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["member", "admin"]),
+
+    supabase
+      .from("members")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["member", "admin"])
+      .gte("created_at", yearStart),
+
+    supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "published")
+      .eq("registration_open", true)
+      .gte("event_date", new Date().toISOString()),
   ]);
 
   const member        = memberResult.data;
@@ -63,35 +94,39 @@ export default async function HomePage() {
   const allBirthdays  = birthdayResult.data ?? [];
   const announcements = announcementsResult.data ?? [];
   const dismissedIds  = new Set((dismissedResult.data ?? []).map((d) => d.announcement_id));
+  const littles        = littlesResult.data ?? [];
+  const brothersCount  = brothersCountResult.count ?? 0;
+  const brothersThisYear = brothersThisYearResult.count ?? 0;
+  const eventsBadgeCount = eventsBadgeResult.count ?? 0;
+
+  const nextEvent = events[0] ?? null;
+
+  const [bigResult, nextEventPaidResult] = await Promise.all([
+    member?.big_id
+      ? supabase.from("members").select("id, first_name, last_name").eq("id", member.big_id).single()
+      : Promise.resolve({ data: null }),
+    nextEvent !== null
+      ? admin.from("registrations").select("id", { count: "exact", head: true }).eq("event_id", nextEvent.id).eq("payment_status", "paid")
+      : Promise.resolve({ count: 0 }),
+  ]);
+  const bigMember = bigResult.data;
+  const nextEventRegisteredCount = "count" in nextEventPaidResult ? (nextEventPaidResult.count ?? 0) : 0;
 
   // First undismissed show_on_login announcement to display as a splash.
   const splashAnnouncement = announcements.find(
     (a) => a.show_on_login && !dismissedIds.has(a.id)
   ) ?? null;
 
-  // Fetch this user's registrations for the upcoming events shown on the home page.
-  const eventIds = events.map((e) => e.id);
-  const myRegistrations =
-    eventIds.length > 0
-      ? ((
-          await supabase
-            .from("registrations")
-            .select("id, event_id, guest_count, payment_status")
-            .eq("member_id", user!.id)
-            .in("event_id", eventIds)
-        ).data ?? [])
-      : ([] as { id: string; event_id: string; guest_count: number; payment_status: string }[]);
-
-  const regIds = myRegistrations.map((r) => r.id);
-  const myGuests =
-    regIds.length > 0
-      ? ((
-          await supabase
-            .from("registration_guests")
-            .select("id, registration_id, guest_name")
-            .in("registration_id", regIds)
-        ).data ?? [])
-      : ([] as { id: string; registration_id: string; guest_name: string }[]);
+  // Fetch this user's registration for the next event shown in the bento's hero tile.
+  const myRegistrations = nextEvent !== null
+    ? ((
+        await supabase
+          .from("registrations")
+          .select("id, event_id")
+          .eq("member_id", user!.id)
+          .eq("event_id", nextEvent.id)
+      ).data ?? [])
+    : ([] as { id: string; event_id: string }[]);
 
   // Filter birthdays to current month
   const nowMonth = new Date().getMonth() + 1; // 1-indexed
@@ -110,9 +145,13 @@ export default async function HomePage() {
 
   const alumnisFbUrl  = process.env.NEXT_PUBLIC_ALUMNI_FB_URL ?? "";
   const chapterFbUrl  = process.env.NEXT_PUBLIC_ACTIVE_CHAPTER_FB_URL ?? "";
+  const isRegisteredForNextEvent = nextEvent !== null && myRegistrations.some((r) => r.event_id === nextEvent.id);
+  const pinnedAnnouncement = announcements[0] ?? null;
+  const now = new Date();
+  const dateLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-4">
       {/* Announcement login splash */}
       {splashAnnouncement !== null && (
         <AnnouncementSplash
@@ -122,121 +161,127 @@ export default async function HomePage() {
         />
       )}
 
-      {/* Welcome header */}
-      <div>
-        <h1 className="text-sn-off-white text-3xl font-bold">
-          Welcome back{member?.first_name ? `, ${member.first_name}` : ""}
-        </h1>
-        <p className="text-sn-gray-medium text-sm mt-1">
-          Sigma Nu · Mu Xi Chapter Alumni Hub
-        </p>
+      {/* Greeting row */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="font-heading text-sn-off-white text-[26px] leading-tight">
+            Welcome back{member?.first_name ? `, ${member.first_name}` : ""}
+          </h1>
+          <p className="text-sn-gray-medium text-[12.5px] mt-1">
+            {dateLabel} · {eventsBadgeCount} {eventsBadgeCount === 1 ? "event" : "events"} open for registration
+          </p>
+        </div>
+        {nextEvent !== null && (
+          <Link
+            href={eventHref(nextEvent)}
+            className="bg-sn-gold text-sn-black-secondary font-semibold text-[12.5px] rounded-lg px-3.75 py-2.25 hover:bg-sn-gold-light transition-colors"
+          >
+            {isRegisteredForNextEvent ? "Manage registration" : `Register for ${nextEvent.title}`}
+          </Link>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main column */}
-        <div className="lg:col-span-2 space-y-8">
+      {/* Bento grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.25">
+        {nextEvent !== null ? (
+          <NextEventTile
+            event={nextEvent}
+            registeredCount={nextEventRegisteredCount}
+            isRegistered={isRegisteredForNextEvent}
+          />
+        ) : (
+          <div className="md:col-span-2 lg:row-span-2 bg-sn-surface border border-white/8 rounded-2xl p-5 flex items-center justify-center text-center">
+            <p className="text-sn-gray-text text-sm">No upcoming events at this time. Check back soon.</p>
+          </div>
+        )}
 
-          {/* Upcoming events */}
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sn-off-white font-semibold">Upcoming Events</h2>
-              <Link
-                href="/events"
-                className="text-sn-gold text-xs hover:text-sn-gold-light transition-colors"
-              >
-                View all →
-              </Link>
-            </div>
-            <HomeEventsSection
-              events={events}
-              myRegistrations={myRegistrations}
-              myGuests={myGuests}
+        <LineageTile
+          you={{ id: user!.id, first_name: member?.first_name ?? "You", last_name: member?.last_name ?? "" }}
+          big={bigMember}
+          littles={littles}
+        />
+
+        <StatTile eyebrow="Brothers" numeral={brothersCount.toLocaleString()} caption={`+${brothersThisYear} this year`} />
+        <StatTile
+          eyebrow="Birthdays"
+          numeral={birthdays.length}
+          caption={birthdays.length > 0 ? birthdays.map((m) => m.last_name).join(", ") : "None this month"}
+        />
+
+        {pinnedAnnouncement !== null && (
+          <div className="md:col-span-2 lg:col-span-3">
+            <AnnouncementCard
+              id={pinnedAnnouncement.id}
+              slug={pinnedAnnouncement.slug ?? null}
+              title={pinnedAnnouncement.title}
+              body={pinnedAnnouncement.body}
+              date={pinnedAnnouncement.created_at}
+              isPinned={pinnedAnnouncement.is_pinned}
             />
-          </section>
+          </div>
+        )}
 
-          {/* Announcements */}
-          {announcements.length > 0 && (
-            <section>
-              <h2 className="text-sn-off-white font-semibold mb-4">Announcements</h2>
-              <div className="space-y-3">
-                {announcements.map((a) => (
-                  <AnnouncementCard
-                    key={a.id}
-                    id={a.id}
-                    slug={a.slug ?? null}
-                    title={a.title}
-                    body={a.body}
-                    date={a.created_at}
-                    isPinned={a.is_pinned}
-                  />
-                ))}
-              </div>
-            </section>
+        <div className="bg-sn-surface border border-white/8 rounded-2xl overflow-hidden divide-y divide-white/5">
+          <QuickLink href="/directory"   label="Brother Directory"         Icon={Users} />
+          <QuickLink href="/family-tree" label="Family Tree"               Icon={GitBranch} />
+          <QuickLink href="/profile"     label="My Profile"                Icon={User} />
+          <QuickLink href="/my-events"   label="My Events"                 Icon={Calendar} />
+          {alumnisFbUrl !== "" && (
+            <QuickLink href={alumnisFbUrl} label="Alumni Facebook Group"   Icon={ExternalLink} external />
+          )}
+          {chapterFbUrl !== "" && (
+            <QuickLink href={chapterFbUrl} label="Active Chapter Facebook" Icon={ExternalLink} external />
           )}
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-8">
-
-          {/* Birthdays this month */}
-          <section>
-            <h2 className="text-sn-off-white font-semibold mb-3">
-              Birthdays This Month
-            </h2>
-            <div className="bg-sn-surface rounded-xl overflow-hidden">
-              {birthdays.length === 0 ? (
-                <p className="text-sn-gray-medium text-sm text-center py-6">
-                  No birthdays this month.
-                </p>
-              ) : (
-                <div className="divide-y divide-white/5">
-                  {birthdays.map((m) => {
-                    const parts = (m.birthday ?? "").split("-");
-                    const day = parts[2] ? parseInt(parts[2], 10) : null;
-                    return (
-                      <div
-                        key={m.id}
-                        className="px-4 py-2.5 flex items-center justify-between gap-2"
-                      >
-                        <Link
-                          href={`/profile/${m.id}`}
-                          className="text-sn-off-white text-sm hover:text-sn-gold-light transition-colors"
-                        >
-                          {m.first_name} {m.last_name}
-                        </Link>
-                        {day !== null && (
-                          <span className="text-sn-gray-medium text-xs">
-                            {new Date(0, nowMonth - 1, day).toLocaleDateString("en-US", {
-                              month: "short", day: "numeric",
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Quick links */}
-          <section>
-            <h2 className="text-sn-off-white font-semibold mb-3">Quick Links</h2>
-            <div className="bg-sn-surface rounded-xl overflow-hidden divide-y divide-white/5">
-              <QuickLink href="/directory"   label="Brother Directory"         Icon={Users} />
-              <QuickLink href="/family-tree" label="Family Tree"               Icon={GitBranch} />
-              <QuickLink href="/profile"     label="My Profile"                Icon={User} />
-              <QuickLink href="/my-events"   label="My Events"                 Icon={Calendar} />
-              {alumnisFbUrl !== "" && (
-                <QuickLink href={alumnisFbUrl} label="Alumni Facebook Group"   Icon={ExternalLink} external />
-              )}
-              {chapterFbUrl !== "" && (
-                <QuickLink href={chapterFbUrl} label="Active Chapter Facebook" Icon={ExternalLink} external />
-              )}
-            </div>
-          </section>
-        </div>
       </div>
+
+      {/* Birthdays this month (full list, beyond the stat tile's names-only caption) */}
+      {birthdays.length > 0 && (
+        <section className="pt-2">
+          <h2 className="text-sn-off-white font-semibold mb-3 text-sm">Birthdays This Month</h2>
+          <div className="bg-sn-surface border border-white/8 rounded-2xl overflow-hidden divide-y divide-white/5">
+            {birthdays.map((m) => {
+              const parts = (m.birthday ?? "").split("-");
+              const day = parts[2] ? parseInt(parts[2], 10) : null;
+              return (
+                <div key={m.id} className="px-4 py-2.5 flex items-center justify-between gap-2">
+                  <Link
+                    href={`/profile/${m.id}`}
+                    className="text-sn-off-white text-sm hover:text-sn-gold-light transition-colors"
+                  >
+                    {m.first_name} {m.last_name}
+                  </Link>
+                  {day !== null && (
+                    <span className="text-sn-gray-medium text-xs">
+                      {new Date(0, nowMonth - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Remaining announcements beyond the pinned bento tile */}
+      {announcements.length > 1 && (
+        <section className="pt-2">
+          <h2 className="text-sn-off-white font-semibold mb-3 text-sm">More Announcements</h2>
+          <div className="space-y-3">
+            {announcements.slice(1).map((a) => (
+              <AnnouncementCard
+                key={a.id}
+                id={a.id}
+                slug={a.slug ?? null}
+                title={a.title}
+                body={a.body}
+                date={a.created_at}
+                isPinned={a.is_pinned}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
