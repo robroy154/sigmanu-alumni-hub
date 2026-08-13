@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Calendar, Users, GitBranch, Ticket, Search } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
 import { getAccountMenuItems } from "./accountMenuItems";
+import { useCommandPalette } from "./CommandPaletteContext";
 
 interface AppRailProps {
   firstName: string | null;
@@ -28,6 +29,7 @@ export function AppRail({ firstName, lastName, pledgeClass, isAdmin, photoUrl, e
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { open: openCommandPalette } = useCommandPalette();
 
   const initials = [firstName?.[0], lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
   const menuItems = getAccountMenuItems(isAdmin, false);
@@ -67,10 +69,10 @@ export function AppRail({ firstName, lastName, pledgeClass, isAdmin, photoUrl, e
 
       <button
         type="button"
-        disabled
+        onClick={openCommandPalette}
         aria-label="Search"
-        title="Search (coming soon)"
-        className="flex items-center gap-2 rounded-[9px] bg-sn-surface-2 border border-white/8 px-2.5 py-2 text-sn-gray-medium cursor-default"
+        title="Search brothers and events"
+        className="flex items-center gap-2 rounded-[9px] bg-sn-surface-2 border border-white/8 px-2.5 py-2 text-sn-gray-medium hover:bg-white/5 transition-colors"
       >
         <Search size={14} className="shrink-0" />
         <span className="hidden lg:block flex-1 text-left text-[11.5px]">Search</span>

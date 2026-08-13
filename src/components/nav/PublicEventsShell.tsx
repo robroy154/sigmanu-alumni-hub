@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppRail } from "./AppRail";
 import { TabBar } from "./TabBar";
 import { MobileHeader } from "./MobileHeader";
+import { CommandPaletteProvider } from "./CommandPaletteContext";
 
 // Wraps /events pages in the member app shell when the visitor is signed in,
 // so navigating there from /home doesn't feel like leaving the app. Renders
@@ -38,6 +39,7 @@ export async function PublicEventsShell({ children }: { children: React.ReactNod
     .gte("event_date", new Date().toISOString());
 
   return (
+    <CommandPaletteProvider>
     <div className="min-h-screen bg-sn-black-secondary md:grid md:grid-cols-[auto_1fr]">
       <AppRail
         firstName={member?.first_name ?? null}
@@ -58,5 +60,6 @@ export async function PublicEventsShell({ children }: { children: React.ReactNod
       </div>
       <TabBar />
     </div>
+    </CommandPaletteProvider>
   );
 }

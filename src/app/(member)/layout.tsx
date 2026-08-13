@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppRail } from "@/components/nav/AppRail";
 import { TabBar } from "@/components/nav/TabBar";
 import { MobileHeader } from "@/components/nav/MobileHeader";
+import { CommandPaletteProvider } from "@/components/nav/CommandPaletteContext";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 
 export default async function MemberLayout({
@@ -44,6 +45,7 @@ export default async function MemberLayout({
   const year = new Date().getFullYear();
 
   return (
+    <CommandPaletteProvider>
     <div className="min-h-screen bg-sn-black-secondary md:grid md:grid-cols-[auto_1fr]">
       <AppRail
         firstName={member?.first_name ?? null}
@@ -86,5 +88,6 @@ export default async function MemberLayout({
       </div>
       <TabBar />
     </div>
+    </CommandPaletteProvider>
   );
 }
