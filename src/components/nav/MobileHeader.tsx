@@ -13,6 +13,7 @@ interface MobileHeaderProps {
 
 const PAGE_TITLES: Record<string, string> = {
   "/home": "Home",
+  "/events": "Events",
   "/directory": "Directory",
   "/family-tree": "Family Tree",
   "/my-events": "My Events",

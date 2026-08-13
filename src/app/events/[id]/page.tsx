@@ -11,6 +11,7 @@ import { ICalButton } from "@/components/events/ICalButton";
 import { WaitlistForm } from "@/components/events/WaitlistForm";
 import { eventLookupFilter } from "@/lib/events/slug";
 import { CalendarDays, ChevronLeft, MapPin, Ticket, ExternalLink } from "lucide-react";
+import { PublicEventsShell } from "@/components/nav/PublicEventsShell";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -133,45 +134,37 @@ export default async function EventDetailPage({ params }: Props) {
 
   const slug = event.slug ?? event.id;
 
-  return (
+  const content = (
     <div className="min-h-screen bg-sn-black flex flex-col">
 
-      {/* Header */}
-      <header className="border-b border-sn-gold/20 px-6 py-4 relative z-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
-              ΣΝ
-            </div>
-            <div>
-              <p className="text-sn-gold font-semibold text-sm leading-none">Sigma Nu Fraternity</p>
-              <p className="text-white/50 text-xs leading-none mt-0.5">Mu Xi Chapter · Columbus State University</p>
-            </div>
-          </Link>
-          <nav className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <Link href="/home">
-                <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
-                  Member Home
+      {/* Header — anonymous visitors only; signed-in members get the app shell nav instead */}
+      {!isLoggedIn && (
+        <header className="border-b border-sn-gold/20 px-6 py-4 relative z-10">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
+                ΣΝ
+              </div>
+              <div>
+                <p className="text-sn-gold font-semibold text-sm leading-none">Sigma Nu Fraternity</p>
+                <p className="text-white/50 text-xs leading-none mt-0.5">Mu Xi Chapter · Columbus State University</p>
+              </div>
+            </Link>
+            <nav className="flex items-center gap-3">
+              <Link href="/login">
+                <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
+                  Member Login
                 </Button>
               </Link>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
-                    Member Login
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
-                    Create Account
-                  </Button>
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+              <Link href="/signup">
+                <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
+                  Create Account
+                </Button>
+              </Link>
+            </nav>
+          </div>
+        </header>
+      )}
 
       {/* Breadcrumb */}
       <div className="max-w-4xl mx-auto w-full px-6 pt-6">
@@ -398,4 +391,6 @@ export default async function EventDetailPage({ params }: Props) {
       </footer>
     </div>
   );
+
+  return isLoggedIn ? <PublicEventsShell>{content}</PublicEventsShell> : content;
 }

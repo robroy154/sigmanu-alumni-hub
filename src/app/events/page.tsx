@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { MapPin, Ticket, CalendarOff } from "lucide-react";
 import { eventHref } from "@/lib/events/slug";
+import { PublicEventsShell } from "@/components/nav/PublicEventsShell";
 
 export const metadata: Metadata = { title: "Events — Sigma Nu Mu Xi Alumni" };
 
@@ -26,44 +27,36 @@ export default async function EventsPage() {
   const upcoming = events.filter((e) => new Date(e.event_date) >= now);
   const past     = events.filter((e) => new Date(e.event_date) <  now).reverse();
 
-  return (
+  const content = (
     <div className="min-h-screen bg-sn-black flex flex-col">
-      {/* Header */}
-      <header className="border-b border-sn-gold/20 px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
-              ΣΝ
-            </div>
-            <div>
-              <p className="text-sn-gold font-semibold text-sm leading-none">Sigma Nu Fraternity</p>
-              <p className="text-white/50 text-xs leading-none mt-0.5">Mu Xi Chapter · Columbus State University</p>
-            </div>
-          </Link>
-          <nav className="flex items-center gap-3">
-            {isLoggedIn ? (
-              <Link href="/home">
-                <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
-                  Member Home
+      {/* Header — anonymous visitors only; signed-in members get the app shell nav instead */}
+      {!isLoggedIn && (
+        <header className="border-b border-sn-gold/20 px-6 py-4">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-sn-gold flex items-center justify-center text-sn-black font-bold text-xs select-none">
+                ΣΝ
+              </div>
+              <div>
+                <p className="text-sn-gold font-semibold text-sm leading-none">Sigma Nu Fraternity</p>
+                <p className="text-white/50 text-xs leading-none mt-0.5">Mu Xi Chapter · Columbus State University</p>
+              </div>
+            </Link>
+            <nav className="flex items-center gap-3">
+              <Link href="/login">
+                <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
+                  Member Login
                 </Button>
               </Link>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm" className="text-white/80 hover:text-white hover:bg-white/10">
-                    Member Login
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
-                    Create Account
-                  </Button>
-                </Link>
-              </>
-            )}
-          </nav>
-        </div>
-      </header>
+              <Link href="/signup">
+                <Button size="sm" className="bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold">
+                  Create Account
+                </Button>
+              </Link>
+            </nav>
+          </div>
+        </header>
+      )}
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-12">
         {/* Page title */}
@@ -111,6 +104,8 @@ export default async function EventsPage() {
       </footer>
     </div>
   );
+
+  return isLoggedIn ? <PublicEventsShell>{content}</PublicEventsShell> : content;
 }
 
 interface EventCardProps {
@@ -131,7 +126,7 @@ function EventCard({ event, isLoggedIn, past = false }: EventCardProps) {
   const eventDate = new Date(event.event_date);
 
   return (
-    <Link href={eventHref(event)} className={`block bg-sn-surface rounded-sm border-t-2 ${past ? "border-t-sn-gray-dark hover:border-t-sn-gray-medium" : "border-t-sn-gold hover:bg-sn-surface/80"} px-5 py-5 transition-colors`}>
+    <Link href={eventHref(event)} className={`block bg-sn-surface rounded-2xl border border-white/8 px-5 py-5 transition-colors ${past ? "opacity-70" : "hover:bg-sn-surface/80"}`}>
       <div className="flex items-start gap-4">
         {/* Date badge */}
         <div className={`shrink-0 text-center rounded-sm px-3 py-2 min-w-[52px] border ${
