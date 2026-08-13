@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import {
-  FamilyTreeClient,
-  type FamilyTreeMember,
-} from "@/components/family-tree/FamilyTreeClient";
+import { FamilyTreeCanvas } from "@/components/family-tree/FamilyTreeCanvas";
+import { FamilyTreeMobileChain } from "@/components/family-tree/FamilyTreeMobileChain";
+import type { FamilyTreeMember } from "@/components/family-tree/types";
 import { GitFork } from "lucide-react";
 
 export const metadata: Metadata = { title: "Family Tree" };
@@ -73,9 +72,7 @@ export default async function FamilyTreePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-white text-2xl font-bold">Chapter Family Tree</h1>
-      </div>
+      <h1 className="hidden md:block text-white text-2xl font-bold">Chapter Family Tree</h1>
 
       {treeMembers.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -83,7 +80,14 @@ export default async function FamilyTreePage() {
           <p className="text-sn-gray-text text-sm">No family tree data yet. Members can add their big brother from their profile.</p>
         </div>
       ) : (
-        <FamilyTreeClient members={treeMembers} viewerStatus={viewerStatus} />
+        <>
+          <div className="hidden md:block">
+            <FamilyTreeCanvas members={treeMembers} viewerId={user.id} viewerStatus={viewerStatus} />
+          </div>
+          <div className="md:hidden">
+            <FamilyTreeMobileChain members={treeMembers} viewerId={user.id} />
+          </div>
+        </>
       )}
     </div>
   );
