@@ -36,14 +36,19 @@ export default function HomeLoading() {
           </div>
         </div>
 
-        {/* Stat tiles */}
-        {[1, 2].map((i) => (
-          <div key={i} className="bg-sn-surface border border-white/8 rounded-2xl p-4.5 space-y-2">
-            <Skeleton className="h-3 w-16" />
-            <Skeleton className="h-8 w-14" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        ))}
+        {/* Brothers stat tile */}
+        <div className="bg-sn-surface border border-white/8 rounded-2xl p-4.5 space-y-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-8 w-14" />
+          <Skeleton className="h-3 w-24" />
+        </div>
+
+        {/* Birthdays tile (list) */}
+        <div className="bg-sn-surface border border-white/8 rounded-2xl p-4.5 space-y-2.5">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
 
         {/* Announcement — span 3 */}
         <div className="md:col-span-2 lg:col-span-3 bg-sn-surface border border-white/8 rounded-2xl p-4.5 space-y-3">
@@ -51,13 +56,6 @@ export default function HomeLoading() {
           <Skeleton className="h-4 w-1/2" />
           <Skeleton className="h-3 w-full" />
           <Skeleton className="h-3 w-2/3" />
-        </div>
-
-        {/* Quick links */}
-        <div className="bg-sn-surface border border-white/8 rounded-2xl p-4.5 space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-4 w-full" />
-          ))}
         </div>
       </div>
     </div>

@@ -8,8 +8,9 @@ import { AnnouncementSplash } from "@/components/home/AnnouncementSplash";
 import { NextEventTile } from "@/components/home/NextEventTile";
 import { LineageTile } from "@/components/home/LineageTile";
 import { StatTile } from "@/components/home/StatTile";
+import { BirthdaysTile } from "@/components/home/BirthdaysTile";
 import { eventHref } from "@/lib/events/slug";
-import { Users, GitBranch, User, Calendar, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export const metadata: Metadata = { title: "Home — Sigma Nu Mu Xi Alumni" };
@@ -143,6 +144,15 @@ export default async function HomePage() {
     return dayA - dayB;
   });
 
+  const birthdayPeople = birthdays.map((m) => {
+    const day = parseInt((m.birthday ?? "").split("-")[2] ?? "0", 10);
+    return {
+      id: m.id,
+      name: `${m.first_name} ${m.last_name}`,
+      dateLabel: new Date(0, nowMonth - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    };
+  });
+
   const alumnisFbUrl  = process.env.NEXT_PUBLIC_ALUMNI_FB_URL ?? "";
   const chapterFbUrl  = process.env.NEXT_PUBLIC_ACTIVE_CHAPTER_FB_URL ?? "";
   const isRegisteredForNextEvent = nextEvent !== null && myRegistrations.some((r) => r.event_id === nextEvent.id);
@@ -202,11 +212,7 @@ export default async function HomePage() {
         />
 
         <StatTile eyebrow="Brothers" numeral={brothersCount.toLocaleString()} caption={`+${brothersThisYear} this year`} />
-        <StatTile
-          eyebrow="Birthdays"
-          numeral={birthdays.length}
-          caption={birthdays.length > 0 ? birthdays.map((m) => m.last_name).join(", ") : "None this month"}
-        />
+        <BirthdaysTile people={birthdayPeople} />
 
         {pinnedAnnouncement !== null && (
           <div className="md:col-span-2 lg:col-span-3">
@@ -221,11 +227,11 @@ export default async function HomePage() {
           </div>
         )}
 
+        {/* External links only — Directory/Family Tree/My Profile/My Events are already
+            one click away in the persistent rail/tab bar, so listing them again here was
+            pure duplication. Tile itself is omitted when neither FB URL is configured. */}
+        {(alumnisFbUrl !== "" || chapterFbUrl !== "") && (
         <div className="bg-sn-surface border border-white/8 rounded-2xl overflow-hidden divide-y divide-white/5">
-          <QuickLink href="/directory"   label="Brother Directory"         Icon={Users} />
-          <QuickLink href="/family-tree" label="Family Tree"               Icon={GitBranch} />
-          <QuickLink href="/profile"     label="My Profile"                Icon={User} />
-          <QuickLink href="/my-events"   label="My Events"                 Icon={Calendar} />
           {alumnisFbUrl !== "" && (
             <QuickLink href={alumnisFbUrl} label="Alumni Facebook Group"   Icon={ExternalLink} external />
           )}
@@ -233,6 +239,7 @@ export default async function HomePage() {
             <QuickLink href={chapterFbUrl} label="Active Chapter Facebook" Icon={ExternalLink} external />
           )}
         </div>
+        )}
       </div>
 
       {/* Remaining announcements beyond the pinned bento tile — eyebrow label matches the
