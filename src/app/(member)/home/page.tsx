@@ -235,38 +235,14 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Birthdays this month (full list, beyond the stat tile's names-only caption) */}
-      {birthdays.length > 0 && (
-        <section className="pt-2">
-          <h2 className="text-sn-off-white font-semibold mb-3 text-sm">Birthdays This Month</h2>
-          <div className="bg-sn-surface border border-white/8 rounded-2xl overflow-hidden divide-y divide-white/5">
-            {birthdays.map((m) => {
-              const parts = (m.birthday ?? "").split("-");
-              const day = parts[2] ? parseInt(parts[2], 10) : null;
-              return (
-                <div key={m.id} className="px-4 py-2.5 flex items-center justify-between gap-2">
-                  <Link
-                    href={`/profile/${m.id}`}
-                    className="text-sn-off-white text-sm hover:text-sn-gold-light transition-colors"
-                  >
-                    {m.first_name} {m.last_name}
-                  </Link>
-                  {day !== null && (
-                    <span className="text-sn-gray-medium text-xs">
-                      {new Date(0, nowMonth - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Remaining announcements beyond the pinned bento tile */}
+      {/* Remaining announcements beyond the pinned bento tile — eyebrow label matches the
+          bento system's micro-label typography (NextEventTile/StatTile) rather than the
+          old plain-heading pattern, so it reads as part of the redesign, not bolted on. */}
       {announcements.length > 1 && (
-        <section className="pt-2">
-          <h2 className="text-sn-off-white font-semibold mb-3 text-sm">More Announcements</h2>
+        <section className="pt-2 space-y-3">
+          <p className="text-sn-gray-medium text-[10px] font-semibold tracking-[0.16em] uppercase px-0.5">
+            More Announcements
+          </p>
           <div className="space-y-3">
             {announcements.slice(1).map((a) => (
               <AnnouncementCard
