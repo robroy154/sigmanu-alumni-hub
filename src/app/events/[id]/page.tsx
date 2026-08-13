@@ -61,6 +61,7 @@ export default async function EventDetailPage({ params }: Props) {
   // Pre-fill for waitlist form (authenticated users)
   let prefillName  = "";
   const prefillEmail = user?.email ?? "";
+  let isRegistered = false;
   if (isLoggedIn && user !== null) {
     const { data: member } = await supabase
       .from("members")
@@ -70,6 +71,13 @@ export default async function EventDetailPage({ params }: Props) {
     if (member !== null) {
       prefillName = `${member.first_name} ${member.last_name}`.trim();
     }
+    const { data: myReg } = await supabase
+      .from("registrations")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("member_id", user.id)
+      .maybeSingle();
+    isRegistered = myReg !== null;
   }
 
   // ── Computed booleans ────────────────────────────────────────────────────────
@@ -321,7 +329,18 @@ export default async function EventDetailPage({ params }: Props) {
 
         {/* CTA section */}
         <div className="border-t border-white/5 pt-8 space-y-4">
-          {showWaitlist ? (
+          {isRegistered ? (
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 text-sn-gold text-sm font-medium bg-sn-gold/10 border border-sn-gold/20 rounded-full px-3 py-1.5">
+                ✓ Registered
+              </span>
+              <Link href="/my-events">
+                <Button size="lg" variant="outline" className="bg-transparent border-white/30 text-white hover:bg-white/10 px-8">
+                  Manage registration
+                </Button>
+              </Link>
+            </div>
+          ) : showWaitlist ? (
             <WaitlistForm
               eventId={event.id}
               prefillName={prefillName}

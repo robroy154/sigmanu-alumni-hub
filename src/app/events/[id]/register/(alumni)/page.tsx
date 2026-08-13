@@ -22,11 +22,20 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
   const filter = eventLookupFilter(id);
   const { data: event } = await (
     filter.column === "id"
-      ? admin.from("events").select("id, title, description, event_date, location, ticket_price").eq("id", filter.value).eq("status", "published")
-      : admin.from("events").select("id, title, description, event_date, location, ticket_price").eq("slug", filter.value).eq("status", "published")
+      ? admin.from("events").select("id, slug, title, description, event_date, location, ticket_price, capacity, capacity_mode").eq("id", filter.value).eq("status", "published")
+      : admin.from("events").select("id, slug, title, description, event_date, location, ticket_price, capacity, capacity_mode").eq("slug", filter.value).eq("status", "published")
   ).maybeSingle();
 
   if (event === null) notFound();
+
+  const { count: registeredCount } = await admin
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", event.id)
+    .eq("payment_status", "paid");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const shareUrl = appUrl !== "" ? `${appUrl}/events/${event.slug ?? event.id}` : "";
 
   // Fetch custom fields for this event.
   const { data: eventFields } = await admin
@@ -69,12 +78,15 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
   });
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Event header */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-2">
+      <div className="bg-sn-surface border border-white/8 rounded-2xl p-6 space-y-2">
+        <p className="text-sn-gold text-[9.5px] font-semibold tracking-[0.16em] uppercase">
+          {formattedDate}
+        </p>
         <h1 className="text-white text-2xl font-bold">{event.title}</h1>
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-white/60 text-sm">
-          <span>{formattedDate} · {formattedTime}</span>
+          <span>{formattedTime}</span>
           {event.location !== null && <span>{event.location}</span>}
           {event.ticket_price > 0 && (
             <span className="text-sn-gold font-medium">
@@ -98,7 +110,7 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
       )}
 
       {/* Registration form */}
-      <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
+      <div className="bg-sn-surface border border-white/8 rounded-2xl p-6 space-y-4">
         <h2 className="text-white font-semibold">Your registration</h2>
         <RegistrationForm
           eventId={event.id}
@@ -106,6 +118,10 @@ export default async function EventRegisterPage({ params, searchParams }: Props)
           defaultName={defaultName}
           defaultEmail={defaultEmail}
           eventFields={eventFields ?? []}
+          capacity={event.capacity}
+          capacityMode={event.capacity_mode}
+          registeredCount={registeredCount ?? 0}
+          shareUrl={shareUrl}
         />
       </div>
     </div>

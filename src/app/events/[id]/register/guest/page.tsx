@@ -19,13 +19,22 @@ export default async function GuestRegisterPage({ params }: Props) {
   const filter = eventLookupFilter(id);
   const { data: event } = await (
     filter.column === "id"
-      ? admin.from("events").select("id, title, description, event_date, location, ticket_price, registration_open").eq("id", filter.value).eq("status", "published")
-      : admin.from("events").select("id, title, description, event_date, location, ticket_price, registration_open").eq("slug", filter.value).eq("status", "published")
+      ? admin.from("events").select("id, slug, title, description, event_date, location, ticket_price, registration_open, capacity, capacity_mode").eq("id", filter.value).eq("status", "published")
+      : admin.from("events").select("id, slug, title, description, event_date, location, ticket_price, registration_open, capacity, capacity_mode").eq("slug", filter.value).eq("status", "published")
   ).maybeSingle();
 
   if (event === null || event.registration_open !== true) {
     redirect("/events");
   }
+
+  const { count: registeredCount } = await admin
+    .from("registrations")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", event.id)
+    .eq("payment_status", "paid");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const shareUrl = appUrl !== "" ? `${appUrl}/events/${event.slug ?? event.id}` : "";
 
   // Fetch custom fields for this event.
   const { data: eventFields } = await admin
@@ -72,7 +81,7 @@ export default async function GuestRegisterPage({ params }: Props) {
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-6">
         {/* Event header */}
-        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-2">
+        <div className="bg-sn-surface border border-white/8 rounded-2xl p-6 space-y-2">
           <h1 className="text-white text-2xl font-bold">{event.title}</h1>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-white/60 text-sm">
             <span>{formattedDate} · {formattedTime}</span>
@@ -91,7 +100,7 @@ export default async function GuestRegisterPage({ params }: Props) {
         </div>
 
         {/* Guest registration form */}
-        <div className="bg-sn-black rounded-xl border border-sn-gold/20 p-6 space-y-4">
+        <div className="bg-sn-surface border border-white/8 rounded-2xl p-6 space-y-4">
           <div>
             <h2 className="text-white font-semibold">Guest registration</h2>
             <p className="text-white/50 text-sm mt-0.5">
@@ -102,6 +111,10 @@ export default async function GuestRegisterPage({ params }: Props) {
             eventId={event.id}
             ticketPrice={event.ticket_price}
             eventFields={eventFields ?? []}
+            capacity={event.capacity}
+            capacityMode={event.capacity_mode}
+            registeredCount={registeredCount ?? 0}
+            shareUrl={shareUrl}
           />
         </div>
       </main>

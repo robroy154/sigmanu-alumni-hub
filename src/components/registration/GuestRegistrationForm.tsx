@@ -3,11 +3,13 @@
 import { useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createGuestRegistration } from "@/lib/registration/guestActions";
 import { uploadRegistrationFile } from "@/lib/registration/upload-registration-file";
+import { toastSuccess, toastError } from "@/lib/toast";
 import {
   GuestRegistrationSchema,
   type GuestRegistrationInput,
@@ -15,9 +17,13 @@ import {
 import type { EventFieldRow } from "@/types/database";
 
 interface GuestRegistrationFormProps {
-  eventId:      string;
-  ticketPrice:  number;
-  eventFields?: EventFieldRow[];
+  eventId:         string;
+  ticketPrice:     number;
+  eventFields?:    EventFieldRow[];
+  capacity?:       number | null;
+  capacityMode?:   string;
+  registeredCount?: number;
+  shareUrl?:       string;
 }
 
 // ── Shared field-input renderer ───────────────────────────────────────────────
@@ -183,7 +189,15 @@ function FieldInput({ field, value, error, tempId, onChange }: FieldInputProps) 
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 
-export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }: GuestRegistrationFormProps) {
+export function GuestRegistrationForm({
+  eventId,
+  ticketPrice,
+  eventFields = [],
+  capacity = null,
+  capacityMode = "unlimited",
+  registeredCount = 0,
+  shareUrl = "",
+}: GuestRegistrationFormProps) {
   const [serverError, setServerError]                 = useState<string | null>(null);
   const [isAlumnus, setIsAlumnus]                     = useState(false);
   const [fieldResponses, setFieldResponses]           = useState<Record<string, string>>({});
@@ -220,10 +234,28 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
   const registrantLastName  = watch("last_name");
   const registrantName = [registrantFirstName, registrantLastName].filter(Boolean).join(" ") || "You";
 
+  const capacityLimited = (capacityMode === "capped" || capacityMode === "waitlist") && capacity !== null;
+  const remainingSpots  = capacityLimited ? Math.max(0, (capacity as number) - registeredCount) : null;
+  const atCapacity      = remainingSpots !== null && totalAttendees >= remainingSpots;
+
   function handleAddGuest() {
+    if (atCapacity) return;
     append("" as never);
     setGuestFieldResponses((prev) => [...prev, {}]);
     setGuestFieldErrors((prev) => [...prev, {}]);
+  }
+
+  function handleShare() {
+    if (shareUrl === "") return;
+    if (typeof navigator.share === "function") {
+      navigator.share({ url: shareUrl }).catch(() => {});
+      return;
+    }
+    void navigator.clipboard.writeText(shareUrl).then(() => {
+      toastSuccess("Link copied!");
+    }).catch(() => {
+      toastError("Could not copy link.");
+    });
   }
 
   function handleRemoveGuest(index: number) {
@@ -302,7 +334,8 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
   const errorClass  = "text-red-400 text-xs mt-0.5";
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+    <form onSubmit={handleSubmit(onSubmit)} className="lg:flex lg:gap-6 lg:items-start" noValidate>
+    <div className="flex-1 space-y-5 pb-32 lg:pb-0">
       {/* ── Section A: Contact info + guests ─────────────────────────────── */}
 
       <div className="grid grid-cols-2 gap-3">
@@ -368,14 +401,38 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
         />
       </div>
 
-      {/* Additional guests */}
-      <div className="space-y-3">
+      {/* Guests card */}
+      <div className="bg-sn-surface border border-white/8 rounded-[14px] p-3.5 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-white/80 text-sm font-medium">Additional guests</p>
-          {ticketPrice > 0 && (
-            <span className="text-white/40 text-xs">${ticketPrice.toFixed(2)} per person</span>
-          )}
+          <p className="text-white/80 text-sm font-medium">Guests</p>
+          <div className="flex items-center gap-2.75 bg-sn-black-secondary rounded-full px-1.5 py-1">
+            <button
+              type="button"
+              onClick={() => handleRemoveGuest(guestCount - 1)}
+              disabled={guestCount === 0}
+              aria-label="Remove a guest"
+              className="w-7 h-7 rounded-full bg-[#232326] text-white flex items-center justify-center disabled:opacity-30 transition-opacity"
+            >
+              −
+            </button>
+            <span className="text-white font-semibold text-sm min-w-3 text-center">{guestCount}</span>
+            <button
+              type="button"
+              onClick={handleAddGuest}
+              disabled={atCapacity}
+              aria-label="Add a guest"
+              className="w-7 h-7 rounded-full bg-sn-gold text-sn-black-secondary flex items-center justify-center disabled:opacity-30 transition-opacity"
+            >
+              +
+            </button>
+          </div>
         </div>
+
+        {atCapacity && remainingSpots !== null && (
+          <p className="text-amber-400 text-xs">
+            Only {Math.max(0, remainingSpots)} spot{remainingSpots === 1 ? "" : "s"} left for this event.
+          </p>
+        )}
 
         {fields.map((field, index) => (
           <div key={field.id} className="flex gap-2 items-start">
@@ -402,13 +459,14 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
           </div>
         ))}
 
-        <button
-          type="button"
-          onClick={handleAddGuest}
-          className="text-sn-gold hover:text-sn-gold-light text-sm transition-colors"
-        >
-          + Add a guest
-        </button>
+        {ticketPrice > 0 && (
+          <div className="flex justify-between text-sm pt-2 border-t border-white/7">
+            <span className="text-white/60">
+              {totalAttendees} × ${ticketPrice.toFixed(2)}
+            </span>
+            <span className="text-sn-gold-light font-semibold">${totalPrice.toFixed(2)}</span>
+          </div>
+        )}
       </div>
 
       {/* ── Section B: Registration-scoped custom fields ──────────────────── */}
@@ -474,23 +532,10 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
         </div>
       )}
 
-      {/* Order summary */}
       {ticketPrice > 0 && (
-        <div className="rounded-lg border border-sn-gold/20 bg-sn-gold/5 p-4 space-y-2">
-          <p className="text-white/70 text-xs font-semibold uppercase tracking-wider">
-            Order Summary
-          </p>
-          <div className="flex justify-between text-sm">
-            <span className="text-white/70">
-              {totalAttendees} attendee{totalAttendees !== 1 ? "s" : ""} × $
-              {ticketPrice.toFixed(2)}
-            </span>
-            <span className="text-white font-semibold">${totalPrice.toFixed(2)}</span>
-          </div>
-          <p className="text-white/40 text-xs">
-            You&apos;ll be redirected to Stripe to complete payment.
-          </p>
-        </div>
+        <p className="text-white/40 text-xs">
+          You&apos;ll be redirected to Stripe to complete payment.
+        </p>
       )}
 
       {/* Alumni checkbox */}
@@ -518,18 +563,38 @@ export function GuestRegistrationForm({ eventId, ticketPrice, eventFields = [] }
           {serverError}
         </p>
       )}
+    </div>
 
+    {/* Sticky action bar — fixed to viewport bottom on phone, docked in the
+        right column (sticky within the flex row) at lg+ per the design spec. */}
+    <div
+      className="fixed bottom-0 inset-x-0 z-40 bg-sn-rail border-t border-white/8 px-4 pt-2.75 flex gap-2.25 items-center lg:sticky lg:bg-transparent lg:border-0 lg:p-0 lg:top-24 lg:w-72 lg:flex-col lg:items-stretch lg:gap-3"
+      style={{ paddingBottom: "calc(11px + env(safe-area-inset-bottom))" }}
+    >
       <Button
         type="submit"
-        className="w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold h-10"
-        disabled={isSubmitting}
+        disabled={isSubmitting || atCapacity}
+        className="flex-1 lg:w-full bg-sn-gold text-sn-black hover:bg-sn-gold-light font-semibold h-11 lg:h-10 rounded-[11px] lg:rounded-lg"
       >
+        {isSubmitting && (
+          <span className="w-3.5 h-3.5 rounded-full border-2 border-sn-black/40 border-t-sn-black animate-spin inline-block mr-2" />
+        )}
         {isSubmitting
           ? "Processing…"
           : ticketPrice > 0
-          ? `Continue to Payment — $${totalPrice.toFixed(2)}`
+          ? `Register · $${totalPrice.toFixed(2)}`
           : "Complete Registration"}
       </Button>
+      <button
+        type="button"
+        onClick={handleShare}
+        aria-label="Share this event"
+        className="w-11 h-11 lg:w-full lg:h-10 rounded-[11px] lg:rounded-lg border border-white/14 flex items-center justify-center lg:justify-center gap-2 text-white shrink-0 hover:bg-white/5 transition-colors"
+      >
+        <Share2 size={17} />
+        <span className="hidden lg:inline text-sm font-medium">Share</span>
+      </button>
+    </div>
     </form>
   );
 }
