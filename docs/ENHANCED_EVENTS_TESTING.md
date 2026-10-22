@@ -1,7 +1,7 @@
 # Enhanced Events — Testing Guide
 
-Branch: `feature/enhanced-events`
-Migration: `supabase/migrations/20260618000000_per_attendee_fields.sql` (NOT YET APPLIED)
+Merged to main in #24. Migration `supabase/migrations/20260618000000_per_attendee_fields.sql` is applied in production.
+As of 2026-10-22 no event uses an attendee-scoped field, so this plan has not been run. Run it before the first real one.
 
 ---
 
