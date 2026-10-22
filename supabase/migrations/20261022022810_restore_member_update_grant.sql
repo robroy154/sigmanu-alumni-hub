@@ -28,6 +28,14 @@
 -- RLS still applies on top of this: "members: update own row" limits members to
 -- their own row.
 
+-- Establish the model explicitly instead of relying on the hand-run revoke, which
+-- exists only in production. On a fresh replay (preview branch, rebuild) Supabase's
+-- default table-level UPDATE grant would otherwise override the column grant below.
+-- A table-level REVOKE also removes column-level UPDATE grants, so it must come first.
+-- Production already has no table-level UPDATE, so these two statements leave prod
+-- in the same state as the GRANT-only version that was applied (version 20261022022810).
+REVOKE UPDATE ON public.members FROM authenticated;
+
 GRANT UPDATE (
   first_name,
   last_name,
