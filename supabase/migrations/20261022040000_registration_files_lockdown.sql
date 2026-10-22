@@ -1,5 +1,7 @@
--- NOT YET APPLIED. Run in the Supabase SQL editor (the MCP confirmation prompt for DROP
--- statements could not be approved from the mobile session on 2026-10-21).
+-- ALREADY APPLIED IN PRODUCTION. Run by hand in the Supabase SQL editor on 2026-10-21
+-- (the MCP confirmation prompt for DROP statements couldn't be approved from mobile), so it
+-- is not recorded in supabase_migrations.schema_migrations. Verified after the run:
+-- 0 policies on registration-files, 5 MB limit, 13 allowed MIME types. Safe to replay.
 --
 -- registration-files is written and read only through the service role
 -- (uploadRegistrationFile uses createAdminClient). These two policies let any signed-in
