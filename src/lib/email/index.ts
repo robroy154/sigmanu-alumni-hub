@@ -56,6 +56,40 @@ const SENDER_EMAIL =
     ? process.env.RESEND_FROM_EMAIL
     : "onboarding@resend.dev";
 
+/**
+ * Email addresses of every member with status `admin`, lowercased and deduplicated.
+ * Returns [] when the lookup fails or there are no admins; callers decide what that means.
+ * Never throws, so the senders keep their "log, don't throw" contract.
+ */
+async function getAdminEmails(caller: string): Promise<string[]> {
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const { data, error } = await createAdminClient()
+      .from("members")
+      .select("email")
+      .eq("status", "admin");
+
+    if (error !== null) {
+      console.error(`[email] ${caller}: admin lookup failed:`, error.message);
+      return [];
+    }
+    return uniqueEmails((data ?? []).map((a) => a.email));
+  } catch (err) {
+    console.error(`[email] ${caller}: admin lookup threw:`, err);
+    return [];
+  }
+}
+
+/** Trims, lowercases, drops blanks, and removes duplicates, keeping first-seen order. */
+function uniqueEmails(emails: ReadonlyArray<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  for (const raw of emails) {
+    const email = (raw ?? "").trim().toLowerCase();
+    if (email !== "") seen.add(email);
+  }
+  return [...seen];
+}
+
 // ---------------------------------------------------------------------------
 // 1. Welcome email — sent when admin approves a member
 // ---------------------------------------------------------------------------
@@ -174,13 +208,7 @@ export async function notifyAdminsNewMember(member?: {
     resolvedMember = fetched;
   }
 
-  const adminDb   = createAdminClient();
-  const { data: admins } = await adminDb
-    .from("members")
-    .select("email")
-    .eq("status", "admin");
-
-  const adminEmails = (admins ?? []).map((a) => a.email);
+  const adminEmails = await getAdminEmails("notifyAdminsNewMember");
   if (adminEmails.length === 0) {
     console.warn("[email] notifyAdminsNewMember: no admin accounts found to notify.");
     return;
@@ -443,15 +471,7 @@ export async function sendBigBrotherSetNotification({
   const resend = getResend();
   if (resend === null) return;
 
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const adminDb = createAdminClient();
-
-  const { data: admins } = await adminDb
-    .from("members")
-    .select("email")
-    .eq("status", "admin");
-
-  const adminEmails = (admins ?? []).map((a) => a.email);
+  const adminEmails = await getAdminEmails("sendBigBrotherSetNotification");
   if (adminEmails.length === 0) {
     console.warn("[email] sendBigBrotherSetNotification: no admin accounts found to notify.");
     return;
@@ -618,7 +638,16 @@ export async function sendRefundProcessedAdminAlert({
   const resend = getResend();
   if (resend === null) return;
 
-  const chapterContactEmail = process.env.CHAPTER_CONTACT_EMAIL ?? "info@csusigmanu.com";
+  // Every admin, plus the chapter inbox so the books keep a copy (decision 108).
+  // If the admin lookup fails, the chapter inbox alone still gets it.
+  const chapterContactEmail =
+    process.env.CHAPTER_CONTACT_EMAIL !== undefined && process.env.CHAPTER_CONTACT_EMAIL.trim() !== ""
+      ? process.env.CHAPTER_CONTACT_EMAIL
+      : "info@csusigmanu.com";
+  const recipients = uniqueEmails([
+    ...(await getAdminEmails("sendRefundProcessedAdminAlert")),
+    chapterContactEmail,
+  ]);
   const timestamp = new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
 
   try {
@@ -635,7 +664,7 @@ export async function sendRefundProcessedAdminAlert({
     );
     await resend.emails.send({
       from:    `${SENDER_NAME} <${SENDER_EMAIL}>`,
-      to:      chapterContactEmail,
+      to:      recipients,
       subject: `Refund processed for ${registrantName} — ${eventTitle}`,
       html,
     });
