@@ -1,13 +1,13 @@
 # Enhanced Events — Testing Guide
 
-Branch: `feature/enhanced-events`
-Migration: `supabase/migrations/20260618000000_per_attendee_fields.sql` (NOT YET APPLIED)
+Merged to main in #24. Migration `supabase/migrations/20260618000000_per_attendee_fields.sql` is applied in production.
+As of 2026-10-22 no event uses an attendee-scoped field, so this plan has not been run. Run it before the first real one.
 
 ---
 
 ## Pre-Test Setup
 
-1. Apply the migration in Supabase: `supabase/migrations/20260618000000_per_attendee_fields.sql`
+1. Do not re-run the migration in production: it's already applied, and its bare `CREATE POLICY` fails if run twice. Only apply it to a fresh test database. In production, confirm it's recorded with `select version from supabase_migrations.schema_migrations where version = '20260618000000';`
 2. Verify new columns exist:
    - `event_fields.field_scope` (text, default `'registration'`)
    - `registration_guests.guest_email` (text, nullable)

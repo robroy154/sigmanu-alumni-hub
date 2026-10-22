@@ -118,11 +118,11 @@ Interim workaround in place: an email forwarding rule on `info@csusigmanu.com` r
 
 ### Per-Attendee Field Scoping
 
-**Status:** In Progress — `feature/enhanced-events` branch
+**Status:** Merged to main (#24), migration applied. Not yet used by any event; QA still pending.
 
 Adds `field_scope: "registration" | "attendee"` to custom event fields. Attendee-scoped fields are collected once per person (registrant + each guest) instead of once per order.
 
-**What's built (branch only, not merged):**
+**What's built:**
 
 - Migration `20260618000000_per_attendee_fields.sql`: `event_fields.field_scope` column, `registration_guests.guest_email/guest_phone` columns, `guest_field_responses` table
 - EventFieldsBuilder: scope toggle (Whole order / Per person) for eligible field types
@@ -131,11 +131,10 @@ Adds `field_scope: "registration" | "attendee"` to custom event fields. Attendee
 - Admin registration detail: displays per-guest responses below each guest name
 - Testing guide: `docs/ENHANCED_EVENTS_TESTING.md`
 
-**To complete before merge:**
+**Still open:**
 
-- Apply migration to production Supabase
-- QA per `docs/ENHANCED_EVENTS_TESTING.md`
-- Decide on `stripe_customer_id` column addition to `members` table (see TODO in `src/lib/registration/actions.ts`)
+- QA per `docs/ENHANCED_EVENTS_TESTING.md` before the first event that uses a per-person field
+- Decide on `stripe_customer_id` column addition to `members` table (see TODO in `src/lib/registration/actions.ts`). Adding it means adding the column to the members UPDATE grant only if members write it; the admin client would normally write it.
 
 ---
 

@@ -1,0 +1,53 @@
+name: CI
+
+# Typecheck + production build on every PR to main, so a change that breaks the
+# build is caught before it merges instead of failing the Vercel production deploy.
+# Lint is intentionally not gated yet: 5 known React Compiler errors (audit C-6)
+# would make every PR red. Add `npm run lint` here once those are fixed.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Dependabot PRs already run the same checks in dependabot-auto-merge.yml.
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npx next build
+        env:
+          # Placeholders only. The build needs these defined, not valid.
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          NEXT_PUBLIC_APP_URL: https://example.com
+          NEXT_PUBLIC_CDN_URL: https://example.com/cdn
+          RESEND_API_KEY: re_placeholder

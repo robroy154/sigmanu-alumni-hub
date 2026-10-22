@@ -310,49 +310,10 @@ Key runtime decisions:
 - /settings page: ChangeEmailForm + ChangePasswordForm; settings-actions.ts uses signInWithPassword to verify current password then updateUser; email change sends confirmation to new address; password change requires 8+ chars; OAuth-only users (no email provider identity) only see email change section
 - Onboarding modal: members.onboarding_dismissed boolean (migration 20260516000001, default false); OnboardingModal client component in src/components/onboarding/; 6 checklist items (profile photo, pledge class, big brother, badge number, family tree, directory); progress bar; mounted in (member)/layout.tsx when onboarding_dismissed=false; dismissOnboarding server action in lib/auth/actions.ts
 - dismissed_announcements table: migration 20260516000002; PRIMARY KEY (member_id, announcement_id); RLS: members can SELECT/INSERT own rows; show_on_login boolean added to announcements table; setAnnouncementLoginSplash action in announcement-actions.ts; AnnouncementControls has Presentation icon button for the toggle; dismissAnnouncement action in lib/auth/actions.ts (upserts); AnnouncementSplash full-screen overlay renders on home page for first undismissed show_on_login announcement; supabase.ts manually patched for both new columns and the dismissed_announcements table type
+- Per-attendee custom fields (merged in #24, migration `20260618000000` applied; no event has used an attendee-scoped field yet, so run `docs/ENHANCED_EVENTS_TESTING.md` before the first real one): `event_fields.field_scope` is `"registration" | "attendee"` (`FieldScope` in src/types/database.ts); the EventFieldsBuilder scope toggle shows only for short_text/dropdown/multi_select/checkbox, and long_text/file_upload are always registration-scoped (changing to one of those resets scope); RegistrationForm/GuestRegistrationForm render Section B (registration fields) and Section C (one card per attendee, hidden when no attendee fields); `GuestFieldResponsesInput = Array<Record<string, string>>` is the 4th arg to createRegistration/createGuestRegistration, indexed like `guest_names`; the registrant's attendee answers go to `event_field_responses`, each guest's to `guest_field_responses` keyed by the guest id from `.select("id")` on the guest insert; Stripe gets one line item per attendee ("Event Title — Attendee Name"), metadata keys `attendee_N_name` / `attendee_N_<snake_label>` capped at 50; webhook `amount_paid` is still `applied_price × (1 + guest_count)` from the DB; alumni checkout looks up the Stripe Customer by email every time because there is no `stripe_customer_id` column yet (open decision, TODO in src/lib/registration/actions.ts); admin registration detail and the member receipt show each guest's answers under their name.
 - Member-initiated cancellation: cancelRegistration in lib/registration/manageActions.ts; ownership verified via session client .eq("member_id", user.id); blocks payment_status=paid (error message sent); checks event.registration_open=true; admin client hard delete (cascades); ManageRegistration renders two-step cancel button only when payment_status !== "paid" and registrationOpen=true
 
 Feature backlog tracked in docs/BACKLOG.md — read this file at the start of any planning or build session.
-
----
-
-## Active Experiment Branch
-
-**Branch:** `feature/enhanced-events`
-**Status:** Implementation complete — pending migration apply and QA
-
-### What changed
-
-Per-attendee field scoping (`field_scope: "registration" | "attendee"`) added to the custom event fields system. Attendee-scoped fields are collected once per person (registrant + each guest) instead of once per order.
-
-### New files / tables (NOT yet applied to production)
-
-- Migration: `supabase/migrations/20260618000000_per_attendee_fields.sql`
-  - `event_fields.field_scope` text column (default `'registration'`)
-  - `registration_guests.guest_email`, `registration_guests.guest_phone` nullable columns
-  - `guest_field_responses` table (stores per-guest attendee-scoped responses)
-- `docs/ENHANCED_EVENTS_TESTING.md` — QA test plan
-
-### Key runtime decisions on this branch
-
-- `FieldScope = "registration" | "attendee"` type in `src/types/database.ts`
-- `GuestFieldResponsesInput = Array<Record<string, string>>` — 4th param to `createRegistration` and `createGuestRegistration`; index matches `guest_names` array position
-- `EventFieldsBuilder`: scope toggle visible only for `short_text`, `dropdown`, `multi_select`, `checkbox` types; `long_text` and `file_upload` always registration-scoped; field type change to non-eligible resets scope to `"registration"`
-- `RegistrationForm` / `GuestRegistrationForm`: Section B = registration-scoped fields; Section C = per-attendee cards (one per attendee); Section C hidden if no attendee-scoped fields exist
-- Registrant's attendee-scoped responses written to `event_field_responses` (same table as registration-scoped — field IDs are globally unique, no collision)
-- Guest attendee-scoped responses written to `guest_field_responses` keyed by `guest_id` (captured via `.select("id")` on the guest insert)
-- Stripe: per-attendee line items (`quantity: 1` each, `product_data.name` = `"Event Title — Attendee Name"`); Customer create/lookup by email on alumni path only; Stripe metadata uses `attendee_N_name` + `attendee_N_<snake_label>` keys, capped at 50 total
-- Webhook `amount_paid` computation unchanged — still `appliedPrice × (1 + guest_count)` from DB, not derived from Stripe quantities
-- Stripe Customer TODO: `stripe_customer_id` column not yet added to `members` table; current implementation looks up by email on each checkout (deferred to main branch review)
-- Admin registration detail: `guest_field_responses` fetched separately after main query; grouped by `guest_id` into a Map; rendered below each guest name with `pl-4` indentation, sorted by `display_order`
-
-### To merge to main
-
-1. Apply migration to production Supabase
-2. Complete QA per `docs/ENHANCED_EVENTS_TESTING.md`
-3. Decide on `stripe_customer_id` column addition (see TODO in `src/lib/registration/actions.ts`)
-4. Update `CLAUDE.md` Phase section; remove this Active Experiment Block
-5. Delete `docs/ENHANCED_EVENTS_TESTING.md` and `docs/EXPERIMENT_LOG.md`
 
 ---
 
