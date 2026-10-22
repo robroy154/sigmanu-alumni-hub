@@ -677,7 +677,7 @@ function SidePanel({
                 {member.first_name} {member.last_name}
                 {member.nickname !== null && member.nickname !== "" && (
                   <span style={{ fontWeight: 400, color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
-                    {" "}"{member.nickname}"
+                    {" "}&ldquo;{member.nickname}&rdquo;
                   </span>
                 )}
               </p>

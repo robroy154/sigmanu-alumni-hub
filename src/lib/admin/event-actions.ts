@@ -34,16 +34,55 @@ const eventSchema = z.object({
   event_date:             z.string().min(1, "Date is required"),
   location:               z.string().optional(),
   ticket_price:           z.coerce.number().min(0, "Price cannot be negative"),
-  early_bird_price:       z.coerce.number().min(0).optional().or(z.literal("")),
+  // "" must be matched before coercion: z.coerce.number() turns "" into 0, which
+  // saved early_bird_price = 0 on every event and would make checkout free if an
+  // early-bird end date were ever set without a price.
+  early_bird_price:       z.union([z.literal(""), z.coerce.number().min(0, "Early-bird price cannot be negative")]).optional(),
   early_bird_ends_at:     z.string().optional(),
   registration_closes_at: z.string().optional(),
   capacity_mode:          z.enum(["unlimited", "capped", "waitlist"]),
-  capacity:               z.coerce.number().int().positive().optional().or(z.literal("")),
+  capacity:               z.union([z.literal(""), z.coerce.number().int().positive("Capacity must be at least 1")]).optional(),
   status:                 z.enum(["draft", "published", "archived"]),
   registration_open:      z.boolean(),
   event_type:             z.enum(["internal", "external"]),
   banner_image_url:       z.string().optional(),
   flyer_url:              z.string().optional(),
+}).superRefine((d, ctx) => {
+  const hasEarlyBirdPrice = typeof d.early_bird_price === "number";
+  const hasEarlyBirdEnd   = d.early_bird_ends_at !== undefined && d.early_bird_ends_at !== "";
+  const eventTime         = new Date(d.event_date).getTime();
+
+  if (hasEarlyBirdPrice !== hasEarlyBirdEnd) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["early_bird_price"],
+      message: "Early bird needs both a price and an end date, or turn it off.",
+    });
+  }
+  if (hasEarlyBirdPrice && (d.early_bird_price as number) >= d.ticket_price) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["early_bird_price"],
+      message: "Early-bird price must be lower than the regular ticket price.",
+    });
+  }
+  if (hasEarlyBirdEnd && new Date(d.early_bird_ends_at as string).getTime() > eventTime) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["early_bird_ends_at"],
+      message: "Early bird must end before the event starts.",
+    });
+  }
+  if (
+    d.registration_closes_at !== undefined && d.registration_closes_at !== "" &&
+    new Date(d.registration_closes_at).getTime() > eventTime
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["registration_closes_at"],
+      message: "Registration must close before the event starts.",
+    });
+  }
 });
 
 export type EventFormInput = z.infer<typeof eventSchema>;
@@ -53,6 +92,10 @@ export async function checkSlugAvailable(
   slug: string,
   excludeId?: string
 ): Promise<boolean> {
+  // Admin-only: otherwise this leaks which slugs exist, including draft events.
+  const guard = await requireAdmin();
+  if ("error" in guard) return false;
+
   const admin = createAdminClient();
   let query = admin.from("events").select("id").eq("slug", slug);
   if (excludeId !== undefined && excludeId !== "") {

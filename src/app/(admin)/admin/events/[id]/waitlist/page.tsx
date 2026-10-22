@@ -35,7 +35,7 @@ export default async function AdminEventWaitlistPage({ params }: Props) {
     .map((w) => w.member_id)
     .filter((id): id is string => id !== null);
 
-  let memberMap = new Map<string, { first_name: string; last_name: string; email: string }>();
+  const memberMap = new Map<string, { first_name: string; last_name: string; email: string }>();
   if (memberIds.length > 0) {
     const { data: members } = await admin
       .from("members")

@@ -10,6 +10,7 @@ import { updateProfile } from "@/lib/profile/actions";
 import { ProfileUpdateSchema, type ProfileUpdateInput } from "@/lib/profile/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { StateField } from "@/components/profile/StateField";
 import { toastSuccess, toastError } from "@/lib/toast";
 
 interface ProfileEditFormProps {
@@ -150,9 +151,12 @@ export function ProfileEditForm({ defaultValues }: ProfileEditFormProps) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="state" className={labelClass}>State</Label>
-            <Input id="state" type="text" autoComplete="address-level1" placeholder="GA" maxLength={2}
+            <StateField
+              registration={register("state")}
+              value={watch("state")}
+              country={watch("country")}
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
-              {...register("state")} />
+            />
           </div>
         </div>
 

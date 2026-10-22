@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ProfileUpdateInput, SetPinInput } from "@/lib/profile/schemas";
+import { DEFAULT_COUNTRY, normalizeProfileFields } from "@/lib/profile/normalize";
 
 // ── Update editable profile fields ────────────────────────────────────────────
 // Members can update all fields here at any time.
@@ -20,21 +21,42 @@ export async function updateProfile(
     return { error: "Not authenticated." };
   }
 
+  // Every profile field is submitted on save (absent = cleared), so normalize the
+  // full set. The returned error surfaces as a toast in ProfileEditForm.
+  const { values, error: invalid } = normalizeProfileFields({
+    first_name:     data.first_name,
+    last_name:      data.last_name,
+    nickname:       data.nickname ?? null,
+    pledge_class:   data.pledge_class ?? null,
+    phone:          data.phone ?? null,
+    street_address: data.street_address ?? null,
+    city:           data.city ?? null,
+    state:          data.state ?? null,
+    zip:            data.zip ?? null,
+    country:        data.country ?? null,
+    birthday:       data.birthday ?? null,
+    linkedin_url:   data.linkedin_url ?? null,
+  });
+  if (invalid !== null) {
+    return { error: invalid };
+  }
+
   const { error } = await supabase
     .from("members")
     .update({
-      first_name: data.first_name,
-      last_name: data.last_name,
-      nickname: data.nickname ?? null,
-      pledge_class: data.pledge_class ?? null,
-      phone: data.phone ?? null,
-      street_address: data.street_address ?? null,
-      city: data.city ?? null,
-      state: data.state ?? null,
-      zip: data.zip ?? null,
-      country: data.country ?? "USA",
-      birthday: data.birthday ?? null,
-      linkedin_url: data.linkedin_url ?? null,
+      // first_name/last_name are guaranteed non-null: normalize rejects blanks.
+      first_name: values.first_name ?? data.first_name,
+      last_name: values.last_name ?? data.last_name,
+      nickname: values.nickname ?? null,
+      pledge_class: values.pledge_class ?? null,
+      phone: values.phone ?? null,
+      street_address: values.street_address ?? null,
+      city: values.city ?? null,
+      state: values.state ?? null,
+      zip: values.zip ?? null,
+      country: values.country ?? DEFAULT_COUNTRY,
+      birthday: values.birthday ?? null,
+      linkedin_url: values.linkedin_url ?? null,
       // Privacy toggles — undefined means "not submitted", preserve current value.
       ...(data.show_address !== undefined && {
         show_address: data.show_address,
@@ -156,6 +178,8 @@ export async function updateBigBrother(
     .update({ big_id: bigId })
     .eq("id", user.id);
   if (error !== null) {
+    // The prevent_big_id_cycle trigger catches loops deeper than the check above.
+    if (error.message.includes("lineage")) return { error: error.message };
     return { error: "Failed to update Big Brother. Please try again." };
   }
 

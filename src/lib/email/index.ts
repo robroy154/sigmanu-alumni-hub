@@ -1,4 +1,6 @@
-"use server";
+// Server-only module. Intentionally NOT "use server": that directive would turn every
+// exported sender into a callable server action with no auth check. Import it only
+// from server actions, route handlers, and server components.
 
 /**
  * Email sending module — wraps Resend.
