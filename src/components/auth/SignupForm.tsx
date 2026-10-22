@@ -14,6 +14,8 @@ import { SignupSchema, type SignupInput } from "@/lib/auth/schemas";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { StateField } from "@/components/profile/StateField";
+import { nonEmptyMemberFields, normalizeProfileFields } from "@/lib/profile/normalize";
 import { findStubMatches, type StubMatch } from "@/lib/auth/stub-search";
 import { StubClaimStep } from "@/components/auth/StubClaimStep";
 import { BigBrotherSearch } from "@/components/auth/BigBrotherSearch";
@@ -48,6 +50,7 @@ export function SignupForm() {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(SignupSchema),
@@ -113,19 +116,23 @@ export function SignupForm() {
     // The handle_new_user trigger copies first_name/last_name (and stub fields if claimed).
     // Write remaining optional fields now that we have a session.
     if (signUpData.user !== null) {
-      const update: {
-        pledge_class?: string; phone?: string; street_address?: string;
-        city?: string; state?: string; zip?: string; country?: string;
-        birthday?: string; big_id?: string | null;
-      } = {};
-      if (data.pledge_class   !== undefined && data.pledge_class   !== "") update.pledge_class   = data.pledge_class;
-      if (data.phone          !== undefined && data.phone          !== "") update.phone          = data.phone;
-      if (data.street_address !== undefined && data.street_address !== "") update.street_address = data.street_address;
-      if (data.city           !== undefined && data.city           !== "") update.city           = data.city;
-      if (data.state          !== undefined && data.state          !== "") update.state          = data.state;
-      if (data.zip            !== undefined && data.zip            !== "") update.zip            = data.zip;
-      if (data.country        !== undefined && data.country        !== "") update.country        = data.country;
-      if (data.birthday       !== undefined && data.birthday       !== "" && data.birthday !== null) update.birthday = data.birthday;
+      // Same cleanup rules as profile edit. The account already exists here, so an
+      // invalid value is dropped (fixable later on the profile page) instead of
+      // failing signup; blanks are omitted rather than written as null.
+      const { values } = normalizeProfileFields(
+        {
+          pledge_class:   data.pledge_class,
+          phone:          data.phone,
+          street_address: data.street_address,
+          city:           data.city,
+          state:          data.state,
+          zip:            data.zip,
+          country:        data.country,
+          birthday:       data.birthday,
+        },
+        { dropInvalid: true },
+      );
+      const update = nonEmptyMemberFields(values);
       // big_id: use explicit form selection, or fall back to stub's big_id if stub was claimed
       if (bigBrotherIdRef.current !== null) update.big_id = bigBrotherIdRef.current;
       if (Object.keys(update).length > 0) {
@@ -445,9 +452,12 @@ export function SignupForm() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="state" className="text-white/80 text-sm">State</Label>
-            <Input id="state" type="text" autoComplete="address-level1" placeholder="GA" maxLength={2}
+            <StateField
+              registration={register("state")}
+              value={watch("state")}
+              country={watch("country")}
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
-              {...register("state")} />
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { canonicalCountry } from "@/lib/profile/normalize";
 
 export interface AddressParts {
   street: string;
@@ -64,7 +65,8 @@ export function AddressAutocomplete({
           city:    get("locality") || get("sublocality") || get("postal_town"),
           state:   getShort("administrative_area_level_1"),
           zip:     get("postal_code"),
-          country: get("country"),
+          // Google returns "United States"; store the app's canonical "USA".
+          country: canonicalCountry(get("country")),
         });
 
         // Update the input value to the formatted street.

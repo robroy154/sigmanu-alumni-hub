@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendReferralCompleted, sendReferralInvite } from "@/lib/email";
+import { nonEmptyMemberFields, normalizeProfileFields } from "@/lib/profile/normalize";
 
 // ── Lightweight token check — called before signUp() in JoinForm ──────────────
 // Returns the invitee's name and email if the token is valid and pending,
@@ -87,16 +88,23 @@ export async function completeReferral(
     return { error: "This invite link has expired." };
   }
 
-  // Build optional profile update payload.
-  const profileUpdate: Record<string, string> = {};
-  if (optionalFields.pledge_class   !== undefined && optionalFields.pledge_class   !== "") profileUpdate.pledge_class   = optionalFields.pledge_class;
-  if (optionalFields.phone          !== undefined && optionalFields.phone          !== "") profileUpdate.phone          = optionalFields.phone;
-  if (optionalFields.street_address !== undefined && optionalFields.street_address !== "") profileUpdate.street_address = optionalFields.street_address;
-  if (optionalFields.city           !== undefined && optionalFields.city           !== "") profileUpdate.city           = optionalFields.city;
-  if (optionalFields.state          !== undefined && optionalFields.state          !== "") profileUpdate.state          = optionalFields.state;
-  if (optionalFields.zip            !== undefined && optionalFields.zip            !== "") profileUpdate.zip            = optionalFields.zip;
-  if (optionalFields.country        !== undefined && optionalFields.country        !== "") profileUpdate.country        = optionalFields.country;
-  if (optionalFields.birthday       !== undefined && optionalFields.birthday       !== "") profileUpdate.birthday       = optionalFields.birthday;
+  // Build optional profile update payload. The account already exists at this
+  // point, so invalid values are dropped (fixable later on the profile page)
+  // rather than failing the join. Blank values are omitted, not written as null.
+  const { values } = normalizeProfileFields(
+    {
+      pledge_class:   optionalFields.pledge_class,
+      phone:          optionalFields.phone,
+      street_address: optionalFields.street_address,
+      city:           optionalFields.city,
+      state:          optionalFields.state,
+      zip:            optionalFields.zip,
+      country:        optionalFields.country,
+      birthday:       optionalFields.birthday,
+    },
+    { dropInvalid: true },
+  );
+  const profileUpdate = nonEmptyMemberFields(values);
 
   // Update new member row: optional fields + referred_by.
   const { error: memberUpdateError } = await admin
@@ -211,6 +219,19 @@ export async function reactivateReferral(
 export async function resendReferralInvite(
   referralId: string,
 ): Promise<{ success: true } | { error: string }> {
+  // Admin-only, matching reactivateReferral: server actions are callable directly.
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user === null) return { error: "Not authenticated." };
+
+  const { data: callerMember } = await supabase
+    .from("members")
+    .select("status")
+    .eq("id", user.id)
+    .single();
+
+  if (callerMember?.status !== "admin") return { error: "Not authorized." };
+
   const admin = createAdminClient();
 
   const { data: referral } = await admin

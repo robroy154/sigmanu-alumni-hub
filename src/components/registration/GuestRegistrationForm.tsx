@@ -13,6 +13,7 @@ import {
   type GuestRegistrationInput,
 } from "@/lib/registration/schemas";
 import type { EventFieldRow } from "@/types/database";
+import { toastError } from "@/lib/toast";
 
 interface GuestRegistrationFormProps {
   eventId:      string;
@@ -167,6 +168,8 @@ function FieldInput({ field, value, error, tempId, onChange }: FieldInputProps) 
               );
               if ("path" in result) {
                 onChange(field.id, result.path);
+              } else {
+                toastError(result.error);
               }
             };
             reader.readAsDataURL(file);

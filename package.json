@@ -59,7 +59,6 @@
     "react-dom": "19.3.1",
     "react-hook-form": "^7.90.0",
     "react-image-crop": "^11.1.2",
-    "reactflow": "^11.11.4",
     "resend": "^6.33.0",
     "sanitize-html": "^2.18.1",
     "shadcn": "^4.21.5",
@@ -82,7 +81,6 @@
     "sharp": "^0.35.5",
     "supabase": "^2.121.0",
     "tailwindcss": "^4",
-    "to-ico": "^1.1.5",
     "typescript": "^5"
   }
 }

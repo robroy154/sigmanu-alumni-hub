@@ -28,6 +28,10 @@ export async function checkAnnouncementSlugAvailable(
   slug: string,
   excludeId?: string,
 ): Promise<{ available: boolean }> {
+  // Admin-only: otherwise this leaks which slugs exist, including inactive announcements.
+  const guard = await requireAdmin();
+  if ("error" in guard) return { available: false };
+
   const admin = createAdminClient();
   let query = admin.from("announcements").select("id").eq("slug", slug);
   if (excludeId !== undefined) {

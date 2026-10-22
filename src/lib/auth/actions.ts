@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { CompleteProfileInput } from "@/lib/auth/schemas";
+import { nonEmptyMemberFields, normalizeProfileFields } from "@/lib/profile/normalize";
 
 export async function signOut() {
   const supabase = await createClient();
@@ -24,14 +25,15 @@ export async function completeProfile(
     redirect("/login");
   }
 
-  const updatePayload: { first_name: string; last_name: string; pledge_class?: string } = {
-    first_name: data.first_name,
-    last_name: data.last_name,
-  };
-
-  if (data.pledge_class !== undefined && data.pledge_class !== "") {
-    updatePayload.pledge_class = data.pledge_class;
+  const { values, error: invalid } = normalizeProfileFields({
+    first_name:   data.first_name,
+    last_name:    data.last_name,
+    pledge_class: data.pledge_class,
+  });
+  if (invalid !== null) {
+    return { error: invalid };
   }
+  const updatePayload = nonEmptyMemberFields(values);
 
   const { error } = await supabase
     .from("members")

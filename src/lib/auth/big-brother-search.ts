@@ -140,7 +140,11 @@ export async function setBigBrother(
     .from("members")
     .update({ big_id: bigId })
     .eq("id", memberId);
-  if (error !== null) return { error: "Failed to update big brother." };
+  if (error !== null) {
+    // The prevent_big_id_cycle trigger explains loops; surface its message as-is.
+    if (error.message.includes("lineage")) return { error: error.message };
+    return { error: "Failed to update big brother." };
+  }
 
   revalidatePath("/profile");
   revalidatePath("/family-tree");

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe } from "@/lib/stripe/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
+import { normalizeProfileFields, type ProfileFieldsInput } from "@/lib/profile/normalize";
 
 // ── Guard: verify caller is admin ─────────────────────────────────────────────
 async function requireAdmin(): Promise<{ id: string } | { error: string }> {
@@ -100,13 +101,40 @@ export async function adminUpdateMember(
   }
 
   const admin = createAdminClient();
+
+  // Same cleanup rules as member self-edit. The form doesn't send country, so use
+  // the saved one: state rules differ for US and non-US addresses.
+  const { data: existing } = await admin
+    .from("members")
+    .select("country")
+    .eq("id", memberId)
+    .maybeSingle();
+  const profileKeys = ["first_name", "last_name", "nickname", "pledge_class", "phone", "city", "state", "linkedin_url"] as const;
+  const profileInput: ProfileFieldsInput = { country: existing?.country ?? null };
+  for (const key of profileKeys) {
+    if (key in data) profileInput[key] = data[key] ?? null;
+  }
+  const { values, error: invalid } = normalizeProfileFields(profileInput);
+  if (invalid !== null) return { error: invalid };
+  // country was only context for validation; never write it from this form.
+  // Names can't be null here (normalize rejects blanks), so only spread them when set.
+  const { country: _country, first_name, last_name, ...cleanedProfile } = values;
+  void _country;
+
   const { error } = await admin
     .from("members")
-    .update(data)
+    .update({
+      ...data,
+      ...cleanedProfile,
+      ...(first_name ? { first_name } : {}),
+      ...(last_name ? { last_name } : {}),
+    })
     .eq("id", memberId);
 
   if (error !== null) {
     if (error.code === "23505") return { error: "That pin number is already in use." };
+    // Raised by the prevent_big_id_cycle trigger.
+    if (error.message.includes("lineage")) return { error: error.message };
     return { error: "Failed to update member." };
   }
 

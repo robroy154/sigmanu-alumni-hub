@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { PLEDGE_CLASSES } from "@/lib/utils/pledge-classes";
 import { AddressAutocomplete } from "@/components/profile/AddressAutocomplete";
+import { StateField } from "@/components/profile/StateField";
 import { checkReferralToken, completeReferral } from "@/lib/referrals/actions";
 import { sendSignupNotifications } from "@/lib/auth/signup-notifications";
 import { toastError } from "@/lib/toast";
@@ -72,6 +73,7 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
     handleSubmit,
     control,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<JoinInput>({
     resolver: zodResolver(JoinSchema),
@@ -390,9 +392,12 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="state" className="text-white/80 text-sm">State</Label>
-            <Input id="state" type="text" autoComplete="address-level1" placeholder="GA" maxLength={2}
+            <StateField
+              registration={register("state")}
+              value={watch("state")}
+              country={watch("country")}
               className="bg-white/10 border-white/20 text-white placeholder:text-white/30 focus-visible:border-sn-gold"
-              {...register("state")} />
+            />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
