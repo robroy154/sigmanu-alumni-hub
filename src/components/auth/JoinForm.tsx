@@ -91,9 +91,6 @@ export function JoinForm({ firstName, lastName, email, token }: JoinFormProps) {
       return;
     }
 
-    // Diagnostic: confirm stub_id is being passed to the trigger
-    console.log("[JoinForm] stub_id being passed:", selectedStubIdRef.current);
-
     const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password: data.password,

@@ -80,10 +80,6 @@ export function SignupForm() {
   async function proceedWithSignup(data: SignupInput) {
     const supabase = createClient();
 
-    // Diagnostic: confirm stub_id is being passed to the trigger
-    console.log("[SignupForm] stub_id being passed:", selectedStubIdRef.current);
-    console.log("[SignupForm] submitting with stub_id:", selectedStubIdRef.current);
-
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
