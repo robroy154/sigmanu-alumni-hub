@@ -233,6 +233,7 @@ export async function archiveEvent(
     .eq("id", id);
 
   if (error !== null) {
+    console.error("[archiveEvent] failed:", error.message);
     return { error: "Failed to archive event." };
   }
 
